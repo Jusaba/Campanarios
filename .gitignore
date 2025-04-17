@@ -1,0 +1,11 @@
+*.bin
+*.pdsbak
+*.workspace
+*.DO
+*.EDF
+*.sts
+*.rte
+*.elf
+*.map
+build/
+Wiki/
