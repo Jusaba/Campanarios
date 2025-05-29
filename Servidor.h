@@ -3,129 +3,81 @@
     #include <WiFi.h>
     #include <AsyncTCP.h>
     #include <ESPAsyncWebServer.h>
+     #include <SPIFFS.h>
+
     
     
     #define DEBUGSERVIDOR
 
-
-    const char* PARAM_INPUT_1 = "output";
-    const char* PARAM_INPUT_2 = "state";
+    //AsyncWebSocket ws;                                                     // WebSocket  
+    int nSecuencia = 0;                                                    // Variable para almacenar la secuencia de botones pulsados
 
     const int Rele0 = 26;
     const int Rele1 = 27;
     const int Rele2 = 25;
 
-
-    const char index_html[] PROGMEM = R"rawliteral(
-        <!DOCTYPE HTML><html>
-        <head>
-          <title>ESP Web Server</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <link rel="icon" href="data:,">
-          <style>
-            html {font-family: Arial; display: inline-block; text-align: center;}
-            h2 {font-size: 3.0rem;}
-            p {font-size: 3.0rem;}
-            body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
-            .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
-            .switch input {display: none}
-            .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 6px}
-            .slider:before {position: absolute; content: ""; height: 52px; width: 52px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 3px}
-            input:checked+.slider {background-color: #b30000}
-            input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
-          </style>
-        </head>
-        <body>
-          <h2>Campanario</h2>
-          %BUTTONPLACEHOLDER%
-        <script>function toggleCheckbox(element) {
-          var xhr = new XMLHttpRequest();
-          if(element.checked){ xhr.open("GET", "/update?output="+element.id+"&state=1", true); }
-          else { xhr.open("GET", "/update?output="+element.id+"&state=0", true); }
-          xhr.send();
-        }
-        </script>
-        </body>
-        </html>
-        )rawliteral";
-
+    AsyncWebSocket ws("/ws");
     AsyncWebServer server(80);
     WiFiClient client;
 
 
     void ServidorOn(void);
-    String ProcesaBotones(const String& var);
-    String EstadoSalida(int output);
+    void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+    void listSPIFFS(void);
+    void printFileContent(const char* filename);
+    void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len);
 
-    /**
-     * @brief Devuelve el estado de un pin de salida en formato de texto.
-     * 
-     * Esta función verifica el estado de un pin de salida digital especificado
-     * y retorna "checked" si el pin está en estado alto (HIGH), o una cadena vacía ("")
-     * si el pin está en estado bajo (LOW).
-     * 
-     * @param output El número del pin de salida digital que se desea verificar.
-     * @return String "checked" si el pin está en estado alto, o una cadena vacía ("") si está en estado bajo.
-     */
-    String EstadoSalida(int output)
-    {
-        if(digitalRead(output)){
-          return "checked";
-        }
-        else {
-          return "";
-        }
-      }
 
-    /**
-     * @brief Genera un conjunto de botones HTML dinámicos basados en el estado de los relés.
-     * 
-     * Esta función procesa una variable de entrada y, si coincide con "BUTTONPLACEHOLDER",
-     * genera un conjunto de botones HTML con interruptores (switches) que representan 
-     * el estado de tres campanas (Campana 1, Campana 2, Campana 3). Cada botón incluye 
-     * un evento `onchange` que llama a la función JavaScript `toggleCheckbox` y utiliza 
-     * el estado actual de los relés (Rele0, Rele1, Rele2) para determinar si el interruptor 
-     * debe estar activado o desactivado.
-     * 
-     * @param var Una referencia constante a un objeto String que contiene la variable a procesar.
-     * @return Un objeto String que contiene el código HTML generado si `var` es "BUTTONPLACEHOLDER".
-     *         Si no, devuelve una cadena vacía.
-     */
-    String ProcesaBotones(const String& var)
-    {
-        if(var == "BUTTONPLACEHOLDER"){
-          String buttons = "";
-          buttons += "<h4>Campana 1</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"26\" " + EstadoSalida(Rele0) + "><span class=\"slider\"></span></label>";
-          buttons += "<h4>Campana 2</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"27\" " + EstadoSalida(Rele1) + "><span class=\"slider\"></span></label>";
-          buttons += "<h4>Campana 3</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"25\" " + EstadoSalida(Rele2) + "><span class=\"slider\"></span></label>";
-          return buttons;
-        }
-        return String();
-    }
     void ServidorOn(void)
     {
+        if(!SPIFFS.begin(true)){
+            #ifdef DEBUGSERVIDOR
+                Serial.println("ha ocurrido un error montando SPIFFS");
+            #endif    
+        }
+/*
+if (SPIFFS.format()) {
+    Serial.println("SPIFFS formateado correctamente.");
+} else {
+    Serial.println("Error al formatear SPIFFS.");
+}                
+*/        
+//        listSPIFFS(); // Lista los archivos en SPIFFS al iniciar el servidor
+//        printFileContent("/index.html"); // Imprime el contenido del archivo index.html al iniciar el servidor  
+//        printFileContent("/Campanas.js"); // Imprime el contenido del archivo Misa.js al iniciar el servidor
+//        printFileContent ("/Campanario.js)"); // Imprime el contenido del archivo Campanario.js al iniciar el servidor
+
+        ws.onEvent(onEvent);
+        server.addHandler(&ws);
+
         server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-            request->send_P(200, "text/html", index_html, ProcesaBotones);
+            request->send(SPIFFS, "/index.html", "text/html");
+            nSecuencia = 0; // Resetea la secuencia a 0 al cargar la página principal
         });
-        server.on("/update", HTTP_GET, [] (AsyncWebServerRequest *request) {
-            String Mensaje1;
-            String Mensaje2;
-            // GET input1 value on <ESP_IP>/update?output=<Mensaje1>&state=<Mensaje2>
-            if (request->hasParam(PARAM_INPUT_1) && request->hasParam(PARAM_INPUT_2)) {
-              Mensaje1 = request->getParam(PARAM_INPUT_1)->value();
-              Mensaje2 = request->getParam(PARAM_INPUT_2)->value();
-              digitalWrite(Mensaje1.toInt(), Mensaje2.toInt());
+        /*
+        server.on("/Misa", HTTP_GET, [](AsyncWebServerRequest *request){
+            request->send(SPIFFS, "/index.html", "text/html");
+            nSecuencia = 3; // Establece la secuencia a 3 para tocar misa
+        });
+        server.on("/Fiesta", HTTP_GET, [](AsyncWebServerRequest *request){
+            request->send(SPIFFS, "/index.html", "text/html");
+            nSecuencia = 2; // Establece la secuencia a 2 para tocar fiesta
+        });
+        server.on("/Difuntos", HTTP_GET, [](AsyncWebServerRequest *request){
+            request->send(SPIFFS, "/index.html", "text/html");
+            nSecuencia = 1; // Establece la secuencia a 1 para tocar difuntos
+    
+        });
+        server.on("/command", HTTP_GET, [](AsyncWebServerRequest *request){
+            if (request->hasParam("value")) {
+                String value = request->getParam("value")->value();
+                Serial.println("Comando recibido: " + value);
+                request->send(200, "text/plain", "ok"); // <-- Responde con "ok"
             }
-            else {
-              Mensaje1 = "No message sent";
-              Mensaje2 = "No message sent";
-            }
-            Serial.print("GPIO: ");
-            Serial.print(Mensaje1);
-            Serial.print(" - Set to: ");
-            Serial.println(Mensaje2);
-            request->send(200, "text/plain", "OK");
-          });
+
+        });
+        */
+        server.serveStatic("/", SPIFFS, "/");
         // Iniciar el servidor
         server.begin();
         #ifdef DEBUGSERVIDOR
@@ -133,8 +85,134 @@
             Serial.println("Servidor HTTP iniciado. Esperando conexiones...");
         #endif
     }
-    
-     
-   
+
+
+    /**
+ * @brief Manejador de eventos del WebSocket.
+ * 
+ * Esta función estática actúa como callback para los eventos del WebSocket.
+ * Redirige los eventos al manejador de eventos de la instancia (_Eventos)
+ * si existe una instancia válida.
+ * 
+ * @param server Puntero al servidor WebSocket
+ * @param client Puntero al cliente WebSocket que generó el evento
+ * @param type Tipo de evento WebSocket recibido
+ * @param arg Argumentos adicionales del evento
+ * @param data Datos recibidos en el evento
+ * @param len Longitud de los datos recibidos
+ */
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+ 
+    switch (type) {
+      case WS_EVT_CONNECT:
+          #ifdef DEBUGSERVIDOR
+            Serial.println(" ");
+            Serial.print("OnEvent->WS_EVT_CONNECT: ");
+            Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+            Serial.println(" ");
+          #endif
+        break;
+      case WS_EVT_DISCONNECT:
+        #ifdef DEBUGSERVIDOR
+          Serial.println(" ");
+          Serial.print("OnEvent->WS_EVT_DISCONNECT: ");
+          Serial.printf("WebSocket client #%u disconnected\n", client->id());
+          Serial.println(" ");
+        #endif      
+        break;
+      case WS_EVT_DATA:
+        #ifdef DEBUGSERVIDOR
+          Serial.println(" ");
+          Serial.print("OnEvent->WS_EVT_DATA: ");
+          Serial.printf("Message received: %s\n", (char*)data);
+          Serial.println(" ");
+        #endif
+        procesaMensajeWebSocket(arg, data, len);
+        break;
+      case WS_EVT_PONG:
+      case WS_EVT_ERROR:
+        break;
+    }
+  
+}
+
+    void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len)
+    {
+        String mensaje = String((const char*)data).substring(0, len);
+        #ifdef DEBUGSERVIDOR
+          Serial.println(" ");
+          Serial.printf("procesaMensajeWebSocket -> Mensaje recibido: %s\n", mensaje);
+          Serial.println(" ");
+        #endif
+        //switch para procesar el mensaje recibido
+        if (mensaje == "Difuntos") {
+            nSecuencia = 1; // Establece la secuencia a 1 para tocar difuntos
+            #ifdef DEBUGSERVIDOR
+              Serial.println("Procesando mensaje: TocaDifuntos");
+            #endif
+        } else if (mensaje == "Fiesta") {
+            nSecuencia = 2; // Establece la secuencia a 2 para tocar fiesta
+            #ifdef DEBUGSERVIDOR
+              Serial.println("Procesando mensaje: TocaFiesta");
+            #endif
+        } else if (mensaje == "Misa") {
+            nSecuencia = 3; // Establece la secuencia a 3 para tocar misa
+            #ifdef DEBUGSERVIDOR
+              Serial.println("Procesando mensaje: TocaMisa");
+            #endif
+        } else {
+            nSecuencia = 0; // Resetea la secuencia si el mensaje no es reconocido
+            #ifdef DEBUGSERVIDOR
+              Serial.println("Mensaje no reconocido, reseteando secuencia.");
+            #endif
+        }
+
+        ws.textAll("Hola caracola"); // Enviar los datos a todos los clientes
+    }    
+
+    void listSPIFFS() {
+    /*
+    if (!SPIFFS.begin(true)) { // Montar el sistema de archivos SPIFFS
+        Serial.println("Error al montar SPIFFS");
+        return;
+    }
+    */
+    Serial.println("Archivos en SPIFFS:");
+    File root = SPIFFS.open("/");
+    File file = root.openNextFile();
+
+    while (file) {
+        Serial.print("Nombre: ");
+        Serial.println(file.name());
+        Serial.print("Tamaño: ");
+        Serial.println(file.size());
+        file = root.openNextFile(); // Abrir el siguiente archivo
+    }
+
+    //SPIFFS.end(); // Desmontar SPIFFS
+}  
+
+void printFileContent(const char* filename) {
+  /*
+  if (!SPIFFS.begin(true)) { // Montar el sistema de archivos SPIFFS
+      Serial.println("Error al montar SPIFFS");
+      return;
+  }
+  */
+  File file = SPIFFS.open(filename, "r"); // Abrir el archivo en modo lectura
+  if (!file) {
+      Serial.printf("Error al abrir el archivo: %s\n", filename);
+      return;
+  }
+
+  Serial.printf("Contenido del archivo %s:\n", filename);
+  while (file.available()) {
+      String line = file.readStringUntil('\n'); // Leer línea por línea
+      Serial.println(line); // Imprimir la línea en el monitor serie
+  }
+
+  file.close(); // Cerrar el archivo
+  //SPIFFS.end(); // Desmontar SPIFFS
+}
 
 #endif

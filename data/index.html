@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Campanario</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="Campanas.js"></script>
+        Campanario
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f4f9;
+            }
+            .topnav {
+                background-color: #333;
+                color: white;
+                padding: 10px 0;
+            }
+            .topnav h1 {
+                margin: 0;
+            }
+            .content {
+                padding: 20px;
+            }
+            .button-grid {
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+                margin-top: 20px;
+            }
+            .button {
+                padding: 15px 30px;
+                font-size: 18px;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+            .button.Misa {
+                background-color: #059e8a;
+            }
+            .button.Fiesta {
+                background-color: #f39c12;
+            }
+            .button.Difuntos {
+                background-color: #e74c3c;
+            }
+            .button:hover {
+                opacity: 0.8;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="topnav">
+            <h1>Campanario</h1>
+        </div>
+        <div class="content">
+            <div class="button-grid">
+                <button class="button Misa" onclick="SelMisa()">Misa</button>
+                <button class="button Fiesta" onclick="SelFiesta()">Fiesta</button>
+                <button class="button Difuntos" onclick="SelDifuntos()">Difuntos</button>
+            </div>
+        </div>
+        <script>
+           function SelMisa() {
+                // Redirige a la misma página con el marcador /Datos
+                //window.location.href = '/Misa';
+                //sendCommand('Misa');
+                websocket.send("Misa");
+            }
+            function SelFiesta() {
+                // Redirige a la misma página con el marcador /Datos
+                //window.location.href = '/Fiesta';
+                //sendCommand('Fiesta');
+                websocket.send("Fiesta");
+            }
+            function SelDifuntos() {
+                // Redirige a la misma página con el marcador /Datos
+                //window.location.href = '/Difuntos';
+                //sendCommand('Difuntos');
+                 websocket.send("Difuntos");
+            }
+              
+            function sendCommand(command) {
+                fetch(`/command?value=${command}`)
+                    .then(response => {
+                        if (response.ok) {
+                            console.log(`Command ${command} sent successfully.`);
+                        } else {
+                            console.error(`Failed to send command ${command}.`);
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+        </script>
+        
+    </body>
+</html>

@@ -1,0 +1,25 @@
+#include "DNSServicio.h"
+#include "Servidor.h"
+#include "Campana.h"
+#include "RTC.h"
+
+#define DEBUG
+
+#define PinCampana1 26 // Definición del pin para la campana 1
+#define PinCampana2 27 // Definición del pin para la campana 2
+
+
+CAMPANA Campana1(PinCampana1); // Instancia de la clase CAMPANA para la campana 0
+CAMPANA Campana2(PinCampana2); // Instancia de la clase CAMPANA para la campana 1
+
+void setup() {
+  dalay(4000); // Espera de 4 segundos antes de iniciar
+  Serial.begin(9600);
+  Serial.println("Iniciando Campanarios...");
+
+}
+
+void loop() {
+
+
+}
