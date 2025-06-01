@@ -13,9 +13,7 @@
                 CAMPANA(int nPin );                                         //!< Constructor con pin 
                 ~CAMPANA();
                 void Toca (void);
-                void Repique (int nRepeticiones, long nTiempoEntreToques);  //!< Repite el toque de la campana durante un tiempo determinado
-        
-            private:
+           private:
 
                 int _nPin;                                                  //!< Pin de la campana    
         };

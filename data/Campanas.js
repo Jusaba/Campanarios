@@ -56,6 +56,18 @@ function onCloseDatos(event) {
 function onMessageDatos(event) {
 
     console.log("Mensaje recibido en pagina Datos: " + event.data);
+console.log("Mensaje recibido: " + event.data);
+console.log(event.data.startsWith("REDIRECT:"))
+
+if (event.data.startsWith("REDIRECT:")) {
+        var url = event.data.substring(9);
+        console.log("Redirigiendo a: " + url);
+        window.location.href = url;
+    }
+if (event.data.startsWith("CAMPANA:")) {
+    let idx = parseInt(event.data.split(":")[1]);
+    window.activarCampana(idx);
+}
 /*
     try {
         var myObj = JSON.parse(event.data);

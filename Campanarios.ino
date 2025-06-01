@@ -41,15 +41,21 @@ void setup() {
 
 void loop() {
   
-  if (nSecuencia == 1) {                              // Si la secuencia es 1, toca la campana 1
-    Campanario.TocaDifuntos();                        // Llama a la función para tocar la secuencia de difuntos
-    nSecuencia = 0;                                   // Resetea la secuencia a 0
-  } else if (nSecuencia == 2) {                       // Si la secuencia es 2, toca la campana 2
-    Campanario.TocaFiesta();                          // Llama a la función para tocar la secuencia de fiesta
-    nSecuencia = 0;                                   // Resetea la secuencia a 0
-  } else if (nSecuencia == 3) {                       // Si la secuencia es 3, toca ambas campanas
-    //Campanario.TocaMisa();                            // Llama a la función para tocar la secuencia de misa
-    nSecuencia = 0;                                   // Resetea la secuencia a 0
+  switch (nToque)
+  {
+    case 1:
+      Campanario.TocaDifuntos();                        // Llama a la función para tocar la secuencia de difuntos
+      nToque = 0;                                   // Resetea la secuencia a 0
+      break;
+    case 2:
+      Campanario.TocaFiesta();                          // Llama a la función para tocar la secuencia de fiesta
+      nToque=0;                                   // Resetea la secuencia a 0
+      break;
+    case 3:
+      //Campanario.TocaMisa();
+      nToque = 0;                                   // Resetea la secuencia a 0
+    default:
+      break;
   }
-
+  Campanario.ActualizarSecuenciaCampanadas();
 }

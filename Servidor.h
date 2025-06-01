@@ -10,7 +10,7 @@
     #define DEBUGSERVIDOR
 
     //AsyncWebSocket ws;                                                     // WebSocket  
-    int nSecuencia = 0;                                                    // Variable para almacenar la secuencia de botones pulsados
+    int nToque = 0;                                                    // Variable para almacenar la secuencia de botones pulsados
 
     const int Rele0 = 26;
     const int Rele1 = 27;
@@ -52,31 +52,11 @@ if (SPIFFS.format()) {
 
         server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
             request->send(SPIFFS, "/index.html", "text/html");
-            nSecuencia = 0; // Resetea la secuencia a 0 al cargar la página principal
+            nToque = 0; // Resetea la secuencia a 0 al cargar la página principal
         });
-        /*
-        server.on("/Misa", HTTP_GET, [](AsyncWebServerRequest *request){
-            request->send(SPIFFS, "/index.html", "text/html");
-            nSecuencia = 3; // Establece la secuencia a 3 para tocar misa
+        server.on("/Campanas.html", HTTP_GET, [](AsyncWebServerRequest *request){
+            request->send(SPIFFS, "/Campanas.html", "text/html");
         });
-        server.on("/Fiesta", HTTP_GET, [](AsyncWebServerRequest *request){
-            request->send(SPIFFS, "/index.html", "text/html");
-            nSecuencia = 2; // Establece la secuencia a 2 para tocar fiesta
-        });
-        server.on("/Difuntos", HTTP_GET, [](AsyncWebServerRequest *request){
-            request->send(SPIFFS, "/index.html", "text/html");
-            nSecuencia = 1; // Establece la secuencia a 1 para tocar difuntos
-    
-        });
-        server.on("/command", HTTP_GET, [](AsyncWebServerRequest *request){
-            if (request->hasParam("value")) {
-                String value = request->getParam("value")->value();
-                Serial.println("Comando recibido: " + value);
-                request->send(200, "text/plain", "ok"); // <-- Responde con "ok"
-            }
-
-        });
-        */
         server.serveStatic("/", SPIFFS, "/");
         // Iniciar el servidor
         server.begin();
@@ -146,28 +126,30 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
         #endif
         //switch para procesar el mensaje recibido
         if (mensaje == "Difuntos") {
-            nSecuencia = 1; // Establece la secuencia a 1 para tocar difuntos
+            nToque = 1; // Establece la secuencia a 1 para tocar difuntos
+            ws.textAll("REDIRECT:/Campanas.html"); // Indica a los clientes que deben redirigir
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: TocaDifuntos");
             #endif
         } else if (mensaje == "Fiesta") {
-            nSecuencia = 2; // Establece la secuencia a 2 para tocar fiesta
+            nToque = 2; // Establece la secuencia a 2 para tocar fiesta
+            ws.textAll("REDIRECT:/Campanas.html"); // Indica a los clientes que deben redirigir
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: TocaFiesta");
             #endif
         } else if (mensaje == "Misa") {
-            nSecuencia = 3; // Establece la secuencia a 3 para tocar misa
+            nToque = 3; // Establece la secuencia a 3 para tocar misa
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: TocaMisa");
             #endif
         } else {
-            nSecuencia = 0; // Resetea la secuencia si el mensaje no es reconocido
+            nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             #ifdef DEBUGSERVIDOR
               Serial.println("Mensaje no reconocido, reseteando secuencia.");
             #endif
         }
 
-        ws.textAll("Hola caracola"); // Enviar los datos a todos los clientes
+       // ws.textAll("Hola caracola"); // Enviar los datos a todos los clientes
     }    
 
     void listSPIFFS() {

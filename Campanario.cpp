@@ -26,8 +26,8 @@ CAMPANARIO::CAMPANARIO() {
  * @param pCampana Puntero a la instancia de CAMPANA que se desea añadir al campanario
  */ 
 void CAMPANARIO::AddCampana(CAMPANA* pCampana) {
-    if (_nNumCampanas < 5) {                    // Verifica que no se exceda el número máximo de campanas
-        _pCampanas[_nNumCampanas++] = pCampana; // Añade la campana al array y aumenta el contador
+    if (this->_nNumCampanas < 5) {                    // Verifica que no se exceda el número máximo de campanas
+        this->_pCampanas[_nNumCampanas++] = pCampana; // Añade la campana al array y aumenta el contador
     }
     else {
         #ifdef DEBUGCAMPANARIO
@@ -36,77 +36,81 @@ void CAMPANARIO::AddCampana(CAMPANA* pCampana) {
     }   
     
 }
-/**
- * @brief Toca la campana para difuntos
- * 
- * Este método hace tocar las campanas del campanario para el evento de difuntos.
- */
+
 void CAMPANARIO::TocaDifuntos(void) {
-   
+    
     #ifdef DEBUGCAMPANARIO
         Serial.println("Tocando campanas para difuntos...");
+        Serial.print ("numPasosDifuntos: ");
+        Serial.println(numPasosDifuntos);
     #endif
-    //Priemer paso de la secuencia de toques
-    Campana2->Repique(4, 1000);             // Hace que la segunda campana toque 4 veces con un intervalo de 1000 ms entre toques
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    Campana2->Repique(3, 1000);             // Hace que la segunda campana toque 4 veces con un intervalo de 1000 ms entre toques
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    Campana2->Repique(2, 1000);             // Hace que la segunda campana toque 4 veces con un intervalo de 1000 ms entre toques
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    Campana2->Repique(3, 1000);             // Hace que la segunda campana toque 4 veces con un intervalo de 1000 ms entre toques
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    //Segundo paso de la secuencia de toques
-    Campana2->Repique(4, 1000);             // Hace que la segunda campana toque 4 veces con un intervalo de 1000 ms entre toques
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    Campana2->Repique(3, 1000);             // Hace que la segunda campana toque 4 veces con un intervalo de 1000 ms entre toques
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    Campana2->Repique(2, 1000);             // Hace que la segunda campana toque 4 veces con un intervalo de 1000 ms entre toques
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    Campana2->Repique(3, 1000);             // Hace que la segunda campana toque 4 veces con un intervalo de 1000 ms entre toques
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    #ifdef DEBUGCAMPANARIO
-        Serial.println("Secuencia de difuntos completada.");
-    #endif
-
+    this->_GeneraraCampanadas(secuenciaDifuntos, numPasosDifuntos);
+    this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
 }
-/**
- * @brief Toca la secuencia de campanas para fiesta
- * 
- * Este método hace tocar las campanas del campanario para el evento de fiesta.
- */
 void CAMPANARIO::TocaFiesta(void) {
+    
     #ifdef DEBUGCAMPANARIO
         Serial.println("Tocando campanas para fiesta...");
+        Serial.print ("numPasosFiesta: ");
+        Serial.println(numPasosFiesta);
     #endif
-    int nRepeticiones = 12; 
-    while (nRepeticiones > 0) {          // Repite la secuencia hasta que nRepeticiones sea 0
-        this->_TocaSecuencia1_2_1000();  // Llama al método privado para tocar la secuencia de campanas
-        nRepeticiones--;                 // Decrementa el contador de repeticiones
-    }   
-    Campana1->Repique(2, 1000);          // Hace que la primera campana toque 2 veces con un intervalo de 1000 ms
-    nRepeticiones = 12;                  // Reinicia el contador de repeticiones
-    while (nRepeticiones > 0) {          // Repite la secuencia hasta que nRepeticiones sea 0
-        this->_TocaSecuencia1_2_1000();  // Llama al método privado para tocar la secuencia de campanas
-        nRepeticiones--;                 // Decrementa el contador de repeticiones
+    this->_GeneraraCampanadas(secuenciaFiesta, numPasosFiesta);
+    this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
+}
+void CAMPANARIO::_GeneraraCampanadas(const PasoSecuencia* secuencia, int numPasos) {
+    int idx = 0;
+    this->_LimpiaraCampanadas(); // Limpia las campanadas antes de generar nuevas
+    for (int i = 0; i < numPasos; ++i) {
+        for (int r = 0; r < secuencia[i].repeticiones; ++r) {
+            this->_aCampanadas[idx].indiceCampana = secuencia[i].indiceCampana;
+            this->_aCampanadas[idx].intervaloMs = secuencia[i].intervaloMs;
+            idx++;
+        }
     }
-    Campana1->Repique(7, 1000);          // Hace que la primera campana toque 2 veces con un intervalo de 1000 ms
-    nRepeticiones = 6;                   // Reinicia el contador de repeticiones
-    while (nRepeticiones > 0) {          // Repite la secuencia hasta que nRepeticiones sea 0
-        this->_TocaSecuencia1_2_1000();  // Llama al método privado para tocar la secuencia de campanas
-        nRepeticiones--;                 // Decrementa el contador de repeticiones
-    }
-    Campana1->Repique(1, 1000);          // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-
+    this->_nCampanadas = idx;
     #ifdef DEBUGCAMPANARIO
-        Serial.println("Secuencia de fiesta completada.");
+        Serial.println("Campanadas generadas:");
+        Serial.print ("Numero de campanadas: ");
+        Serial.println(this->_nCampanadas);
+    #endif
+
+}
+void CAMPANARIO::_LimpiaraCampanadas(void) {
+    #ifdef DEBUGCAMPANARIO
+        Serial.println("Limpiando campanadas...");
+    #endif
+    this->_nCampanadas = 0; // Resetea el contador de campanadas
+    for (int i = 0; i < 200; ++i) {
+        this->_aCampanadas[i].indiceCampana = -1; // Resetea el índice de la campana
+        this->_aCampanadas[i].intervaloMs = 0; // Resetea el intervalo en milisegundos
+    }
+    #ifdef DEBUGCAMPANARIO
+        Serial.println("Campanadas limpiadas.");
     #endif
 }
-/**
- * @brief Toca la secuencia de campanas 1 y 2 con un intervalo de 1000 ms
- * 
- */
 
- void CAMPANARIO::_TocaSecuencia1_2_1000 (void) {
-    Campana1->Repique(1, 1000);             // Hace que la primera campana toque 1 vez con un intervalo de 1000 ms
-    Campana2->Repique(1, 1000);             // Hace que la segunda campana toque 1 vez con un intervalo de 1000 ms
- }
+void CAMPANARIO::IniciarSecuenciaCampanadas() {
+    this->_indiceCampanadaActual = 0;
+    this->_ultimoToqueMs = 0;
+    this->_tocandoSecuencia = (_nCampanadas > 0);
+}
+
+void CAMPANARIO::ActualizarSecuenciaCampanadas() {
+    if (!this->_tocandoSecuencia || this->_indiceCampanadaActual >= this->_nCampanadas) return;
+
+    unsigned long ahora = millis();
+    if (_ultimoToqueMs == 0 || (ahora - this->_ultimoToqueMs) >= this->_aCampanadas[this->_indiceCampanadaActual].intervaloMs) {
+        int idxCampana = this->_aCampanadas[this->_indiceCampanadaActual].indiceCampana;
+        if (idxCampana >= 0 && idxCampana < this->_nNumCampanas) {
+            this->_pCampanas[idxCampana]->Toca();
+        }
+        this->_ultimoToqueMs = ahora;
+        this->_indiceCampanadaActual++;
+        if (this->_indiceCampanadaActual >= this->_nCampanadas) {
+            this->_tocandoSecuencia = false;
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("Secuencia de campanadas finalizada.");
+            #endif
+        }
+    }
+}

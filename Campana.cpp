@@ -35,21 +35,5 @@ void CAMPANA::Toca(void) {
     digitalWrite(this->_nPin, HIGH);                                // Activar el pin de la campana
     delay(TiempoBadajoOn);                                          // Mantenerlo activo durante 1 segundo
     digitalWrite(this->_nPin, LOW);                                 // Desactivar el pin de la campana
-}
-/**
- * @brief Realiza un repique de la campana con múltiples toques
- * 
- * Este método ejecuta una secuencia de toques de campana con un intervalo de tiempo especificado
- * entre cada toque. La campana se activará el número de veces indicado.
- * 
- * @param nRepeticiones Número de veces que sonará la campana
- * @param nTiempoEntreToques Tiempo en milisegundos entre cada toque de campana
- * 
- * @note Este método utiliza la función delay() que bloquea la ejecución durante el tiempo especificado
- */
-void CAMPANA::Repique(int nRepeticiones, long nTiempoEntreToques) {
-    for (int i = 0; i < nRepeticiones; i++) {                       // Repite el toque de la campana
-        this->Toca();                                               // Llama al método Toca para activar la campana
-        delay(nTiempoEntreToques);                                 // Espera el tiempo especificado entre toques
-    }
+Serial.println("Dong");
 }

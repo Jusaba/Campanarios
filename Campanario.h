@@ -7,10 +7,57 @@
 
     #define MAX_CAMPANAS 2                                              //!< Número máximo de campanas en el campanario
 
-    #define Campana1 _pCampanas[0]                                       //!< Puntero a la primera campana del campanario
-    #define Campana2 _pCampanas[1]                                       //!< Puntero a la segunda campana del campanario
+    struct PasoSecuencia {
+        int indiceCampana;
+        int repeticiones;
+        int intervaloMs;
+    };
 
+    struct ToquePlano {
+        int indiceCampana;
+        int intervaloMs;
+    };
 
+    const PasoSecuencia secuenciaDifuntos[] PROGMEM = {
+        {1, 4, 1000},
+        {0, 1, 1000},
+        {1, 3, 1000},
+        {0, 1, 1000},
+        {1, 2, 1000},
+        {0, 1, 1000},
+        {1, 3, 1000},
+        {0, 1, 1000},
+        {1, 4, 1000},
+        {0, 1, 1000},
+        {1, 3, 1000},
+        {0, 1, 1000},
+        {1, 2, 1000},
+        {0, 1, 1000},
+        {1, 3, 1000},
+        {0, 1, 1000},
+        {1, 4, 1000},
+        {0, 1, 1000},
+        {1, 3, 1000},
+        {0, 1, 1000},
+        {1, 2, 1000},
+        {0, 1, 1000},
+        {1, 3, 1000},
+        {0, 1, 1000},
+        {1, 4, 1000},
+        {0, 1, 1000},
+        {1, 3, 1000},
+        {0, 1, 1000},
+        {1, 2, 1000},
+        {0, 1, 1000},
+        {1, 3, 1000},
+        {0, 1, 1000}
+    };
+    const int numPasosDifuntos = sizeof(secuenciaDifuntos) / sizeof(PasoSecuencia);
+    const PasoSecuencia secuenciaFiesta[] PROGMEM = {
+        {1, 4, 1000},
+        {0, 3, 1000}
+    };    
+    const int numPasosFiesta = sizeof(secuenciaFiesta) / sizeof(PasoSecuencia);
 
     class CAMPANARIO 
     {
@@ -20,16 +67,24 @@
             ~CAMPANARIO();
             void AddCampana (CAMPANA* pCampana);                        //!< Añade una campana al campanario
             void TocaDifuntos (void);
-            void TocaFiesta (void);                                     //!< Toca la secuencia de campanas para fiesta
-        
+            void TocaFiesta (void);
+            void IniciarSecuenciaCampanadas(void);
+            void ActualizarSecuenciaCampanadas(void);
         private:
 
             CAMPANA* _pCampanas[MAX_CAMPANAS];                          //!< Array de punteros a las campanas del campanario
             int _nNumCampanas = 0;                                      //!< Número de campanas en el campanario
+            
+            ToquePlano _aCampanadas[200];
+            int _nCampanadas = 0;
+            void _GeneraraCampanadas(const PasoSecuencia* secuencia, int numPasos);
+            void _LimpiaraCampanadas(void) ;
+    
+            int _indiceCampanadaActual = 0;
+            unsigned long _ultimoToqueMs = 0;
+            bool _tocandoSecuencia = false;
 
-            void _TocaSecuencia1_2_1000(void);                          //!< Toca la secuencia de campanas 1 y 2 con un intervalo de 1000 ms
-
-    };
+        };
 #endif
 
 

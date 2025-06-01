@@ -36,8 +36,10 @@
 #define DEBUGWIFI
 
 // Datos SSID y contraseña de la red Wi-Fi
-const char* ssid = "D_Wifi_jsb_rma";
-const char* password = "9732309093112";
+//const char* ssid = "D_Wifi_jsb_rma";
+//const char* password = "9732309093112";
+const char* ssid = "T_Wifi_jsb_rma";
+const char* password = "9776424223112";
 
 // Configuración de IP estática
 IPAddress local_IP(192, 168, 1, 173); 
