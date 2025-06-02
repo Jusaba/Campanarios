@@ -1,0 +1,94 @@
+
+
+## Resumen general del programa
+
+Tu proyecto controla un **campanario electrónico** con ESP32, capaz de tocar diferentes secuencias de campanas (difuntos, fiesta, misa, cuartos, horas) de forma automática o remota, usando WiFi y una interfaz web.  
+El sistema utiliza el RTC interno del ESP32 sincronizado por NTP, y permite la interacción en tiempo real mediante WebSocket.
+
+---
+
+## Contenido de cada fichero principal
+
+### **Campanarios.ino**
+- **Archivo principal del programa.**
+- Inicializa el hardware, crea las instancias de las campanas y las añade al campanario.
+- Configura la conexión WiFi y arranca el servidor web.
+- En el `loop()`, gestiona la lógica principal: chequea los cuartos y horas, procesa las órdenes recibidas y actualiza el estado de las campanas.
+
+---
+
+### **Campana.h / Campana.cpp**
+- **Define la clase `CAMPANA`.**
+- Gestiona el control individual de cada campana (pin, activación, animación del badajo).
+- Métodos para tocar la campana y actualizar su estado (idealmente de forma no bloqueante).
+
+---
+
+### **Campanario.h / Campanario.cpp**
+- **Define la clase `CAMPANARIO`.**
+- Gestiona el conjunto de campanas y las secuencias (difuntos, fiesta, misa, cuartos, horas).
+- Métodos para añadir campanas, iniciar y parar secuencias, y actualizar el estado general del campanario.
+
+---
+
+### **Servidor.h**
+- **Configura y gestiona el servidor web y WebSocket.**
+- Atiende las peticiones HTTP y WebSocket desde la interfaz web.
+- Procesa los comandos recibidos (por ejemplo, tocar secuencias o parar).
+- Envía mensajes a los clientes para actualizar la interfaz en tiempo real.
+
+---
+
+### **RTC.h**
+- **Clase utilitaria para la gestión del reloj en tiempo real (RTC) del ESP32.**
+- Sincroniza la hora con un servidor NTP.
+- Permite obtener la hora actual para controlar los cuartos y las horas.
+
+---
+
+### **Archivos web (data/index.html, data/Campanas.html, data/Campanas.js, etc.)**
+- **Interfaz web del usuario.**
+- Permite seleccionar y visualizar las secuencias de campanas.
+- Usa WebSocket para recibir en tiempo real el estado de las campanas y enviar comandos al ESP32.
+- Incluye animaciones visuales para simular el toque de las campanas.
+
+---
+
+### **Otros ficheros**
+- **DNSServicio.h, ConexionWifi.h, Auxiliar.h, etc.:**
+  - Utilidades para la conexión WiFi, DNS, y funciones auxiliares varias.
+
+---
+
+## **Funcionamiento general**
+1. El ESP32 se conecta a WiFi y sincroniza la hora.
+2. El usuario puede interactuar desde la web para lanzar secuencias o parar el campanario.
+3. El sistema toca automáticamente las campanas según la hora y los cuartos.
+4. Toda la lógica de control y comunicación es no bloqueante para mantener la respuesta en tiempo real.
+
+---
+
+INICIO
+  |
+  v
+setup()
+  |
+  |-- Inicializa Serial
+  |-- Crea objetos CAMPANA y los añade al CAMPANARIO
+  |-- Conecta a WiFi
+  |-- Inicia el servidor web y WebSocket
+  |
+  v
+loop()
+  |
+  |-- Chequea cuartos y horas (ChekearCuartos)
+  |-- Procesa órdenes remotas (nToque)
+  |     |-- Si nToque == 1: TocaDifuntos
+  |     |-- Si nToque == 2: TocaFiesta
+  |     |-- Si nToque == 3: TocaHora(6)
+  |     |-- Resetea nToque a 0 tras cada acción
+  |
+  |-- TestCampanadas (actualiza animación web)
+  |
+  v
+REPITE LOOP

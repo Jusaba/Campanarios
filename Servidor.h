@@ -5,7 +5,7 @@
     #include <ESPAsyncWebServer.h>
      #include <SPIFFS.h>
 
-    
+    #include "Campanario.h"
     
     #define DEBUGSERVIDOR
 
@@ -20,6 +20,7 @@
     AsyncWebServer server(80);
     WiFiClient client;
 
+    extern CAMPANARIO Campanario;
 
     void ServidorOn(void);
     void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
@@ -126,22 +127,30 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
         #endif
         //switch para procesar el mensaje recibido
         if (mensaje == "Difuntos") {
-            nToque = 1; // Establece la secuencia a 1 para tocar difuntos
-            ws.textAll("REDIRECT:/Campanas.html"); // Indica a los clientes que deben redirigir
+            nToque = 1;                               // Establece la secuencia a 1 para tocar difuntos
+            ws.textAll("REDIRECT:/Campanas.html");    // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: TocaDifuntos");
             #endif
         } else if (mensaje == "Fiesta") {
-            nToque = 2; // Establece la secuencia a 2 para tocar fiesta
-            ws.textAll("REDIRECT:/Campanas.html"); // Indica a los clientes que deben redirigir
+            nToque = 2;                               // Establece la secuencia a 2 para tocar fiesta
+            ws.textAll("REDIRECT:/Campanas.html");    // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: TocaFiesta");
             #endif
         } else if (mensaje == "Misa") {
             nToque = 3; // Establece la secuencia a 3 para tocar misa
-            #ifdef DEBUGSERVIDOR
+            ws.textAll("REDIRECT:/Campanas.html");    // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
+             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: TocaMisa");
             #endif
+        } else if (mensaje == "PARAR") {
+            nToque = 0; // Parada la secuencia de toques
+            Campanario.ParaSecuencia(); // Detiene la secuencia de campanadas
+            ws.textAll("REDIRECT:/index.html"); // Indica a los clientes que deben redirigir            
+            #ifdef DEBUGSERVIDOR
+              Serial.println("Procesando mensaje: Parar");
+            #endif            
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             #ifdef DEBUGSERVIDOR

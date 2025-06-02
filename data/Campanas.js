@@ -65,6 +65,7 @@ if (event.data.startsWith("REDIRECT:")) {
         window.location.href = url;
     }
 if (event.data.startsWith("CAMPANA:")) {
+    console.log ("Activando campaña con ID: " + event.data);
     let idx = parseInt(event.data.split(":")[1]);
     window.activarCampana(idx);
 }
@@ -88,3 +89,27 @@ if (event.data.startsWith("CAMPANA:")) {
     }        
 */
 }
+function activarCampana(num) {
+      // Desactiva todas
+      document.getElementById("campana0").classList.remove("activa");
+      document.getElementById("campana1").classList.remove("activa");
+      // Activa la correspondiente (números desde 1)
+      if (num === 1) {
+        document.getElementById("campana0").classList.add("activa");
+      } else if (num === 2) {
+        document.getElementById("campana1").classList.add("activa");
+      }
+      // Opcional: desactivar la animación después de un tiempo
+      setTimeout(() => {
+        document.getElementById("campana0").classList.remove("activa");
+        document.getElementById("campana1").classList.remove("activa");
+      }, 400); // 400 ms de animación
+    }
+
+    function pararSecuencia() {
+        if (window.confirm("¿Seguro que quieres parar la secuencia?")) {
+            if (typeof websocket !== "undefined" && websocket.readyState === 1) {
+                websocket.send("PARAR");
+            }
+        }
+    }

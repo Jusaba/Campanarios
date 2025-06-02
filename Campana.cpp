@@ -35,5 +35,4 @@ void CAMPANA::Toca(void) {
     digitalWrite(this->_nPin, HIGH);                                // Activar el pin de la campana
     delay(TiempoBadajoOn);                                          // Mantenerlo activo durante 1 segundo
     digitalWrite(this->_nPin, LOW);                                 // Desactivar el pin de la campana
-Serial.println("Dong");
 }
