@@ -1,6 +1,12 @@
 #include "RTC.h"
 
     #define DEBUGAUXILIAR
+    
+    #define I2C_SLAVE_ADDR 0x12
+    #define SDA_PIN 21
+    #define SCL_PIN 22
+    //#define SDA_PIN 6
+    //#define SCL_PIN 7
 
     CAMPANARIO Campanario;                              // Instancia del campanario 
     struct tm timeinfo;
@@ -8,10 +14,11 @@
     int ultimoMinuto = -1;                              // Variable para almacenar el último minuto detectado
     int nCampanaTocada = 0;                             // Variable para almacenar el número de campana tocada
 
+    volatile uint8_t secuenciaI2C = 0;
 
     void ChekearCuartos(void);                          // Función para chequear los cuartos y las horas y tocar las campanas correspondientes
     void TestCampanadas(void);                          // Función para temporizar las campnas y presentarlas en la pagina correspondiente  
-
+    void recibirSecuencia(int numBytes);                // Función para recibir la secuencia de campanas por I2C
     /**
      * @brief Verifica y gestiona las campanadas de horas y cuartos
      * 
@@ -33,7 +40,7 @@
                 int hora = timeinfo.tm_hour;
                 int minuto = timeinfo.tm_min;
                 // Detectar cambio de minuto
-                if (minuto != ultimoMinuto) {
+                if (minuto != ultimoMinuto) {               
                     ultimoMinuto = minuto;
                     if (minuto % 15 == 0) {
                         if (minuto == 0) {
@@ -103,3 +110,18 @@
             }
         }
     }
+
+    void recibirSecuencia(int numBytes) {
+        if (Wire.available()) {
+            secuenciaI2C = Wire.read();
+            Serial.println("Secuencia recibida por I2C: " + String(secuenciaI2C));
+        }
+    
+    }
+
+    void enviarEstadoI2C() {
+    // Por ejemplo, 0 = parado, 1 = secuencia activa
+        uint8_t estado = Campanario.GetEstadoSecuencia() ? 1 : 0;
+        Wire.write(estado);
+    }
+
