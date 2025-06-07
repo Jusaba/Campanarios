@@ -1,17 +1,13 @@
-#include <M5Dial.h>
+
 #include <Wire.h>
 
 #define I2C_SLAVE_ADDR 0x12
 
 void setup() {
-
-  auto cfg = M5.config();
-  M5Dial.begin(cfg, false, false);
-
-  Wire.begin();
-  Wire.setClock(50000);
-  Serial.begin(115200);
-
+  
+  Wire.begin(13, 15); // SDA = 13, SCL = 15
+  Wire.setClock(100000);
+  Serial.begin(9600);
 }
 
 void loop() {
