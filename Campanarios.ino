@@ -27,8 +27,11 @@ void setup() {
   CAMPANA* campana1 = new CAMPANA(PinCampana1); // Crea una nueva instancia de la clase CAMPANA para la campana 1
   CAMPANA* campana2 = new CAMPANA(PinCampana2); // Crea una nueva instancia de la clase CAMPANA para la campana 2 
 
+  CALEFACCION* calefaccion = new CALEFACCION(CalefaccionPin); // Crea una nueva instancia de la clase CALEFACCION 
+
   Campanario.AddCampana(campana1);              // Añade la campana 1 al campanario
   Campanario.AddCampana(campana2);              // Añade la campana 2 al campanario
+  Campanario.AddCalefaccion(calefaccion);       // Añade la calefacción al campanario
 
   #ifdef DEBUG
     Serial.println("Iniciando Campanario...");

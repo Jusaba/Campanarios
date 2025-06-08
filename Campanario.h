@@ -2,6 +2,7 @@
 	#define CAMPANARIO_H
 
     #include  "CAMPANA.h"
+    #include "Calefaccion.h"
 
     #define DEBUGCAMPANARIO
 
@@ -135,7 +136,11 @@
             void ParaSecuencia(void);                                   //!< Detiene la secuencia de campanadas
             void TocaHora(int nHora);                                   //!< Toca la campana de la hora
             void TocaCuarto(int nCuarto);                               //!< Toca la campana del cuarto correspondiente
-            bool GetEstadoSecuencia (void);
+            bool GetEstadoSecuencia (void);                             //!< Devuelve el estado de la secuencia de campanadas (true si está activa, false si no lo está)
+            void AddCalefaccion(CALEFACCION* pCalefaccion);             //!< Añade la calefacción al campanario
+            void EnciendeCalefaccion(void);                             //!< Enciende la calefacción del campanario
+            void ApagaCalefaccion(void);                                //!< Apaga la calefacción del campanario
+            bool GetEstadoCalefaccion(void);                            //!< Devuelve el estado de la calefacción del campanario (true si está encendida, false si está apagada)
 
             private:
 
@@ -152,6 +157,9 @@
             bool _tocandoSecuencia = false;                             //!< Indica si se está tocando una secuencia de campanadas
 
             int _nCampanaTocada = 0;                                    //!< Número de campana tocada en la última secuencia
+            bool _lCalefaccion = false;                                 //!< Estado de la calefacción del campanario
+            
+            CALEFACCION* _pCalefaccion = nullptr;                       //!< Puntero a la calefacción del campanario
 
         };
 #endif

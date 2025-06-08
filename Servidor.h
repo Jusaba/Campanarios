@@ -150,7 +150,24 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
             ws.textAll("REDIRECT:/index.html"); // Indica a los clientes que deben redirigir            
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: Parar");
-            #endif            
+            #endif   
+        } else if (mensaje == "CALEFACCION_ON") {
+            Campanario.EnciendeCalefaccion(); // Enciende la calefacción
+            #ifdef DEBUGSERVIDOR
+              Serial.println("Procesando mensaje: Calefacción ON");
+            #endif
+        } else if (mensaje == "CALEFACCION_OFF") {
+            Campanario.ApagaCalefaccion(); // Apaga la calefacción
+            #ifdef DEBUGSERVIDOR
+              Serial.println("Procesando mensaje: Calefacción OFF");
+            #endif
+        } else if (mensaje == "GET_CALEFACCION") {
+            // Enviar el estado de la calefacción a todos los clientes conectados
+            String estadoCalefaccion = Campanario.GetEstadoCalefaccion() ? "ON" : "OFF";
+            ws.textAll("ESTADO_CALEFACCION:" + estadoCalefaccion);
+            #ifdef DEBUGSERVIDOR
+              Serial.printf("Estado de la calefacción enviado: %s\n", estadoCalefaccion.c_str());
+            #endif
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             #ifdef DEBUGSERVIDOR

@@ -320,3 +320,73 @@ void CAMPANARIO::TocaHora(int nHora) {
 bool CAMPANARIO::GetEstadoSecuencia() {
     return this->_tocandoSecuencia; // Retorna el estado de la secuencia de campanadas
 }
+
+/**
+ * @brief Añade una calefacción al campanario
+ * 
+ * 
+ * @param pCalefaccion Puntero a la instancia de CALEFACCION que se desea añadir al campanario
+ */ 
+void CAMPANARIO::AddCalefaccion (CALEFACCION* pCalefaccion) {
+    if (this->_pCalefaccion == nullptr) { // Verifica que no haya calefacción añadida
+        this->_pCalefaccion = pCalefaccion; // Asigna la calefacción al campanario
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Calefacción añadida al campanario.");
+        #endif
+    } else {
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Ya hay una calefacción añadida al campanario.");
+        #endif
+    }
+
+}
+/**
+ * @brief Obtiene el estado de la calefacción del campanario
+ * 
+ * @return true Si la calefacción está activada
+ * @return false Si la calefacción está desactivada
+ */
+bool CAMPANARIO::GetEstadoCalefaccion() {
+    if (this->_pCalefaccion != nullptr) {
+        return this->_pCalefaccion->GetEstado(); // Retorna el estado de la calefacción
+    } else {
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("No hay calefacción añadida al campanario.");
+        #endif
+        return false; // Si no hay calefacción, retorna false
+    }
+}
+/**
+ * @brief Enciende la calefacción del campanario
+ * 
+ * Si hay una calefacción añadida, la enciende. Si no, imprime un mensaje de error.
+ */
+void CAMPANARIO::EnciendeCalefaccion() {
+    if (this->_pCalefaccion != nullptr) {
+        this->_pCalefaccion->Enciende(); // Enciende la calefacción
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Calefacción encendida.");
+        #endif
+    } else {
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("No hay calefacción añadida al campanario.");
+        #endif
+    }
+}
+/**
+ * @brief Apaga la calefacción del campanario
+ * 
+ * Si hay una calefacción añadida, la apaga. Si no, imprime un mensaje de error.
+ */
+void CAMPANARIO::ApagaCalefaccion() {
+    if (this->_pCalefaccion != nullptr) {
+        this->_pCalefaccion->Apaga(); // Apaga la calefacción
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Calefacción apagada.");
+        #endif
+    } else {
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("No hay calefacción añadida al campanario.");
+        #endif
+    }
+}

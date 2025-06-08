@@ -6,6 +6,9 @@ window.addEventListener('load', onload);
 function onload(event) {
     console.log("Página cargada correctamente");
     initWebSocket();
+    if (typeof websocket !== "undefined") {
+        websocket.send("GET_CALEFACCION");
+    }    
 }
 
 /**
@@ -55,7 +58,7 @@ function onCloseDatos(event) {
  */
 function onMessageDatos(event) {
 
-    console.log("Mensaje recibido en pagina Datos: " + event.data);
+console.log("Mensaje recibido en pagina Datos: " + event.data);
 console.log("Mensaje recibido: " + event.data);
 console.log(event.data.startsWith("REDIRECT:"))
 
