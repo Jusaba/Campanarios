@@ -42,9 +42,6 @@
             .button.Misa {
                 background-color: #059e8a;
             }
-            .button.Fiesta {
-                background-color: #f39c12;
-            }
             .button.Difuntos {
                 background-color: #e74c3c;
             }
@@ -66,12 +63,11 @@
     </head>
     <body>
         <div class="topnav">
-            <h1>Campanario</h1>
+            <h1>Raimat</h1>
         </div>
         <div class="content">
             <div class="button-grid">
                 <button class="button Misa" onclick="SelMisa()">Misa</button>
-                <button class="button Fiesta" onclick="SelFiesta()">Fiesta</button>
                 <button class="button Difuntos" onclick="SelDifuntos()">Difuntos</button>
                 <button class="button Calefaccion" id="btnCalefaccion" onclick="toggleCalefaccion()">
                     <svg id="iconoCalefaccion" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="orange" stroke-width="2"
@@ -85,23 +81,11 @@
         </div>
 
         <script>
-           function SelMisa() {
-                // Redirige a la misma página con el marcador /Datos
-                //window.location.href = '/Misa';
-                //sendCommand('Misa');
+            function SelMisa() {
                 websocket.send("Misa");
             }
-            function SelFiesta() {
-                // Redirige a la misma página con el marcador /Datos
-                //window.location.href = '/Fiesta';
-                //sendCommand('Fiesta');
-                websocket.send("Fiesta");
-            }
             function SelDifuntos() {
-                // Redirige a la misma página con el marcador /Datos
-                //window.location.href = '/Difuntos';
-                //sendCommand('Difuntos');
-                 websocket.send("Difuntos");
+                websocket.send("Difuntos");
             }
               
             function sendCommand(command) {
@@ -116,16 +100,16 @@
                     .catch(error => console.error('Error:', error));
             }
 
-let calefaccionEncendida = false;
+            let calefaccionEncendida = false;
 
-function toggleCalefaccion() {
-    calefaccionEncendida = !calefaccionEncendida;
-    // Cambia el color del icono según el estado
-    document.getElementById("iconoCalefaccion").setAttribute("stroke", calefaccionEncendida ? "red" : "orange");
-    // Envía el comando por WebSocket o fetch
-    if (typeof websocket !== "undefined") {
-        websocket.send(calefaccionEncendida ? "CALEFACCION_ON" : "CALEFACCION_OFF");
-    }
+            function toggleCalefaccion() {
+                calefaccionEncendida = !calefaccionEncendida;
+                // Cambia el color del icono según el estado
+                document.getElementById("iconoCalefaccion").setAttribute("stroke", calefaccionEncendida ? "red" : "orange");
+                // Envía el comando por WebSocket o fetch
+                if (typeof websocket !== "undefined") {
+                    websocket.send(calefaccionEncendida ? "CALEFACCION_ON" : "CALEFACCION_OFF");
+                }
 }            
         </script>
         

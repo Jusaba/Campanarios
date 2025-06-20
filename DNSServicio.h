@@ -34,19 +34,19 @@
 
     const char* serverUrl1 = "http://serverpic.cloud:8001"; 
     const char* serverUrl2 = "http://serverpic.com:8001";
-    const char* username = "manolis";                               //Nombre del dominio deseado
+    //const char* username = "raimat";                             //Nombre del dominio deseado
     const char* userPassword = "JUSABA2408";      
 
     HTTPClient http1;
     HTTPClient http2;
 
-    void ActualizaDNS (void);
+    void ActualizaDNS (const char* cDominio);
 
-    void ActualizaDNS (void)
+    void ActualizaDNS (const char* cDominio)
     {
         // http al servidor DNS 1
         http1.begin(serverUrl1);
-        http1.setAuthorization(username, userPassword);
+        http1.setAuthorization(cDominio, userPassword);
         int httRespuesta = http1.GET();
         #ifdef DEBUGDNS
             if (httRespuesta > 0) {
@@ -63,7 +63,7 @@
         http1.end();
         // http al servidor DNS 2
         http2.begin(serverUrl2);
-        http2.setAuthorization(username, userPassword);
+        http2.setAuthorization(cDominio, userPassword);
         httRespuesta = http2.GET();
         #ifdef DEBUGDNS
             if (httRespuesta > 0) {

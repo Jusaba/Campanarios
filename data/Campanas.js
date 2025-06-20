@@ -1,13 +1,16 @@
 var gateway = `ws://${window.location.hostname}:8080/ws`;
 var websocket;
 
+let lCalefaccion = false;
+let lCampanas = false;
+
 window.addEventListener('load', onload);
 
 function onload(event) {
     console.log("Página cargada correctamente");
     initWebSocket();
     if (typeof websocket !== "undefined") {
-        websocket.send("GET_CALEFACCION");
+       
     }    
 }
 
@@ -34,7 +37,11 @@ function initWebSocket() {
  * @param {Event} event - El evento que dispara la función al abrir.
  */
 function onOpenDatos(event) {
+    const path = window.location.pathname;
     console.log("Conexión WebSocket abierta en Datos");
+    if ( path === "/" || path.endsWith("index.html") ) {
+        websocket.send("GET_CAMPANARIO");
+    }
 }
 
 /**
@@ -68,30 +75,45 @@ if (event.data.startsWith("REDIRECT:")) {
         window.location.href = url;
     }
 if (event.data.startsWith("CAMPANA:")) {
-    console.log ("Activando campaña con ID: " + event.data);
+    console.log ("Activando campana con ID: " + event.data);
     let idx = parseInt(event.data.split(":")[1]);
     window.activarCampana(idx);
 }
-/*
-    try {
-        var myObj = JSON.parse(event.data);
-        var keys = Object.keys(myObj);
-
-        const cardGrid = document.querySelector('.card-grid');
-        if (cardGrid.classList.contains('hidden')) {
-            cardGrid.classList.remove('hidden');
-            cardGrid.style.display = 'grid'; // Establecer explícitamente display: grid
-        }
-
-        for (var i = 0; i < keys.length; i++){
-            var key = keys[i];
-            document.getElementById(key).innerHTML = myObj[key];
-        }
-    } catch (error) {
-        console.error("Error al procesar el mensaje:", error);
-    }        
-*/
+if (event.data.startsWith("CALEFACCION:ON")) {
+    console.log ("Actualizando calefaccion: " + event.data);
+    lCalefaccion = true;
+    document.getElementById("iconoCalefaccion").setAttribute("stroke", "red" );
 }
+if (event.data.startsWith("CALEFACCION:OFF")) {
+    console.log ("Actualizando calefaccion: " + event.data);
+    lCalefaccion = false;
+    document.getElementById("iconoCalefaccion").setAttribute("stroke", "orange" );
+}
+if (event.data.startsWith("ESTADO_CAMPANARIO:")) {
+    console.log ("Comprobando estado de campanario: " + event.data);
+    let EstadoCampanario = parseInt(event.data.split(":")[1]);
+    if ((EstadoCampanario & 0x01) || (EstadoCampanario & 0x02)) {
+        lCampanas = true;
+        if (EstadoCampanario & 0x01) {
+           console.log("Difuntos")
+        } else {
+            console.log("Misa");
+        }
+        window.location.href = "/Campanas.html";
+    }else{
+        lCampanas = false;
+    }    
+    if (EstadoCampanario & 0x10) {
+        lCalefaccion =   true;
+        document.getElementById("iconoCalefaccion").setAttribute("stroke", "red" );
+    }else{
+        lCalefaccion = false;
+        document.getElementById("iconoCalefaccion").setAttribute("stroke", "orange" );
+    }
+}
+    
+}
+
 function activarCampana(num) {
       // Desactiva todas
       document.getElementById("campana0").classList.remove("activa");

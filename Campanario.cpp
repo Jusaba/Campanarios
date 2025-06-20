@@ -6,18 +6,19 @@
  * Este constructor inicializa una instancia de CAMPANARIO sin parámetros.
  * Actualmente no realiza ninguna operación específica de inicialización.
  */
-CAMPANARIO::CAMPANARIO() {
-    // Constructor por defecto
-}
+    CAMPANARIO::CAMPANARIO() {
+        // Constructor por defecto
+    }
 /**
  * @brief Destructor de la clase CAMPANARIO
  * 
  * Destructor por defecto que limpia los recursos utilizados por la instancia de CAMPANARIO
  * cuando esta es eliminada. Al ser el destructor por defecto, no realiza ninguna
  * operación específica de limpieza.
- */CAMPANARIO::~CAMPANARIO() {
-    // Destructor por defecto   
-}
+ */
+    CAMPANARIO::~CAMPANARIO() {
+        // Destructor por defecto   
+    }
 /**
  * @brief Añade una campana al campanario
  * 
@@ -25,17 +26,16 @@ CAMPANARIO::CAMPANARIO() {
  * 
  * @param pCampana Puntero a la instancia de CAMPANA que se desea añadir al campanario
  */ 
-void CAMPANARIO::AddCampana(CAMPANA* pCampana) {
-    if (this->_nNumCampanas < 5) {                    // Verifica que no se exceda el número máximo de campanas
-        this->_pCampanas[_nNumCampanas++] = pCampana; // Añade la campana al array y aumenta el contador
+    void CAMPANARIO::AddCampana(CAMPANA* pCampana) {
+        if (this->_nNumCampanas < MAX_CAMPANAS) {                    // Verifica que no se exceda el número máximo de campanas
+            this->_pCampanas[_nNumCampanas++] = pCampana;            // Añade la campana al array y aumenta el contador
+        }else {
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("No se pueden añadir más campanas al campanario.");
+            #endif
+        }   
+
     }
-    else {
-        #ifdef DEBUGCAMPANARIO
-            Serial.println("No se pueden añadir más campanas al campanario.");
-        #endif
-    }   
-    
-}
 
 /**
  * @brief Inicia la secuencia de campanadas para difuntos
@@ -50,47 +50,54 @@ void CAMPANARIO::AddCampana(CAMPANA* pCampana) {
  * 2. Genera la secuencia de campanadas usando el patrón para difuntos
  * 3. Inicia la ejecución de la secuencia
  * 
- * @note Esta función es parte de la clase CAMPANARIO y gestiona uno de los 
+ * @see _GeneraraCampanadas()
+ * @see IniciarSecuenciaCampanadas()
+ *
+ * @note Esta función es parte de la clase CAMPANARIO y gestiona uno de los
  * toques tradicionales de campanas
  */
-void CAMPANARIO::TocaDifuntos(void) {
-    
-    #ifdef DEBUGCAMPANARIO
-        Serial.println("Tocando campanas para difuntos...");
-        Serial.print ("numPasosDifuntos: ");
-        Serial.println(numPasosDifuntos);
-    #endif
-    this->_GeneraraCampanadas(secuenciaDifuntos, numPasosDifuntos);
-    this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
-}
+    void CAMPANARIO::TocaDifuntos(void) {
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Tocando campanas para difuntos...");
+            Serial.print ("numPasosDifuntos: ");
+            Serial.println(numPasosDifuntos);
+        #endif
+        this->_GeneraraCampanadas(secuenciaDifuntos, numPasosDifuntos);             // Genera la secuencia plana de campanadas para difuntos
+        this->IniciarSecuenciaCampanadas();                                         // Inicia la secuencia de toque de campanadas
+        this->_nEstadoCampanario |= BitDifuntos;                                    // Marca el estado del campanario como tocando difuntos
+    }
 
 /**
- * @brief Ejecuta la secuencia de campanadas para eventos festivos
+ * @brief Ejecuta la secuencia de campanadas para anunciar la misa
  * 
  * @details Genera y ejecuta una secuencia predefinida de campanadas utilizada para 
- * celebraciones y fiestas. Utiliza un patrón almacenado en secuenciaFiesta y 
- * el número de pasos definido en numPasosFiesta.
+ * anunciar la misa. Utiliza un patrón almacenado en secuenciaMisa y 
+ * el número de pasos definido en numPasosMisa.
  * 
  * Si está definido DEBUGCAMPANARIO, imprime información de depuración por el puerto serie.
  * 
- * @note Esta función primero genera la secuencia de campanadas y luego la inicia
+ * @note Esta función primero genera la secuencia plana de campanadas y luego la inicia
  * 
  * @see _GeneraraCampanadas()
  * @see IniciarSecuenciaCampanadas()
+ *
+ * @note Esta función es parte de la clase CAMPANARIO y gestiona uno de los 
+ * toques tradicionales de campanas
  */
-void CAMPANARIO::TocaFiesta(void) {
-    
-    #ifdef DEBUGCAMPANARIO
-        Serial.println("Tocando campanas para fiesta...");
-        Serial.print ("numPasosFiesta: ");
-        Serial.println(numPasosFiesta);
-    #endif
-    this->_GeneraraCampanadas(secuenciaFiesta, numPasosFiesta);
-    this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
-}
+    void CAMPANARIO::TocaMisa(void) {
+
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Tocando campanas para misa...");
+            Serial.print ("numPasosMisa: ");
+            Serial.println(numPasosMisa);
+        #endif
+        this->_GeneraraCampanadas(secuenciaMisa, numPasosMisa);
+        this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
+        this->_nEstadoCampanario |= BitMisa;
+    }
 
 /**
- * @brief Genera una secuencia de campanadas a partir de una secuencia de pasos definida
+ * @brief Genera una secuencia plana de campanadas a partir de una secuencia de pasos definida
  * 
  * @details Este método toma una secuencia de pasos y genera un array interno de campanadas
  * expandiendo las repeticiones especificadas en cada paso. Limpia cualquier secuencia
@@ -103,50 +110,50 @@ void CAMPANARIO::TocaFiesta(void) {
  * @note La función actualiza los miembros internos _aCampanadas y _nCampanadas
  * @note Si DEBUGCAMPANARIO está definido, imprime información de depuración por Serial
  */
-void CAMPANARIO::_GeneraraCampanadas(const PasoSecuencia* secuencia, int numPasos) {
-    int idx = 0;
-    this->_LimpiaraCampanadas(); // Limpia las campanadas antes de generar nuevas
-    for (int i = 0; i < numPasos; ++i) {
-        for (int r = 0; r < secuencia[i].repeticiones; ++r) {
-            this->_aCampanadas[idx].indiceCampana = secuencia[i].indiceCampana;
-            this->_aCampanadas[idx].intervaloMs = secuencia[i].intervaloMs;
-            idx++;
+    void CAMPANARIO::_GeneraraCampanadas(const PasoSecuencia* secuencia, int numPasos) {
+        int idx = 0;
+        this->_LimpiaraCampanadas(); // Limpia las campanadas antes de generar nuevas
+        for (int i = 0; i < numPasos; ++i) {
+            for (int r = 0; r < secuencia[i].repeticiones; ++r) {
+                this->_aCampanadas[idx].indiceCampana = secuencia[i].indiceCampana;
+                this->_aCampanadas[idx].intervaloMs = secuencia[i].intervaloMs;
+                idx++;
+            }
         }
-    }
-    this->_nCampanadas = idx;
-    #ifdef DEBUGCAMPANARIO
-        Serial.println("Campanadas generadas:");
-        Serial.print ("Numero de campanadas: ");
-        Serial.println(this->_nCampanadas);
-    #endif
+        this->_nCampanadas = idx;
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Campanadas generadas:");
+            Serial.print ("Numero de campanadas: ");
+            Serial.println(this->_nCampanadas);
+        #endif
 
-}
+    }
 
 /**
- * @brief Limpia el arreglo de campanadas y reinicia el contador.
+ * @brief Limpia el array de campanadas y reinicia el contador.
  * 
  * Esta función reinicia el estado de las campanadas:
  * - Pone a cero el contador de campanadas (_nCampanadas)
- * - Limpia el arreglo _aCampanadas, estableciendo valores por defecto:
+ * - Limpia el array _aCampanadas, estableciendo valores por defecto:
  *   - Índice de campana a -1
  *   - Intervalo a 0 ms
- * para todas las posiciones del arreglo (200 elementos)
+ * para todas las posiciones del array (200 elementos)
  * 
  * @note Función privada de la clase
  */
-void CAMPANARIO::_LimpiaraCampanadas(void) {
-    #ifdef DEBUGCAMPANARIO
-        Serial.println("Limpiando campanadas...");
-    #endif
-    this->_nCampanadas = 0; // Resetea el contador de campanadas
-    for (int i = 0; i < 200; ++i) {
-        this->_aCampanadas[i].indiceCampana = -1; // Resetea el índice de la campana
-        this->_aCampanadas[i].intervaloMs = 0; // Resetea el intervalo en milisegundos
+    void CAMPANARIO::_LimpiaraCampanadas(void) {
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Limpiando campanadas...");
+        #endif
+        this->_nCampanadas = 0; // Resetea el contador de campanadas
+        for (int i = 0; i < 200; ++i) {
+            this->_aCampanadas[i].indiceCampana = -1; // Resetea el índice de la campana
+            this->_aCampanadas[i].intervaloMs = 0; // Resetea el intervalo en milisegundos
+        }
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Campanadas limpiadas.");
+        #endif
     }
-    #ifdef DEBUGCAMPANARIO
-        Serial.println("Campanadas limpiadas.");
-    #endif
-}
 
 /**
  * @brief Inicia la secuencia de campanadas desde el principio
@@ -154,11 +161,11 @@ void CAMPANARIO::_LimpiaraCampanadas(void) {
  * Reinicia el contador de campanadas actual a 0, limpia el timestamp del último toque
  * y establece el estado de la secuencia como activo si hay campanadas pendientes.
  */
-void CAMPANARIO::IniciarSecuenciaCampanadas() {
-    this->_indiceCampanadaActual = 0;
-    this->_ultimoToqueMs = 0;
-    this->_tocandoSecuencia = (this->_nCampanadas > 0);
-}
+    void CAMPANARIO::IniciarSecuenciaCampanadas() {
+        this->_indiceCampanadaActual = 0;
+        this->_ultimoToqueMs = 0;
+        this->_tocandoSecuencia = (this->_nCampanadas > 0);
+    }
 
 /**
  * @brief Actualiza y ejecuta la secuencia de campanadas programada
@@ -183,37 +190,37 @@ void CAMPANARIO::IniciarSecuenciaCampanadas() {
  * @note Utiliza _tocandoSecuencia para controlar si hay una secuencia activa
  * @note Los índices de campana deben estar dentro del rango válido (0 a _nNumCampanas-1)
  */
-int CAMPANARIO::ActualizarSecuenciaCampanadas() {
-    if (!this->_tocandoSecuencia || this->_indiceCampanadaActual >= this->_nCampanadas) 
-    {
-        return 0;   // Si no se está tocando una secuencia o no hay campanadas, retorna 0   
-    }    
-    unsigned long ahora = millis();
-    if (this->_ultimoToqueMs == 0 || (ahora - this->_ultimoToqueMs) >= this->_aCampanadas[this->_indiceCampanadaActual].intervaloMs) {
-        int idxCampana = this->_aCampanadas[this->_indiceCampanadaActual].indiceCampana;
-        if (idxCampana >= 0 && idxCampana < this->_nNumCampanas) {
-            this->_pCampanas[idxCampana]->Toca();
-            this->_nCampanaTocada = 1 + idxCampana; // Actualiza el número de campana tocada ( el 1 es poruq e la campana 1 esta en un indice 0)
-            #ifdef DEBUGCAMPANARIO
-                Serial.print("Tocando campana: ");
-                Serial.println(this->_nCampanaTocada);
-            #endif
-        } else {
-            #ifdef DEBUGCAMPANARIO
-                Serial.println("Índice de campana fuera de rango.");
-            #endif
+    int CAMPANARIO::ActualizarSecuenciaCampanadas() {
+        if (!this->_tocandoSecuencia || this->_indiceCampanadaActual >= this->_nCampanadas)     // Si no se está tocando una secuencia o no hay campanadas, retorna 0   
+        {
+            return 0;   
+        }    
+        unsigned long ahora = millis();                                                         // Obtiene el tiempo actual en milisegundos
+        if (this->_ultimoToqueMs == 0 || (ahora - this->_ultimoToqueMs) >= this->_aCampanadas[this->_indiceCampanadaActual].intervaloMs) {  // Si es el primer toque o ha pasado el intervalo definido
+            int idxCampana = this->_aCampanadas[this->_indiceCampanadaActual].indiceCampana;                                                // Obtiene el índice de la campana a tocar
+            if (idxCampana >= 0 && idxCampana < this->_nNumCampanas) {                                                                      // Verifica que el índice de campana esté dentro del rango válido   
+                this->_pCampanas[idxCampana]->Toca();                                                                                       // Llama al método Toca de la campana correspondiente para hacerla sonar
+                this->_nCampanaTocada = 1 + idxCampana;                                                                                     // Actualiza el número de campanada tocada ( el 1 es poruq e la campana 1 esta en un indice 0)
+                #ifdef DEBUGCAMPANARIO
+                    Serial.print("Tocando campana: ");
+                    Serial.println(this->_nCampanaTocada);
+                #endif
+            } else {
+                #ifdef DEBUGCAMPANARIO
+                    Serial.println("Índice de campana fuera de rango.");
+                #endif
+            }
+            this->_ultimoToqueMs = ahora;                                                                                                   // Actualiza la marca de tiempo del último toque
+            this->_indiceCampanadaActual++;                                                                                                 // Incrementa el índice de la campanada actual    
+            if (this->_indiceCampanadaActual >= this->_nCampanadas) {                                                                       // Si se han tocado todas las campanadas de la secuencia plana
+                this->_tocandoSecuencia = false;                                                                                            // Marca la secuencia como no activa    
+                #ifdef DEBUGCAMPANARIO
+                    Serial.println("Secuencia de campanadas finalizada.");
+                #endif
+            }
         }
-        this->_ultimoToqueMs = ahora;
-        this->_indiceCampanadaActual++;
-        if (this->_indiceCampanadaActual >= this->_nCampanadas) {
-            this->_tocandoSecuencia = false;
-            #ifdef DEBUGCAMPANARIO
-                Serial.println("Secuencia de campanadas finalizada.");
-            #endif
-        }
+        return this->_nCampanaTocada;                                                                                                       // Retorna el número de campana tocada en la última secuencia
     }
-    return this->_nCampanaTocada; // Retorna el número de campana tocada en la última secuencia
-}
 
 /**
  * @brief Reinicia la variable que contiene la ultima campana tocada
@@ -221,12 +228,12 @@ int CAMPANARIO::ActualizarSecuenciaCampanadas() {
  * Si está definido DEBUGCAMPANARIO, imprime un mensaje de
  * confirmación por el puerto serie.
  */
-void CAMPANARIO::ResetCampanaTocada() {
-    this->_nCampanaTocada = 0; // Resetea el número de campana tocada
-    #ifdef DEBUGCAMPANARIO
-        Serial.println("Número de campana tocada reseteado.");
-    #endif
-}
+    void CAMPANARIO::ResetCampanaTocada() {
+        this->_nCampanaTocada = 0; // Resetea el número de campana tocada
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Número de campana tocada reseteado.");
+        #endif
+    }
 
 /**
  * @brief Detiene la ejecución de una secuencia de campanadas en curso
@@ -237,13 +244,14 @@ void CAMPANARIO::ResetCampanaTocada() {
  * 
  * @note Utiliza el flag interno _tocandoSecuencia para controlar el estado
  */
-void CAMPANARIO::ParaSecuencia() {
-    this->_tocandoSecuencia = false; // Detiene la secuencia de campanadas
-    this->_LimpiaraCampanadas(); // Limpia las campanadas
-    #ifdef DEBUGCAMPANARIO
-        Serial.println("Secuencia de campanadas detenida.");
-    #endif
-}
+    void CAMPANARIO::ParaSecuencia() {
+        this->_tocandoSecuencia = false;                                                                // Detiene la secuencia de campanadas
+        this->_LimpiaraCampanadas();                                                                    // Limpia las campanadas
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Secuencia de campanadas detenida.");
+        #endif
+        this->_nEstadoCampanario &= ~((BitCalefaccion - 1));                                            // Limpia los bits de estado del campanario relacionados con las campanadas                     
+    }
 
 /**
  * @brief Toca la campana para marcar los cuartos de hora
@@ -259,20 +267,21 @@ void CAMPANARIO::ParaSecuencia() {
  * @see _LimpiaraCampanadas()
  * @see IniciarSecuenciaCampanadas()
  */
-void CAMPANARIO::TocaCuarto(int nCuarto) {
-    this->_LimpiaraCampanadas();                        // Limpia las campanadas antes de tocar la hora
-    for (int i = 0; i < nCuarto; ++i) {
-        this->_aCampanadas[i].indiceCampana = 0;        // Toca la campana 1
-        this->_aCampanadas[i].intervaloMs = 1000;       // espaciado 1000 ms
+    void CAMPANARIO::TocaCuarto(int nCuarto) {
+        this->_LimpiaraCampanadas();                                                                    // Limpia las campanadas antes de tocar la hora
+        for (int i = 0; i < nCuarto; ++i) {                                                             // Itera sobre el número de cuartos a tocar                           
+            this->_aCampanadas[i].indiceCampana = 1;                                                    // Toca la campana 2
+            this->_aCampanadas[i].intervaloMs = 1000;                                                   // espaciado 1000 ms
+        }
+        this->_nCampanadas = nCuarto;                                                                   // Actualiza el número de campanadas a tocar
+        this->_nEstadoCampanario |= BitCuartos;                                                         // Actualiza el estado del campanario para indicar que se están tocando cuartos
+        this->IniciarSecuenciaCampanadas();                                                             // Inicia la secuencia de campanadas
+        #ifdef DEBUGCAMPANARIO
+            Serial.print("Tocando cuarto: ");
+            Serial.println(nCuarto);    
+        #endif
     }
-    this->_nCampanadas = nCuarto; // Actualiza el número de campanadas a tocar
-    this->IniciarSecuenciaCampanadas();                 // Inicia la secuencia de campanadas
-    #ifdef DEBUGCAMPANARIO
-        Serial.print("Tocando cuarto: ");
-        Serial.println(nCuarto);    
-    #endif
-}
-
+//============================================================================================
 /**
  * @brief Genera la secuencia de campanadas para marcar una hora específica.
  * 
@@ -294,16 +303,17 @@ void CAMPANARIO::TocaCuarto(int nCuarto) {
 void CAMPANARIO::TocaHora(int nHora) {
     this->_LimpiaraCampanadas(); // Limpia las campanadas antes de tocar la hora
     for (int i = 0; i < 4; ++i) {
-        this->_aCampanadas[i].indiceCampana = 0;        // Toca la campana 1 los cuatro cuartos
+        this->_aCampanadas[i].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
         this->_aCampanadas[i].intervaloMs = 1000;       // espaciado 1000 ms
     }
     int nHoraReal = nHora % 12; // Asegura que la hora esté en el rango de 0 a 11
     int nHoraTocada = (nHoraReal == 0) ? 12 : nHoraReal; // Si es 0, se toca la campana 12
     for ( int i = 0; i < nHoraTocada; ++i) {
-        this->_aCampanadas[i+4].indiceCampana = 1;        // Toca la campana 2 para la hora
+        this->_aCampanadas[i+4].indiceCampana = 0;        // Toca la campana 2 para la hora
         this->_aCampanadas[i+4].intervaloMs = 1000;       // espaciados 1000 ms
     }    
     this->_nCampanadas = nHoraTocada + 4; // Actualiza el número de campanadas a tocar (4 cuartos + hora)
+    this->_nEstadoCampanario |= BitHora;                                   // Actualiza el estado del campanario para indicar que se está tocando la hora
     this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
     #ifdef DEBUGCAMPANARIO
         Serial.print("Tocando hora: ");
@@ -364,6 +374,7 @@ bool CAMPANARIO::GetEstadoCalefaccion() {
 void CAMPANARIO::EnciendeCalefaccion() {
     if (this->_pCalefaccion != nullptr) {
         this->_pCalefaccion->Enciende(); // Enciende la calefacción
+        this->_nEstadoCampanario |= BitCalefaccion; // Actualiza el estado del campanario para indicar que la calefacción está encendida
         #ifdef DEBUGCAMPANARIO
             Serial.println("Calefacción encendida.");
         #endif
@@ -381,6 +392,7 @@ void CAMPANARIO::EnciendeCalefaccion() {
 void CAMPANARIO::ApagaCalefaccion() {
     if (this->_pCalefaccion != nullptr) {
         this->_pCalefaccion->Apaga(); // Apaga la calefacción
+        this->_nEstadoCampanario &= ~BitCalefaccion; // Actualiza el estado del campanario para indicar que la calefacción está apagada
         #ifdef DEBUGCAMPANARIO
             Serial.println("Calefacción apagada.");
         #endif
@@ -389,4 +401,20 @@ void CAMPANARIO::ApagaCalefaccion() {
             Serial.println("No hay calefacción añadida al campanario.");
         #endif
     }
+}
+
+/**
+ * @brief Obtiene el estado del campanario
+ * 
+ * @return int Devuelve el estado del campanario como un entero que representa los bits de estado
+ * 
+ * El estado se compone de varios bits que indican diferentes estados:
+ * - BitDifuntos: Si la secuencia de difuntos está activa
+ * - BitMisa: Si la secuencia de misa está activa
+ * - BitHora: Si la secuencia de hora está activa
+ * - BitCuartos: Si la secuencia de cuartos está activa
+ * - BitCalefaccion: Si la calefacción está encendida
+ */
+int CAMPANARIO::GetEstadoCampanario(void) {
+    return this->_nEstadoCampanario;
 }

@@ -32,14 +32,15 @@
 #include "DNSServicio.h"
 #include "Servidor.h"
 #include "RTC.h"
+#include "ModoAp.h"
 
 #define DEBUGWIFI
 
 // Datos SSID y contraseña de la red Wi-Fi
-//const char* ssid = "D_Wifi_jsb_rma";
-//const char* password = "9732309093112";
-const char* ssid = "T_Wifi_jsb_rma";
-const char* password = "9776424223112";
+const char* ssid = "D_Wifi_jsb_rma";
+const char* password = "9732309093112";
+//const char* ssid = "T_Wifi_jsb_rma";
+//const char* password = "9776424223112";
 
 // Configuración de IP estática
 IPAddress local_IP(192, 168, 1, 173); 
@@ -64,8 +65,10 @@ IPAddress local_IP(192, 168, 1, 173);
  * 
  * @return void
  */
-void ConectarWifi (void)
+void ConectarWifi (const ConfigWiFi& ConfiguracionWiFi)
 {
+    uint8_t ultimoOcteto = atoi(ConfiguracionWiFi.ip); // <-- Conversión correcta
+    IPAddress local_IP(192, 168, 1, ultimoOcteto);
     IPAddress gateway(192, 168, 1, 1);          // Puerta de enlace (router)
     IPAddress subnet(255, 255, 255, 0);         // Máscara de subred
     IPAddress primaryDNS(8, 8, 8, 8);           // DNS primario (Google DNS)
@@ -82,11 +85,11 @@ void ConectarWifi (void)
       Serial.print("Conectando a ");
       Serial.println(ssid);
     #endif
-    WiFi.begin(ssid, password);                         // Inicia la conexión Wi-Fi 
-    while (WiFi.status() != WL_CONNECTED) {             // Espera hasta que se conecte
+    WiFi.begin(ConfiguracionWiFi.ssid, ConfiguracionWiFi.password);     // Inicia la conexión Wi-Fi 
+    while (WiFi.status() != WL_CONNECTED) {                             // Espera hasta que se conecte
       delay(500);
       #ifdef DEBUGWIFI
-        Serial.print(".");                               // Imprime un punto cada medio segundo para indicar que está intentando conectar   
+        Serial.print(".");                                              // Imprime un punto cada medio segundo para indicar que está intentando conectar   
       #endif
     }
     #ifdef DEBUGWIFI
@@ -99,7 +102,7 @@ void ConectarWifi (void)
   
   if (WiFi.status() == WL_CONNECTED) {
 
-    ActualizaDNS();                                   // Llama a la función para actualizar el DNS en minidindns
+    ActualizaDNS(configWiFi.dominio);                 // Llama a la función para actualizar el DNS en minidindns
     RTC::begin();                                     // Sincroniza hora con NTP
   } else {
     #ifdef DEBUGWIFI

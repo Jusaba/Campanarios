@@ -7,10 +7,18 @@
 
     #include "Campanario.h"
     
+    #define EstadoInicio            0
+    #define EstadoDifuntos          1
+    #define EstadoMisa              2
+    #define EstadoStop              3
+    #define EstadoCalefaccionOn     4
+    #define EstadoCalefaccionOff    5
+
+
     #define DEBUGSERVIDOR
 
     //AsyncWebSocket ws;                                                     // WebSocket  
-    int nToque = 0;                                                    // Variable para almacenar la secuencia de botones pulsados
+    int nToque = 0;                                                          // Variable para almacenar la secuencia de botones pulsados
 
     const int Rele0 = 26;
     const int Rele1 = 27;
@@ -20,16 +28,21 @@
     AsyncWebServer server(80);
     WiFiClient client;
 
+  // Usuario y contraseña
+  const char* http_username = "usuario";
+  const char* http_password = "clave";
+
+
     extern CAMPANARIO Campanario;
 
-    void ServidorOn(void);
+    void ServidorOn(const char* usuario, const char* clave);
     void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
     void listSPIFFS(void);
     void printFileContent(const char* filename);
     void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len);
 
 
-    void ServidorOn(void)
+    void ServidorOn(const char* usuario, const char* clave)
     {
         if(!SPIFFS.begin(true)){
             #ifdef DEBUGSERVIDOR
@@ -51,10 +64,19 @@ if (SPIFFS.format()) {
         ws.onEvent(onEvent);
         server.addHandler(&ws);
 
+server.on("/", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
+    if(!request->authenticate(usuario, clave)) {
+        return request->requestAuthentication();
+    }
+    request->send(SPIFFS, "/index.html", "text/html");
+    nToque = 0; // Resetea la secuencia a 0 al cargar la página principal
+});
+/*
         server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
             request->send(SPIFFS, "/index.html", "text/html");
             nToque = 0; // Resetea la secuencia a 0 al cargar la página principal
         });
+*/
         server.on("/Campanas.html", HTTP_GET, [](AsyncWebServerRequest *request){
             request->send(SPIFFS, "/Campanas.html", "text/html");
         });
@@ -127,19 +149,13 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
         #endif
         //switch para procesar el mensaje recibido
         if (mensaje == "Difuntos") {
-            nToque = 1;                               // Establece la secuencia a 1 para tocar difuntos
+            nToque = EstadoDifuntos;                               // Establece la secuencia a 1 para tocar difuntos
             ws.textAll("REDIRECT:/Campanas.html");    // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: TocaDifuntos");
             #endif
-        } else if (mensaje == "Fiesta") {
-            nToque = 2;                               // Establece la secuencia a 2 para tocar fiesta
-            ws.textAll("REDIRECT:/Campanas.html");    // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
-            #ifdef DEBUGSERVIDOR
-              Serial.println("Procesando mensaje: TocaFiesta");
-            #endif
         } else if (mensaje == "Misa") {
-            nToque = 3; // Establece la secuencia a 3 para tocar misa
+            nToque = EstadoMisa; // Establece la secuencia a 3 para tocar misa
             ws.textAll("REDIRECT:/Campanas.html");    // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
              #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: TocaMisa");
@@ -153,11 +169,13 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
             #endif   
         } else if (mensaje == "CALEFACCION_ON") {
             Campanario.EnciendeCalefaccion(); // Enciende la calefacción
+            ws.textAll("CALEFACCION:ON"); // Envía el estado de la calefacción a todos los clientes conectados
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: Calefacción ON");
             #endif
         } else if (mensaje == "CALEFACCION_OFF") {
             Campanario.ApagaCalefaccion(); // Apaga la calefacción
+            ws.textAll("CALEFACCION:OFF"); // Envía el estado de la calefacción a todos los clientes conectados
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: Calefacción OFF");
             #endif
@@ -168,6 +186,9 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
             #ifdef DEBUGSERVIDOR
               Serial.printf("Estado de la calefacción enviado: %s\n", estadoCalefaccion.c_str());
             #endif
+        } else if (mensaje == "GET_CAMPANARIO") {    
+            String EstadoCampanario = String(Campanario.GetEstadoCampanario()); // 
+            ws.textAll("ESTADO_CAMPANARIO:" + EstadoCampanario);        // Envía el estado al cliente que lo pidió
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             #ifdef DEBUGSERVIDOR
@@ -222,5 +243,6 @@ void printFileContent(const char* filename) {
   file.close(); // Cerrar el archivo
   //SPIFFS.end(); // Desmontar SPIFFS
 }
+
 
 #endif
