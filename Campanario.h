@@ -166,10 +166,10 @@
             CAMPANA* _pCampanas[MAX_CAMPANAS];                          //!< Array de punteros a las campanas del campanario
             int _nNumCampanas = 0;                                      //!< Número de campanas en el campanario
             
-            ToquePlano _aCampanadas[200];                               //!< Arreglo de campanadas a tocar, con un máximo de 200 elementos
+            ToquePlano _aCampanadas[200];                               //!< Array de campanadas a tocar en formato plano, un elemento por campanada, con un máximo de 200 elementos
             int _nCampanadas = 0;                                       //!< Número de campanadas a tocar en la secuencia actual   
-            void _GeneraraCampanadas(const PasoSecuencia* secuencia, int numPasos); // Genera una secuencia de campanadas a partir de una secuencia de pasos definida
-            void _LimpiaraCampanadas(void) ;                            //!< Limpia el arreglo de campanadas y reinicia el contador.    
+            void _GeneraraCampanadas(const PasoSecuencia* secuencia, int numPasos); // Genera una secuencia de campanadas planas a partir de una secuencia de pasos definida
+            void _LimpiaraCampanadas(void) ;                            //!< Limpia el array de campanadas y reinicia el contador.    
     
             int _indiceCampanadaActual = 0;                             //!< Índice de la campanada actual en la secuencia
             unsigned long _ultimoToqueMs = 0;                           //!< Marca de tiempo del último toque de campana en milisegundos
@@ -183,7 +183,7 @@
             int _nEstadoCampanario = 0;
 
             bool _tocando = false;                                      //!< Flag que indica si las campanas estan en reposo o tocando (1/0)
-            bool _Calefaccion = false;                                  //!< Flag que indica si la calefacción está encendida o apagada (1/0)º
+            bool _Calefaccion = false;                                  //!< Flag que indica si la calefacción está encendida o apagada (1/0)
 
         };
 #endif

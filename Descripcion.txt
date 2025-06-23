@@ -1,94 +1,108 @@
+# Descripción general del sistema de campanario electrónico
 
-
-## Resumen general del programa
-
-Tu proyecto controla un **campanario electrónico** con ESP32, capaz de tocar diferentes secuencias de campanas (difuntos, fiesta, misa, cuartos, horas) de forma automática o remota, usando WiFi y una interfaz web.  
-El sistema utiliza el RTC interno del ESP32 sincronizado por NTP, y permite la interacción en tiempo real mediante WebSocket.
+Este proyecto implementa un **campanario electrónico** basado en ESP32, capaz de tocar diferentes secuencias de campanas (difuntos, misa, fiesta, cuartos, horas) tanto de forma automática como remota a través de una interfaz web. El sistema está diseñado para ser robusto, flexible y fácilmente gestionable desde cualquier dispositivo conectado a la red local.
 
 ---
 
-## Contenido de cada fichero principal
+## Arquitectura y módulos principales
 
-### **Campanarios.ino**
-- **Archivo principal del programa.**
-- Inicializa el hardware, crea las instancias de las campanas y las añade al campanario.
-- Configura la conexión WiFi y arranca el servidor web.
-- En el `loop()`, gestiona la lógica principal: chequea los cuartos y horas, procesa las órdenes recibidas y actualiza el estado de las campanas.
+### 1. **Campanarios.ino**
+Archivo principal del programa. Se encarga de:
+- Inicializar el hardware y los objetos principales (`CAMPANA`, `CAMPANARIO`).
+- Configurar la conexión WiFi y sincronizar el reloj interno (RTC) mediante NTP.
+- Arrancar el servidor web y el WebSocket.
+- Ejecutar el bucle principal (`loop()`), donde se chequean los cuartos y horas, se procesan las órdenes remotas y se actualiza el estado de las campanas.
 
----
+### 2. **Campana.h / Campana.cpp**
+Define la clase `CAMPANA`, que representa cada campana física:
+- Gestiona el pin de control, la activación y la animación del badajo.
+- Permite tocar la campana y actualizar su estado de forma no bloqueante.
 
-### **Campana.h / Campana.cpp**
-- **Define la clase `CAMPANA`.**
-- Gestiona el control individual de cada campana (pin, activación, animación del badajo).
-- Métodos para tocar la campana y actualizar su estado (idealmente de forma no bloqueante).
+### 3. **Campanario.h / Campanario.cpp**
+Define la clase `CAMPANARIO`, que agrupa y gestiona todas las campanas:
+- Permite añadir campanas al conjunto.
+- Gestiona las secuencias de toque (difuntos, misa, fiesta, cuartos, horas).
+- Controla el inicio, parada y actualización de las secuencias.
 
----
+### 4. **Servidor.h / Servidor.cpp**
+Gestiona el servidor web y el WebSocket:
+- Atiende peticiones HTTP y WebSocket desde la interfaz web.
+- Procesa comandos recibidos (tocar secuencias, parar, controlar calefacción).
+- Envía mensajes en tiempo real a los clientes para actualizar la interfaz.
+- Protege el acceso a la interfaz mediante autenticación básica.
 
-### **Campanario.h / Campanario.cpp**
-- **Define la clase `CAMPANARIO`.**
-- Gestiona el conjunto de campanas y las secuencias (difuntos, fiesta, misa, cuartos, horas).
-- Métodos para añadir campanas, iniciar y parar secuencias, y actualizar el estado general del campanario.
-
----
-
-### **Servidor.h**
-- **Configura y gestiona el servidor web y WebSocket.**
-- Atiende las peticiones HTTP y WebSocket desde la interfaz web.
-- Procesa los comandos recibidos (por ejemplo, tocar secuencias o parar).
-- Envía mensajes a los clientes para actualizar la interfaz en tiempo real.
-
----
-
-### **RTC.h**
-- **Clase utilitaria para la gestión del reloj en tiempo real (RTC) del ESP32.**
+### 5. **RTC.h**
+Clase utilitaria para la gestión del reloj en tiempo real (RTC) del ESP32:
 - Sincroniza la hora con un servidor NTP.
-- Permite obtener la hora actual para controlar los cuartos y las horas.
+- Permite obtener la hora actual para controlar los toques automáticos de cuartos y horas.
 
----
+### 6. **Auxiliar.h**
+Funciones auxiliares para el control del campanario y la calefacción:
+- Chequea los cuartos y horas para activar las secuencias automáticas.
+- Ejecuta secuencias recibidas por I2C o desde la web.
+- Gestiona la comunicación I2C para recibir órdenes y enviar estados.
+- Permite encender y apagar la calefacción desde la web o por I2C, notificando el estado a los clientes conectados
 
-### **Archivos web (data/index.html, data/Campanas.html, data/Campanas.js, etc.)**
-- **Interfaz web del usuario.**
+### 7. **ConexionWifi.h / DNSServicio.h**
+Utilidades para la conexión WiFi y la gestión de DNS:
+- Facilitan la conexión automática a la red WiFi configurada.
+- Permiten el acceso al sistema mediante un nombre de dominio local.
+
+### 8. **Archivos web (data/index.html, data/Campanas.html, data/Campanas.js, etc.)**
+Interfaz web del usuario:
 - Permite seleccionar y visualizar las secuencias de campanas.
 - Usa WebSocket para recibir en tiempo real el estado de las campanas y enviar comandos al ESP32.
 - Incluye animaciones visuales para simular el toque de las campanas.
 
----
-
-### **Otros ficheros**
-- **DNSServicio.h, ConexionWifi.h, Auxiliar.h, etc.:**
-  - Utilidades para la conexión WiFi, DNS, y funciones auxiliares varias.
-
----
-
-## **Funcionamiento general**
-1. El ESP32 se conecta a WiFi y sincroniza la hora.
-2. El usuario puede interactuar desde la web para lanzar secuencias o parar el campanario.
-3. El sistema toca automáticamente las campanas según la hora y los cuartos.
-4. Toda la lógica de control y comunicación es no bloqueante para mantener la respuesta en tiempo real.
+### 9. **Calefaccion.h / Calefaccion.cpp**
+Define la clase y funciones para el control de la calefacción del campanario:
+- Permite encender y apagar la calefacción de forma programada o remota.
+- Gestiona el estado de la calefacción y su integración con el resto del sistema.
+- Proporciona métodos para consultar y modificar el estado desde otros módulos (por ejemplo, desde la web o por I2C).
 
 ---
 
-INICIO
-  |
-  v
-setup()
-  |
-  |-- Inicializa Serial
-  |-- Crea objetos CAMPANA y los añade al CAMPANARIO
-  |-- Conecta a WiFi
-  |-- Inicia el servidor web y WebSocket
-  |
-  v
-loop()
-  |
-  |-- Chequea cuartos y horas (ChekearCuartos)
-  |-- Procesa órdenes remotas (nToque)
-  |     |-- Si nToque == 1: TocaDifuntos
-  |     |-- Si nToque == 2: TocaFiesta
-  |     |-- Si nToque == 3: TocaHora(6)
-  |     |-- Resetea nToque a 0 tras cada acción
-  |
-  |-- TestCampanadas (actualiza animación web)
-  |
-  v
-REPITE LOOP
+## Resumen de integración de módulos
+
+- **Campanarios.ino** orquesta la inicialización y el bucle principal.
+- **Campana** y **Campanario** gestionan el hardware y la lógica de las campanas.
+- **Servidor** expone la interfaz web y el canal de comunicación en tiempo real.
+- **RTC** asegura la precisión horaria para los toques automáticos.
+- **Auxiliar** implementa la lógica de chequeo y ejecución de secuencias y la integración de órdenes externas.
+- **Calefaccion** gestiona el hardware y la lógica de la calefacción, permitiendo su control tanto local como remoto.
+- **Archivos web** proporcionan la experiencia de usuario, incluyendo el control de la calefacción.
+- **ConexionWifi** y **DNSServicio** facilitan la conectividad y el acceso.
+
+---
+
+Este diseño modular permite mantener el sistema organizado, facilitar su mantenimiento y futuras ampliaciones, y asegurar una experiencia de usuario fluida y segura, incluyendo la gestión remota de la calefacción del campanario.
+---
+
+## Funcionamiento general
+
+1. **Inicio:**  
+   El ESP32 se conecta a la red WiFi y sincroniza la hora con un servidor NTP.
+2. **Interfaz web:**  
+   El usuario accede a la interfaz web protegida por usuario y contraseña, desde donde puede lanzar secuencias de campanas, parar el sistema o controlar la calefacción.
+3. **Toques automáticos:**  
+   El sistema chequea continuamente la hora y activa automáticamente los toques de cuartos y horas según la programación.
+4. **Comunicación en tiempo real:**  
+   Toda la interacción con la web es en tiempo real gracias a WebSocket, permitiendo ver el estado de las campanas y recibir notificaciones instantáneas.
+5. **Control remoto y local:**  
+   Las órdenes pueden recibirse tanto desde la web como por I2C, permitiendo la integración con otros sistemas o controles físicos.
+
+---
+
+## Resumen de integración de módulos
+
+- **Campanarios.ino** orquesta la inicialización y el bucle principal.
+- **Campana** y **Campanario** gestionan el hardware y la lógica de las campanas.
+- **Servidor** expone la interfaz web y el canal de comunicación en tiempo real.
+- **RTC** asegura la precisión horaria para los toques automáticos.
+- **Auxiliar** implementa la lógica de chequeo y ejecución de secuencias.
+- **Archivos web** proporcionan la experiencia de usuario.
+- **ConexionWifi** y **DNSServicio** facilitan la conectividad y el acceso.
+
+---
+
+Este diseño modular permite mantener el sistema organizado, facilitar su mantenimiento y futuras ampliaciones, y asegurar una experiencia de usuario fluida y

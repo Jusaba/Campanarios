@@ -191,11 +191,11 @@
  * @note Los índices de campana deben estar dentro del rango válido (0 a _nNumCampanas-1)
  */
     int CAMPANARIO::ActualizarSecuenciaCampanadas() {
-        if (!this->_tocandoSecuencia || this->_indiceCampanadaActual >= this->_nCampanadas)     // Si no se está tocando una secuencia o no hay campanadas, retorna 0   
+        if (!this->_tocandoSecuencia || this->_indiceCampanadaActual >= this->_nCampanadas)                                                 // Si no se está tocando una secuencia o no hay campanadas, retorna 0   
         {
             return 0;   
         }    
-        unsigned long ahora = millis();                                                         // Obtiene el tiempo actual en milisegundos
+        unsigned long ahora = millis();                                                                                                     // Obtiene el tiempo actual en milisegundos
         if (this->_ultimoToqueMs == 0 || (ahora - this->_ultimoToqueMs) >= this->_aCampanadas[this->_indiceCampanadaActual].intervaloMs) {  // Si es el primer toque o ha pasado el intervalo definido
             int idxCampana = this->_aCampanadas[this->_indiceCampanadaActual].indiceCampana;                                                // Obtiene el índice de la campana a tocar
             if (idxCampana >= 0 && idxCampana < this->_nNumCampanas) {                                                                      // Verifica que el índice de campana esté dentro del rango válido   
@@ -225,6 +225,7 @@
 /**
  * @brief Reinicia la variable que contiene la ultima campana tocada
  * 
+ * Se usa para reiniciar el contador de campana tocada a 0 despues de haberla reconocido desde el cliente web 
  * Si está definido DEBUGCAMPANARIO, imprime un mensaje de
  * confirmación por el puerto serie.
  */
@@ -300,26 +301,26 @@
  * 
  * @note Si la hora es 0 o 12, sonará 12 campanadas
  */
-void CAMPANARIO::TocaHora(int nHora) {
-    this->_LimpiaraCampanadas(); // Limpia las campanadas antes de tocar la hora
-    for (int i = 0; i < 4; ++i) {
-        this->_aCampanadas[i].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
-        this->_aCampanadas[i].intervaloMs = 1000;       // espaciado 1000 ms
+    void CAMPANARIO::TocaHora(int nHora) {
+        this->_LimpiaraCampanadas(); // Limpia las campanadas antes de tocar la hora
+        for (int i = 0; i < 4; ++i) {
+            this->_aCampanadas[i].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
+            this->_aCampanadas[i].intervaloMs = 1000;       // espaciado 1000 ms
+        }
+        int nHoraReal = nHora % 12; // Asegura que la hora esté en el rango de 0 a 11
+        int nHoraTocada = (nHoraReal == 0) ? 12 : nHoraReal; // Si es 0, se toca la campana 12
+        for ( int i = 0; i < nHoraTocada; ++i) {
+            this->_aCampanadas[i+4].indiceCampana = 0;        // Toca la campana 2 para la hora
+            this->_aCampanadas[i+4].intervaloMs = 1000;       // espaciados 1000 ms
+        }    
+        this->_nCampanadas = nHoraTocada + 4; // Actualiza el número de campanadas a tocar (4 cuartos + hora)
+        this->_nEstadoCampanario |= BitHora;                                   // Actualiza el estado del campanario para indicar que se está tocando la hora
+        this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
+        #ifdef DEBUGCAMPANARIO
+            Serial.print("Tocando hora: ");
+            Serial.println(nHora);    
+        #endif
     }
-    int nHoraReal = nHora % 12; // Asegura que la hora esté en el rango de 0 a 11
-    int nHoraTocada = (nHoraReal == 0) ? 12 : nHoraReal; // Si es 0, se toca la campana 12
-    for ( int i = 0; i < nHoraTocada; ++i) {
-        this->_aCampanadas[i+4].indiceCampana = 0;        // Toca la campana 2 para la hora
-        this->_aCampanadas[i+4].intervaloMs = 1000;       // espaciados 1000 ms
-    }    
-    this->_nCampanadas = nHoraTocada + 4; // Actualiza el número de campanadas a tocar (4 cuartos + hora)
-    this->_nEstadoCampanario |= BitHora;                                   // Actualiza el estado del campanario para indicar que se está tocando la hora
-    this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
-    #ifdef DEBUGCAMPANARIO
-        Serial.print("Tocando hora: ");
-        Serial.println(nHora);    
-    #endif
-}
 
 /**
  * @brief Obtiene el estado actual de la secuencia de campanadas
@@ -327,9 +328,9 @@ void CAMPANARIO::TocaHora(int nHora) {
  * @return true Si hay una secuencia de campanadas en ejecución
  * @return false Si no hay ninguna secuencia de campanadas ejecutándose
  */
-bool CAMPANARIO::GetEstadoSecuencia() {
-    return this->_tocandoSecuencia; // Retorna el estado de la secuencia de campanadas
-}
+    bool CAMPANARIO::GetEstadoSecuencia() {
+        return this->_tocandoSecuencia; // Retorna el estado de la secuencia de campanadas
+    }
 
 /**
  * @brief Añade una calefacción al campanario
@@ -337,71 +338,73 @@ bool CAMPANARIO::GetEstadoSecuencia() {
  * 
  * @param pCalefaccion Puntero a la instancia de CALEFACCION que se desea añadir al campanario
  */ 
-void CAMPANARIO::AddCalefaccion (CALEFACCION* pCalefaccion) {
-    if (this->_pCalefaccion == nullptr) { // Verifica que no haya calefacción añadida
-        this->_pCalefaccion = pCalefaccion; // Asigna la calefacción al campanario
-        #ifdef DEBUGCAMPANARIO
-            Serial.println("Calefacción añadida al campanario.");
-        #endif
-    } else {
-        #ifdef DEBUGCAMPANARIO
-            Serial.println("Ya hay una calefacción añadida al campanario.");
-        #endif
-    }
+    void CAMPANARIO::AddCalefaccion (CALEFACCION* pCalefaccion) {
+        if (this->_pCalefaccion == nullptr) { // Verifica que no haya calefacción añadida
+            this->_pCalefaccion = pCalefaccion; // Asigna la calefacción al campanario
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("Calefacción añadida al campanario.");
+            #endif
+        } else {
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("Ya hay una calefacción añadida al campanario.");
+            #endif
+        }
 
-}
+    }
 /**
  * @brief Obtiene el estado de la calefacción del campanario
  * 
  * @return true Si la calefacción está activada
  * @return false Si la calefacción está desactivada
  */
-bool CAMPANARIO::GetEstadoCalefaccion() {
-    if (this->_pCalefaccion != nullptr) {
-        return this->_pCalefaccion->GetEstado(); // Retorna el estado de la calefacción
-    } else {
-        #ifdef DEBUGCAMPANARIO
-            Serial.println("No hay calefacción añadida al campanario.");
-        #endif
-        return false; // Si no hay calefacción, retorna false
+    bool CAMPANARIO::GetEstadoCalefaccion() {
+        if (this->_pCalefaccion != nullptr) {
+            return this->_pCalefaccion->GetEstado(); // Retorna el estado de la calefacción
+        } else {
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("No hay calefacción añadida al campanario.");
+            #endif
+            return false; // Si no hay calefacción, retorna false
+        }
     }
-}
 /**
  * @brief Enciende la calefacción del campanario
  * 
  * Si hay una calefacción añadida, la enciende. Si no, imprime un mensaje de error.
+ * Actualiza el estado del campanario para indicar que la calefacción está encendida.
  */
-void CAMPANARIO::EnciendeCalefaccion() {
-    if (this->_pCalefaccion != nullptr) {
-        this->_pCalefaccion->Enciende(); // Enciende la calefacción
-        this->_nEstadoCampanario |= BitCalefaccion; // Actualiza el estado del campanario para indicar que la calefacción está encendida
-        #ifdef DEBUGCAMPANARIO
-            Serial.println("Calefacción encendida.");
-        #endif
-    } else {
-        #ifdef DEBUGCAMPANARIO
-            Serial.println("No hay calefacción añadida al campanario.");
-        #endif
+    void CAMPANARIO::EnciendeCalefaccion() {
+        if (this->_pCalefaccion != nullptr) {
+            this->_pCalefaccion->Enciende(); // Enciende la calefacción
+            this->_nEstadoCampanario |= BitCalefaccion; // Actualiza el estado del campanario para indicar que la calefacción está encendida
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("Calefacción encendida.");
+            #endif
+        } else {
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("No hay calefacción añadida al campanario.");
+            #endif
+        }
     }
-}
 /**
  * @brief Apaga la calefacción del campanario
  * 
  * Si hay una calefacción añadida, la apaga. Si no, imprime un mensaje de error.
+ * Actualiza el estado del campanario para indicar que la calefacción está apagada.
  */
-void CAMPANARIO::ApagaCalefaccion() {
-    if (this->_pCalefaccion != nullptr) {
-        this->_pCalefaccion->Apaga(); // Apaga la calefacción
-        this->_nEstadoCampanario &= ~BitCalefaccion; // Actualiza el estado del campanario para indicar que la calefacción está apagada
-        #ifdef DEBUGCAMPANARIO
-            Serial.println("Calefacción apagada.");
-        #endif
-    } else {
-        #ifdef DEBUGCAMPANARIO
-            Serial.println("No hay calefacción añadida al campanario.");
-        #endif
+    void CAMPANARIO::ApagaCalefaccion() {
+        if (this->_pCalefaccion != nullptr) {
+            this->_pCalefaccion->Apaga(); // Apaga la calefacción
+            this->_nEstadoCampanario &= ~BitCalefaccion; // Actualiza el estado del campanario para indicar que la calefacción está apagada
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("Calefacción apagada.");
+            #endif
+        } else {
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("No hay calefacción añadida al campanario.");
+            #endif
+        }
     }
-}
 
 /**
  * @brief Obtiene el estado del campanario
@@ -415,6 +418,6 @@ void CAMPANARIO::ApagaCalefaccion() {
  * - BitCuartos: Si la secuencia de cuartos está activa
  * - BitCalefaccion: Si la calefacción está encendida
  */
-int CAMPANARIO::GetEstadoCampanario(void) {
-    return this->_nEstadoCampanario;
-}
+    int CAMPANARIO::GetEstadoCampanario(void) {
+        return this->_nEstadoCampanario;
+    }

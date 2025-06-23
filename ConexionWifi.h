@@ -9,19 +9,16 @@
  * Dependencias:
  * - DNSServicio.h: Para la actualización del DNS.
  * - Servidor.h: Para la gestión del servidor local (si aplica).
+ * - ModoAp.h: Para el modo punto de acceso (si aplica).
  * - RTC.h: Para la sincronización del reloj en tiempo real.
  * - Librería WiFi estándar de ESP32.
  *
- * Definiciones:
- * - ssid: Nombre de la red Wi-Fi.
- * - password: Contraseña de la red Wi-Fi.
- * - local_IP: Dirección IP estática asignada al dispositivo.
  *
  * Macros:
  * - DEBUGWIFI: Habilita mensajes de depuración por Serial.
  *
  * Funciones:
- * - void ConectarWifi(void): Establece la conexión Wi-Fi, configura IP estática,
+ * - void ConectarWifi (const ConfigWiFi& ConfiguracionWiFi): Establece la conexión Wi-Fi, configura IP estática con los datos pasados en la estructura ConfigWiFi,
  *   actualiza DNS y sincroniza el RTC.
  *
  * @author Julian Salas Bartolome
@@ -36,43 +33,35 @@
 
 #define DEBUGWIFI
 
-// Datos SSID y contraseña de la red Wi-Fi
-const char* ssid = "D_Wifi_jsb_rma";
-const char* password = "9732309093112";
-//const char* ssid = "T_Wifi_jsb_rma";
-//const char* password = "9776424223112";
 
-// Configuración de IP estática
-IPAddress local_IP(192, 168, 1, 173); 
-
+void ConectarWifi (const ConfigWiFi& ConfiguracionWiFi);
 
 
 /**
- * @brief Establece la conexión WiFi con configuración de IP estática
- * 
- * Esta función realiza las siguientes tareas:
- * - Configura una IP estática con los parámetros de red definidos
- * - Establece la conexión con la red WiFi usando las credenciales configuradas
- * - Espera hasta que la conexión se establezca exitosamente
- * - Si la conexión es exitosa:
- *   - Actualiza el DNS en miniDNS
- *   - Sincroniza el RTC con NTP
- * 
- * La función incluye mensajes de depuración que se muestran cuando DEBUGWIFI está definido
- * 
- * @note Requiere que las variables ssid, password y local_IP estén definidas previamente
- * @note Utiliza las librerías WiFi y RTC
- * 
- * @return void
+ * @brief Establece la conexión Wi-Fi utilizando la configuración proporcionada.
+ *
+ * Esta función configura una IP estática basada en el último octeto de la dirección IP
+ * especificada en la estructura ConfigWiFi. Luego, intenta conectar el dispositivo a la red Wi-Fi
+ * utilizando el SSID y la contraseña proporcionados. Si la conexión es exitosa, actualiza el DNS
+ * dinámico y sincroniza la hora mediante NTP.
+ *
+ * @param ConfiguracionWiFi Estructura que contiene los parámetros de configuración Wi-Fi:
+ *        - ip: Cadena de texto con el último octeto de la IP local.
+ *        - ssid: Nombre de la red Wi-Fi.
+ *        - password: Contraseña de la red Wi-Fi.
+ *        - dominio: Dominio para la actualización de DNS dinámico.
+ *
+ * @note Utiliza macros de depuración (DEBUGWIFI) para imprimir mensajes por Serial.
+ * @note Llama a funciones externas para la actualización de DNS y sincronización de hora.
  */
 void ConectarWifi (const ConfigWiFi& ConfiguracionWiFi)
 {
-    uint8_t ultimoOcteto = atoi(ConfiguracionWiFi.ip); // <-- Conversión correcta
+    uint8_t ultimoOcteto = atoi(ConfiguracionWiFi.ip);                        // Convierte el último octeto de la IP a entero
     IPAddress local_IP(192, 168, 1, ultimoOcteto);
-    IPAddress gateway(192, 168, 1, 1);          // Puerta de enlace (router)
-    IPAddress subnet(255, 255, 255, 0);         // Máscara de subred
-    IPAddress primaryDNS(8, 8, 8, 8);           // DNS primario (Google DNS)
-    IPAddress secondaryDNS(8, 8, 4, 4);         // DNS secundario (Google DNS)
+    IPAddress gateway(192, 168, 1, 1);                                        // Puerta de enlace (router)
+    IPAddress subnet(255, 255, 255, 0);                                       // Máscara de subred
+    IPAddress primaryDNS(8, 8, 8, 8);                                         // DNS primario (Google DNS)
+    IPAddress secondaryDNS(8, 8, 4, 4);                                       // DNS secundario (Google DNS)
     // Configurar IP estática
     if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
       #ifdef DEBUGWIFI
@@ -83,7 +72,7 @@ void ConectarWifi (const ConfigWiFi& ConfiguracionWiFi)
     #ifdef DEBUGWIFI
       Serial.println("Iniciando conexión Wi-Fi...");
       Serial.print("Conectando a ");
-      Serial.println(ssid);
+      Serial.println(ConfiguracionWiFi.ssid);
     #endif
     WiFi.begin(ConfiguracionWiFi.ssid, ConfiguracionWiFi.password);     // Inicia la conexión Wi-Fi 
     while (WiFi.status() != WL_CONNECTED) {                             // Espera hasta que se conecte
