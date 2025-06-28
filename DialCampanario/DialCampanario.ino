@@ -7,23 +7,30 @@
         delay (3000);
         Serial.begin(9600);
         
-        #ifdef DEBUG
-            Serial.println("Inicio");
-        #endif
-
-        InicioDisplay();                            // Inicializar la pantalla del M5Dial
-        ClearPantalla();                            // Limpiar la pantalla
+        auto cfg = M5.config();
+        M5Dial.begin(cfg, true, false);
         
-        Wire.begin();                               // Iniciar el bus I2C como maestro
+        InicioDisplay();
+        ClearPantalla();
+        
+        Wire.begin();
         Wire.setClock(100000);
+        //Wire.setTimeout(1000);
 
-        lCambioEstado = true;                       // Indicar que se debe mostrar el menu por un cambio de estado
-        MensajeInicio();                            // Mostrar el mensaje de inicio 
-        menuActual = menu0;                        // Establecer el menú actual
+        lCambioEstado = true;
+        MensajeInicio();
+        delay(5000);
+        menuActual = menu0;
+        
+        #ifdef DEBUG
+            Serial.println("Setup completado exitosamente");
+        #endif
     }
 
     void loop() {
- 
+        // Alimentar el watchdog para evitar reinicios
+        yield();
+        
         M5Dial.update();                            // Actualizar el estado del M5Dial
 
   
@@ -51,33 +58,45 @@
                         Serial.printf("Estado Actual: %d\n", menuActual[nEstado]);
                     #endif
                     case EstadoInicio:
-                        Serial.println("Estado Inicio");
+                        #ifdef DEBUG
+                            Serial.println("Estado Inicio");
+                        #endif
                         break;    
                     case EstadoDifuntos:
-                        Serial.println("Estado Difuntos");
+                        #ifdef DEBUG
+                            Serial.println("Estado Difuntos");
+                        #endif  
                         EnviarEstado(EstadoDifuntos);  // Enviar el estado de difuntos al esclavo I2C
                         nEstado = 0;  // Reiniciar el estado al primer elemento del menú reducido
                         nEstadoAnterior = EstadoDifuntos;
                         break;
                     case EstadoMisa:
-                        Serial.println("Estado Misa");
+                        #ifdef DEBUG
+                            Serial.println("Estado Misa");
+                        #endif
                         EnviarEstado(EstadoMisa);  // Enviar el estado de misa al esclavo I2C
                         nEstado = 0;  // Reiniciar el estado al primer elemento del menú reducido
                         nEstadoAnterior = EstadoMisa;
                         break;
                     case EstadoStop:
-                        Serial.println("Estado Stop");
+                        #ifdef DEBUG
+                            Serial.println("Estado Stop");
+                        #endif
                         EnviarEstado(EstadoStop);  // Enviar el estado de stop al esclavo I2C
                         nEstado = nEstadoAnterior - 1;  // Volver al estado anterior
                         break;
                     case EstadoCalefaccionOn:
-                        Serial.println("Estado Calefaccion On");
+                        #ifdef DEBUG
+                            Serial.println("Estado Calefaccion On");
+                        #endif
                         EnviarEstado(EstadoCalefaccionOn);  // Enviar el estado de calefacción encendida al esclavo I2C
                         nEstado = 0;  // Reiniciar el estado al primer elemento del menú reducido
                         nEstadoAnterior = EstadoCalefaccionOn;
                         break;
                     case EstadoCalefaccionOff:
-                        Serial.println("Estado Calefaccion Off");
+                        #ifdef DEBUG
+                            Serial.println("Estado Calefaccion Off");
+                        #endif
                         EnviarEstado(EstadoCalefaccionOff);  // Enviar el estado de calefacción apagada al esclavo I2C
                         nEstado = 0;  // Reiniciar el estado al primer elemento del menú reducido
                         nEstadoAnterior = EstadoCalefaccionOff;
@@ -117,7 +136,9 @@
         nMilisegundoTemporal = millis();    
         SolicitarEstadoCampanario();
     }
-
+    
+    // Pequeño delay para evitar saturar el procesador
+    delay(10);
 }
 
 

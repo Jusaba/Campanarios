@@ -3,3 +3,11 @@ arduino-cli compile -b esp32:esp32:esp32s3:PartitionScheme=no_ota,FlashMode=qio,
 arduino-cli compile -b esp32:esp32:d1_mini32:PartitionScheme=min_spiffs,UploadSpeed=115200  -e -v
 
 arduino-cli upload -p COM17 -b esp32:esp32:d1_mini32 -i Campanario.ino.bin
+
+
+arduino-cli compile -b esp32:esp32:esp32:PartitionScheme=minimal,UploadSpeed=115200  -e -v
+arduino-cli upload -p COM3  -b esp32:esp32:esp32 -i Campanarios.ino.bin
+
+
+arduino-cli compile -b esp32:esp32:stamp-s3  --build-property  " build.extra_flags= -D ESP32 -D ARDUINO_USB_MODE=1 -D ARDUINO_USB_CDC_ON_BOOT=1" --build-path build -e -vls
+arduino-cli upload -p COM10  -b esp32:esp32:stamp-s3 -i DialCampanario.ino.bin
