@@ -20,10 +20,15 @@
  * @date 19/06/2025
  * 
  */
-#include "RTC.h"
 
-#include <Wire.h>
+#ifndef AUXILIAR_H
+  #define AUXILIAR_H
+
+    #include "RTC.h"
+
+    #include <Wire.h>
     #include "Servidor.h"
+    
 
     #define DEBUGAUXILIAR
     
@@ -43,21 +48,28 @@
     #define EstadoStop              3
     #define EstadoCalefaccionOn     4
     #define EstadoCalefaccionOff    5
+    #define EstadoCampanario        6
+    #define EstadoHora              7
 
-
+    extern ConfigWiFi configWiFi;                           // Estructura para almacenar la configuración WiFi definida en modo AP
 
     CAMPANARIO Campanario;                                  // Instancia del campanario 
     struct tm timeinfo;                                     // Estructura para almacenar la hora actual
 
     int ultimoMinuto = -1;                                  // Variable para almacenar el minuto anterior
     int nCampanaTocada = 0;                                 // Variable para almacenar el número de campana tocada
+    int ultimaHora = -1;                                    // Variable para almacenar la última hora tocada
 
     volatile uint8_t secuenciaI2C = 0;
-
+    uint8_t requestI2C = 0;                                    // Variable para almacenar el número de solicitud I2C
+    bool lConexionInternet = false;                         // Variable para indicar si hay conexión a Internet
+    
     void ChekearCuartos(void);                              // Función para chequear los cuartos y las horas y tocar las campanas correspondientes
     void TestCampanadas(void);                              // Función para temporizar las campnas y presentarlas en la pagina correspondiente  
     
     void recibirSecuencia(int numBytes);                    // Función para recibir la secuencia de campanas por I2C
+    void enviarRequest();                                  // Función para enviar una solicitud al esclavo I2C
+    void enviarHoraI2C();                                   // Función para enviar la hora actual por I
     void enviarEstadoI2C();                                 // Función para enviar el estado de la secuencia de campanas por I2C
 
     void EjecutaSecuencia (int nSecuencia);                 // Función para ejecutar la secuencia de campanas según el valor recibido por I2C
@@ -88,11 +100,24 @@
                         ws.textAll("REDIRECT:/Campanas.html");          // Redirige a la página de campanas
                         if (minuto == 0) {                              // Si es la hora en punto (minuto 0)
                             Campanario.TocaHora(hora);                  // Toca la campana correspondiente a la hora
+                            if (hora == 12 )
+                            {
+                                if(hayInternet()){
+                                    RTC::begin();                       // Sincroniza el RTC con NTP si es mediodía
+                                }
+                            }   
                         } else {
                             Campanario.TocaCuarto(minuto / 15);         // Toca la campana correspondiente al cuarto (1, 2, 3)
-                       }
+                        }
+                        if (hayInternet()){                             // Verifica si hay conexión a Internet
+                            ActualizaDNS(configWiFi.dominio);          // Actualiza el DNS con el dominio configurado
+                        } else {
+                            #ifdef DEBUGAUXILIAR
+                                Serial.println("Sin conexión a internet. No se actualiza DNS.");
+                            #endif
+                        }
                     }
-                }
+                }    
             } else {
                 #ifdef DEBUGAUXILIAR
                     Serial.println("No se pudo obtener la hora del RTC");
@@ -157,12 +182,54 @@
     void recibirSecuencia(int numBytes) {
         if (Wire.available()) {
             secuenciaI2C = Wire.read();
+            if (secuenciaI2C == EstadoCampanario || secuenciaI2C == EstadoHora ) {
+                requestI2C = secuenciaI2C; // Guarda la solicitud I2C para enviar la hora o el estado
+                secuenciaI2C = 0; // Resetea la secuencia si es una solicitud de estado o hora
+            }
             #ifdef DEBUGAUXILIAR
                 Serial.println("Secuencia recibida por I2C: " + String(secuenciaI2C));
             #endif
         }
     }
+void enviarHoraI2C() {
+    uint8_t hora = 0xFF;
+    uint8_t minuto = 0xFF;
+    uint8_t segundos = 0xFF; // Inicializa las variables de hora, minuto y segundos
+    struct tm localTime;
+    int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
+    if (RTC::isNtpSync() && getLocalTime(&localTime)) {
+        hora = (uint8_t)localTime.tm_hour;
+        minuto = (uint8_t)localTime.tm_min;
+        segundos = (uint8_t)localTime.tm_sec; // Obtiene la hora, minuto y segundos del RTC
+        #ifdef DEBUGAUXILIAR
+            Serial.printf("enviarHoraI2C -> Hora enviada por I2C: %02d:%02d\n", hora, minuto);
+        #endif
+    } else {
+        #ifdef DEBUGAUXILIAR
+            Serial.println("Error obteniendo hora para enviar por I2C");
+        #endif
+    }
+    Wire.write(nEstadoCampanario); // Envía el estado del campanario
+    Wire.write(hora);
+    Wire.write(minuto);
+    Wire.write(segundos); // Envía la hora, minuto y segundos por I2C
+}
 
+void enviarRequest() {
+    #ifdef DEBUGAUXILIAR
+        Serial.print("enviarRequest -> Solicitud recibida por I2C: ");
+        Serial.println (requestI2C);
+    #endif
+    switch (requestI2C) {
+        case EstadoCampanario: // Si se solicita el estado del campanario
+            enviarEstadoI2C(); // Envía el estado del campanario
+            break;
+        case EstadoHora: // Si se solicita la hora
+            enviarHoraI2C(); // Envía la hora actual
+            break;
+    }
+    requestI2C = 0; // Resetea la solicitud I2C para esperar la siguiente
+}
 /**
  * @brief Envía el estado actual del campanario a través de comunicación I2C
  * 
@@ -177,7 +244,7 @@
         int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
         Wire.write(nEstadoCampanario); // estadoCampanario es la variable que quieres enviar
         #ifdef DEBUGAUXILIAR
-            Serial.println("Estado enviado por I2C: " + String(nEstadoCampanario));
+            Serial.println("enviarEstadoI2C -> Estado enviado por I2C: " + String(nEstadoCampanario));
         #endif
     }
 
@@ -198,6 +265,7 @@
  *          Si la secuencia no es reconocida, genera un mensaje de debug si DEBUGSERVIDOR está definido.
  */
     void EjecutaSecuencia (int nSecuencia) {
+Serial.println ("Ejecutando secuencia: " + String(nSecuencia)); // Imprime la secuencia que se va a ejecutar
         switch (nSecuencia) {
             case EstadoDifuntos:
                 Campanario.TocaDifuntos();                  // Toca la secuencia de difuntos
@@ -226,5 +294,7 @@
                 break;
         }
     }
+
+#endif
     
 

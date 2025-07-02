@@ -63,6 +63,7 @@
     void ServidorOn(const char* usuario, const char* clave);             // Función para iniciar el servidor HTTP y WebSocket
     void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);  // Callback para manejar eventos del WebSocket
     void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len);  // Procesa los mensajes recibidos por WebSocket
+    bool hayInternet(void);                                             // Comprueba si hay conexión a Internet
 
     // Funciones auxiliares
     // Estas funciones se utilizan para listar los archivos en SPIFFS y para imprimir el contenido de un archivo específico.
@@ -244,6 +245,15 @@
             #endif
         }
     }    
+
+
+    bool hayInternet() {
+      HTTPClient http;
+      http.begin("http://clients3.google.com/generate_204"); // URL ligera y rápida de Google
+      int httpCode = http.GET();
+      http.end();
+      return (httpCode == 204); // Google responde 204 si hay Internet
+  }
 
   /**
    * @brief Lista los archivos almacenados en el sistema de archivos SPIFFS y muestra su nombre y tamaño por el puerto serie.

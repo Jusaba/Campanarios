@@ -34,68 +34,67 @@
 #define DEBUGWIFI
 
 
-void ConectarWifi (const ConfigWiFi& ConfiguracionWiFi);
+bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms);
 
 
 /**
- * @brief Establece la conexión Wi-Fi utilizando la configuración proporcionada.
- *
- * Esta función configura una IP estática basada en el último octeto de la dirección IP
- * especificada en la estructura ConfigWiFi. Luego, intenta conectar el dispositivo a la red Wi-Fi
- * utilizando el SSID y la contraseña proporcionados. Si la conexión es exitosa, actualiza el DNS
- * dinámico y sincroniza la hora mediante NTP.
- *
- * @param ConfiguracionWiFi Estructura que contiene los parámetros de configuración Wi-Fi:
- *        - ip: Cadena de texto con el último octeto de la IP local.
- *        - ssid: Nombre de la red Wi-Fi.
- *        - password: Contraseña de la red Wi-Fi.
- *        - dominio: Dominio para la actualización de DNS dinámico.
- *
- * @note Utiliza macros de depuración (DEBUGWIFI) para imprimir mensajes por Serial.
- * @note Llama a funciones externas para la actualización de DNS y sincronización de hora.
+ * @brief Establece la conexión Wi-Fi utilizando una configuración específica y un tiempo de espera.
+ * 
+ * Configura la IP estática del dispositivo basada en el último octeto de la dirección IP proporcionada en la configuración.
+ * Intenta conectar a la red Wi-Fi especificada por el SSID y la contraseña. Si la conexión es exitosa dentro del tiempo de espera,
+ * actualiza la configuración DNS y sincroniza el reloj RTC.
+ * 
+ * @param ConfiguracionWiFi Estructura que contiene los parámetros de configuración Wi-Fi (SSID, contraseña, IP, dominio, etc.).
+ * @param timeout_ms Tiempo máximo de espera para la conexión en milisegundos (por defecto 10,000 ms).
+ * @return true Si la conexión Wi-Fi se establece correctamente.
+ * @return false Si ocurre un error o se supera el tiempo de espera sin conectar.
  */
-void ConectarWifi (const ConfigWiFi& ConfiguracionWiFi)
+bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms = 10000) // timeout por defecto: 10 segundos
 {
-    uint8_t ultimoOcteto = atoi(ConfiguracionWiFi.ip);                        // Convierte el último octeto de la IP a entero
+    uint8_t ultimoOcteto = atoi(ConfiguracionWiFi.ip);
     IPAddress local_IP(192, 168, 1, ultimoOcteto);
-    IPAddress gateway(192, 168, 1, 1);                                        // Puerta de enlace (router)
-    IPAddress subnet(255, 255, 255, 0);                                       // Máscara de subred
-    IPAddress primaryDNS(8, 8, 8, 8);                                         // DNS primario (Google DNS)
-    IPAddress secondaryDNS(8, 8, 4, 4);                                       // DNS secundario (Google DNS)
-    // Configurar IP estática
+    IPAddress gateway(192, 168, 1, 1);
+    IPAddress subnet(255, 255, 255, 0);
+    IPAddress primaryDNS(8, 8, 8, 8);
+    IPAddress secondaryDNS(8, 8, 4, 4);
+
     if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
       #ifdef DEBUGWIFI
         Serial.println("Configuración de IP estática fallida");
       #endif
     }
-    // Conexión a la red Wi-Fi
+
     #ifdef DEBUGWIFI
       Serial.println("Iniciando conexión Wi-Fi...");
       Serial.print("Conectando a ");
       Serial.println(ConfiguracionWiFi.ssid);
     #endif
-    WiFi.begin(ConfiguracionWiFi.ssid, ConfiguracionWiFi.password);     // Inicia la conexión Wi-Fi 
-    while (WiFi.status() != WL_CONNECTED) {                             // Espera hasta que se conecte
+
+    WiFi.begin(ConfiguracionWiFi.ssid, ConfiguracionWiFi.password);
+
+    unsigned long startAttemptTime = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime) < timeout_ms) {
       delay(500);
       #ifdef DEBUGWIFI
-        Serial.print(".");                                              // Imprime un punto cada medio segundo para indicar que está intentando conectar   
+        Serial.print(".");
       #endif
     }
-    #ifdef DEBUGWIFI
-      Serial.println();
-      Serial.println("\nConexión Wi-Fi establecida.");
-      Serial.print("Direccion IP: ");
-      Serial.println(WiFi.localIP());
-    #endif
 
-  
-  if (WiFi.status() == WL_CONNECTED) {
-
-    ActualizaDNS(configWiFi.dominio);                 // Llama a la función para actualizar el DNS en minidindns
-    RTC::begin();                                     // Sincroniza hora con NTP
-  } else {
-    #ifdef DEBUGWIFI
-      Serial.println("Error al conectar a la red Wi-Fi.");
-    #endif
-  }    
+    if (WiFi.status() == WL_CONNECTED) {
+      #ifdef DEBUGWIFI
+        Serial.println();
+        Serial.println("\nConexión Wi-Fi establecida.");
+        Serial.print("Direccion IP: ");
+        Serial.println(WiFi.localIP());
+      #endif
+      ActualizaDNS(ConfiguracionWiFi.dominio);
+      RTC::begin();
+      return true;
+    } else {
+      #ifdef DEBUGWIFI
+        Serial.println();
+        Serial.println("Error al conectar a la red Wi-Fi (timeout).");
+      #endif
+      return false;
+    }
 }

@@ -100,17 +100,17 @@
                     .catch(error => console.error('Error:', error));
             }
 
-            let calefaccionEncendida = false;
 
             function toggleCalefaccion() {
-                calefaccionEncendida = !calefaccionEncendida;
-                // Cambia el color del icono según el estado
-                document.getElementById("iconoCalefaccion").setAttribute("stroke", calefaccionEncendida ? "red" : "orange");
-                // Envía el comando por WebSocket o fetch
-                if (typeof websocket !== "undefined") {
-                    websocket.send(calefaccionEncendida ? "CALEFACCION_ON" : "CALEFACCION_OFF");
+                
+                lCalefaccion = !lCalefaccion;               // Cambia el estado de la variable global lCalefaccion
+
+                document.getElementById("iconoCalefaccion").setAttribute("stroke", lCalefaccion ? "red" : "orange");      // Cambia el color del icono según el estado
+    
+                if (typeof websocket !== "undefined") {                 // Envía el comando por WebSocket si está definido
+                    websocket.send(lCalefaccion ? "CALEFACCION_ON" : "CALEFACCION_OFF");
                 }
-}            
+            }
         </script>
         
     </body>

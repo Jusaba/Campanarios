@@ -36,21 +36,23 @@
 
   #define DebugAP
 
-  #define EEPROM_SIZE 256
+  #define EEPROM_SIZE 256                                   // Tamaño de la EEPROM para almacenar la configuración WiFi
 
-  struct ConfigWiFi {
+    struct ConfigWiFi {
       char ssid[32];
       char password[32];
       char ip[16];
       char dominio[32];
       char usuario[32];
       char clave[32];
-  };
+    };
 
-  ConfigWiFi configWiFi;
+    ConfigWiFi configWiFi;
 
-  const char* ap_ssid = "magaru";
-  const char* ap_password = "tremp2025";
+  
+
+const char* ap_ssid = "magaru";
+const char* ap_password = "24081960";
 
   DNSServer dnsServer;
   extern AsyncWebServer server;

@@ -64,7 +64,7 @@
         Wire.begin(I2C_SLAVE_ADDR);                                 // Iniciar el bus I2C como esclavo con la dirección definida
         Wire.setClock(100000);
         Wire.onReceive(recibirSecuencia);
-        Wire.onRequest(enviarEstadoI2C);
+        Wire.onRequest(enviarRequest);
       
         CAMPANA* campana1 = new CAMPANA(PinCampana1);               // Crea una nueva instancia de la clase CAMPANA para la campana 1
         CAMPANA* campana2 = new CAMPANA(PinCampana2);               // Crea una nueva instancia de la clase CAMPANA para la campana 2
@@ -75,14 +75,27 @@
         Campanario.AddCampana(campana2);                            // Añade la campana 2 al campanario
         Campanario.AddCalefaccion(calefaccion);                     // Añade la calefacción al campanario  
       
-        ConectarWifi(configWiFi);                                   // Llama a la función para conectar a la red Wi-Fi
-        ServidorOn(configWiFi.usuario, configWiFi.clave);           // Llama a la función para iniciar el servidor
+        lConexionInternet = ConectarWifi(configWiFi);               // Llama a la función para conectar a la red Wi-Fi con la configuración cargada
+        if (lConexionInternet)                                      // Llama a la función para conectar a la red Wi-Fi
+        {                                                           // Si la conexión es exitosa
+            ServidorOn(configWiFi.usuario, configWiFi.clave);       // Llama a la función para iniciar el servidor
+            #ifdef DEBUG
+              Serial.println("Conexión Wi-Fi exitosa.");
+            #endif
+        } else {
+          #ifdef DEBUG
+            Serial.println("Error al conectar a la red Wi-Fi.");
+          #endif
+        }
+      
     }  
-  }
+    }
   
   void loop() {
   
-    ChekearCuartos();                                               // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
+    if (RTC::isNtpSync()){
+      ChekearCuartos();                                             // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
+    }
   
     if (secuenciaI2C > 0) {                                         // Si se ha recibido orden por I2C
       EjecutaSecuencia(secuenciaI2C);                               // Llama a la función para ejecutar la orden recibida 

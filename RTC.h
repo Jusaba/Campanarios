@@ -31,25 +31,40 @@
     #define GMT_OFFSET_SEC 3600                                 // Offset horario en segundos (por ejemplo, -5*3600 para GMT-5)
     #define DAYLIGHT_OFFSET_SEC 3600                            // Horario de verano, si aplica
 
-    class RTC {
-        public:
-            static void begin(const char* ntpServer = NTP_SERVER, long gmtOffsetSec = GMT_OFFSET_SEC, int daylightOffsetSec = DAYLIGHT_OFFSET_SEC) {
+class RTC {
+    public:
+        static void begin(const char* ntpServer = NTP_SERVER, long gmtOffsetSec = GMT_OFFSET_SEC, int daylightOffsetSec = DAYLIGHT_OFFSET_SEC, unsigned long timeout_ms = 10000) {
             configTime(gmtOffsetSec, daylightOffsetSec, ntpServer);
             #ifdef DEBUGRTC
                 Serial.println("Sincronizando hora con NTP...");
             #endif
-
             struct tm timeinfo;
+            unsigned long start = millis();
+            bool syncOk = false;
             while (!getLocalTime(&timeinfo)) {
+                if (millis() - start > timeout_ms) {
+                    #ifdef DEBUGRTC
+                        Serial.println("Timeout esperando sincronización NTP.");
+                    #endif
+                    break;
+                }
                 #ifdef DEBUGRTC
                     Serial.println("Esperando sincronización NTP...");
                 #endif
                 delay(1000);
             }
+            syncOk = getLocalTime(&timeinfo);
+            RTC::ntpSyncOk = syncOk;
             #ifdef DEBUGRTC
-                Serial.println("Hora sincronizada correctamente:");
-                Serial.println(timeToString(timeinfo).c_str());
+                if (syncOk) {
+                    Serial.println("Hora sincronizada correctamente:");
+                    Serial.println(timeToString(timeinfo).c_str());
+                }
             #endif
+        }
+
+        static bool isNtpSync() {
+            return ntpSyncOk; // Devuelve el estado de sincronización NTP
         }
 
         static String getTimeStr() {
@@ -66,6 +81,10 @@
             strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
             return String(buffer);
         }
-    };
+        static bool ntpSyncOk; // Indica si la sincronización NTP fue exitosa
+};
+
+// Definición del miembro estático fuera de la clase
+bool RTC::ntpSyncOk = false;
 
 #endif // RTC_H
