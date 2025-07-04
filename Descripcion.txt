@@ -1,108 +1,148 @@
-# Descripción general del sistema de campanario electrónico
+---
 
-Este proyecto implementa un **campanario electrónico** basado en ESP32, capaz de tocar diferentes secuencias de campanas (difuntos, misa, fiesta, cuartos, horas) tanto de forma automática como remota a través de una interfaz web. El sistema está diseñado para ser robusto, flexible y fácilmente gestionable desde cualquier dispositivo conectado a la red local.
+## **Descripción General de la Aplicación Campanario**
+
+La aplicación **Campanario** es un sistema embebido basado en ESP32 para la gestión y control de un campanario electrónico. 
+Permite automatizar el toque de campanas, el control de la calefacción y la gestión remota a través de WiFi, WebSocket e I2C. 
+El sistema puede funcionar tanto de forma autónoma (por horarios) como bajo órdenes recibidas desde una interfaz web o desde 
+un dispositivo maestro por I2C.
 
 ---
 
-## Arquitectura y módulos principales
+## **Función de Cada Módulo**
 
 ### 1. **Campanarios.ino**
-Archivo principal del programa. Se encarga de:
-- Inicializar el hardware y los objetos principales (`CAMPANA`, `CAMPANARIO`).
-- Configurar la conexión WiFi y sincronizar el reloj interno (RTC) mediante NTP.
-- Arrancar el servidor web y el WebSocket.
-- Ejecutar el bucle principal (`loop()`), donde se chequean los cuartos y horas, se procesan las órdenes remotas y se actualiza el estado de las campanas.
+- **Función:**  
+  Es el archivo principal (`main`) del proyecto. Gestiona la inicialización de hardware, la configuración WiFi, el arranque del servidor web, 
+  la inicialización del bus I2C y el bucle principal de control.
+- **Responsabilidades:**
+  - Inicializa el sistema y los periféricos.
+  - Gestiona el modo configuración (AP) si el pin de configuración está a LOW.
+  - Conecta a la red WiFi y arranca el servidor web.
+  - Inicializa el bus I2C como esclavo y asocia los manejadores de eventos.
+  - Crea y añade las instancias de campanas y calefacción al objeto Campanario.
+  - En el loop, atiende órdenes recibidas por I2C o WebSocket y ejecuta las secuencias correspondientes.
+  - Llama periódicamente a funciones de chequeo de cuartos y test de campanadas.
+
+---
 
 ### 2. **Campana.h / Campana.cpp**
-Define la clase `CAMPANA`, que representa cada campana física:
-- Gestiona el pin de control, la activación y la animación del badajo.
-- Permite tocar la campana y actualizar su estado de forma no bloqueante.
+- **Función:**  
+  Define la clase `CAMPANA`, que representa una campana física controlada por el sistema.
+- **Responsabilidades:**
+  - Gestiona el encendido y apagado de la campana.
+  - Permite definir diferentes patrones de toque.
 
-### 3. **Campanario.h / Campanario.cpp**
-Define la clase `CAMPANARIO`, que agrupa y gestiona todas las campanas:
-- Permite añadir campanas al conjunto.
-- Gestiona las secuencias de toque (difuntos, misa, fiesta, cuartos, horas).
-- Controla el inicio, parada y actualización de las secuencias.
+---
 
-### 4. **Servidor.h / Servidor.cpp**
-Gestiona el servidor web y el WebSocket:
-- Atiende peticiones HTTP y WebSocket desde la interfaz web.
-- Procesa comandos recibidos (tocar secuencias, parar, controlar calefacción).
-- Envía mensajes en tiempo real a los clientes para actualizar la interfaz.
-- Protege el acceso a la interfaz mediante autenticación básica.
+### 3. **Calefaccion.h / Calefaccion.cpp**
+- **Función:**  
+  Define la clase `CALEFACCION`, que representa el sistema de calefacción del campanario.
+- **Responsabilidades:**
+  - Permite encender y apagar la calefacción.
+  - Gestiona el estado actual de la calefacción.
+
+---
+
+### 4. **Campanario.h / Campanario.cpp**
+- **Función:**  
+  Define la clase `Campanario`, que es el núcleo lógico del sistema.
+- **Responsabilidades:**
+  - Gestiona el conjunto de campanas y la calefacción.
+  - Ejecuta secuencias de toques (horas, cuartos, difuntos, misa, etc.).
+  - Mantiene el estado global del campanario.
+
+---
 
 ### 5. **RTC.h**
-Clase utilitaria para la gestión del reloj en tiempo real (RTC) del ESP32:
-- Sincroniza la hora con un servidor NTP.
-- Permite obtener la hora actual para controlar los toques automáticos de cuartos y horas.
-
-### 6. **Auxiliar.h**
-Funciones auxiliares para el control del campanario y la calefacción:
-- Chequea los cuartos y horas para activar las secuencias automáticas.
-- Ejecuta secuencias recibidas por I2C o desde la web.
-- Gestiona la comunicación I2C para recibir órdenes y enviar estados.
-- Permite encender y apagar la calefacción desde la web o por I2C, notificando el estado a los clientes conectados
-
-### 7. **ConexionWifi.h / DNSServicio.h**
-Utilidades para la conexión WiFi y la gestión de DNS:
-- Facilitan la conexión automática a la red WiFi configurada.
-- Permiten el acceso al sistema mediante un nombre de dominio local.
-
-### 8. **Archivos web (data/index.html, data/Campanas.html, data/Campanas.js, etc.)**
-Interfaz web del usuario:
-- Permite seleccionar y visualizar las secuencias de campanas.
-- Usa WebSocket para recibir en tiempo real el estado de las campanas y enviar comandos al ESP32.
-- Incluye animaciones visuales para simular el toque de las campanas.
-
-### 9. **Calefaccion.h / Calefaccion.cpp**
-Define la clase y funciones para el control de la calefacción del campanario:
-- Permite encender y apagar la calefacción de forma programada o remota.
-- Gestiona el estado de la calefacción y su integración con el resto del sistema.
-- Proporciona métodos para consultar y modificar el estado desde otros módulos (por ejemplo, desde la web o por I2C).
+- **Función:**  
+  Gestiona el reloj en tiempo real usando NTP.
+- **Responsabilidades:**
+  - Sincroniza la hora con servidores NTP.
+  - Proporciona la hora local al sistema.
+  - Indica si la hora está sincronizada.
 
 ---
 
-## Resumen de integración de módulos
-
-- **Campanarios.ino** orquesta la inicialización y el bucle principal.
-- **Campana** y **Campanario** gestionan el hardware y la lógica de las campanas.
-- **Servidor** expone la interfaz web y el canal de comunicación en tiempo real.
-- **RTC** asegura la precisión horaria para los toques automáticos.
-- **Auxiliar** implementa la lógica de chequeo y ejecución de secuencias y la integración de órdenes externas.
-- **Calefaccion** gestiona el hardware y la lógica de la calefacción, permitiendo su control tanto local como remoto.
-- **Archivos web** proporcionan la experiencia de usuario, incluyendo el control de la calefacción.
-- **ConexionWifi** y **DNSServicio** facilitan la conectividad y el acceso.
+### 6. **ConexionWifi.h**
+- **Función:**  
+  Gestiona la conexión WiFi del sistema.
+- **Responsabilidades:**
+  - Carga la configuración WiFi.
+  - Conecta a la red y gestiona el estado de la conexión.
+  - Permite el arranque en modo AP para configuración.
 
 ---
 
-Este diseño modular permite mantener el sistema organizado, facilitar su mantenimiento y futuras ampliaciones, y asegurar una experiencia de usuario fluida y segura, incluyendo la gestión remota de la calefacción del campanario.
----
-
-## Funcionamiento general
-
-1. **Inicio:**  
-   El ESP32 se conecta a la red WiFi y sincroniza la hora con un servidor NTP.
-2. **Interfaz web:**  
-   El usuario accede a la interfaz web protegida por usuario y contraseña, desde donde puede lanzar secuencias de campanas, parar el sistema o controlar la calefacción.
-3. **Toques automáticos:**  
-   El sistema chequea continuamente la hora y activa automáticamente los toques de cuartos y horas según la programación.
-4. **Comunicación en tiempo real:**  
-   Toda la interacción con la web es en tiempo real gracias a WebSocket, permitiendo ver el estado de las campanas y recibir notificaciones instantáneas.
-5. **Control remoto y local:**  
-   Las órdenes pueden recibirse tanto desde la web como por I2C, permitiendo la integración con otros sistemas o controles físicos.
+### 7. **ModoAP.h**
+- **Función:**  
+  Gestiona el modo Access Point (AP) y el portal cautivo para configuración inicial.
+- **Responsabilidades:**
+  - Arranca el ESP32 como punto de acceso.
+  - Permite al usuario configurar la red WiFi desde un navegador.
 
 ---
 
-## Resumen de integración de módulos
-
-- **Campanarios.ino** orquesta la inicialización y el bucle principal.
-- **Campana** y **Campanario** gestionan el hardware y la lógica de las campanas.
-- **Servidor** expone la interfaz web y el canal de comunicación en tiempo real.
-- **RTC** asegura la precisión horaria para los toques automáticos.
-- **Auxiliar** implementa la lógica de chequeo y ejecución de secuencias.
-- **Archivos web** proporcionan la experiencia de usuario.
-- **ConexionWifi** y **DNSServicio** facilitan la conectividad y el acceso.
+### 8. **DNSServicio.h**
+- **Función:**  
+  Gestiona la actualización dinámica de DNS para acceso remoto.
+- **Responsabilidades:**
+  - Envía peticiones HTTP a servidores DNS para actualizar la IP pública asociada a un dominio.
 
 ---
 
-Este diseño modular permite mantener el sistema organizado, facilitar su mantenimiento y futuras ampliaciones, y asegurar una experiencia de usuario fluida y
+### 9. **Servidor.h**
+- **Función:**  
+  Gestiona el servidor web asíncrono y los WebSockets.
+- **Responsabilidades:**
+  - Sirve la interfaz web al usuario.
+  - Recibe y procesa comandos desde la web (por WebSocket).
+  - Envía actualizaciones de estado a los clientes conectados.
+
+---
+
+### 10. **Auxiliar.h**
+- **Función:**  
+  Contiene funciones auxiliares y utilitarias.
+- **Responsabilidades:**
+  - Gestiona la comunicación I2C (recepción y envío de datos).
+  - Procesa y ejecuta secuencias recibidas.
+  - Funciones de chequeo de cuartos y horas.
+  - Conversión y formateo de datos.
+
+---
+
+### 11. **Display.h** (en el DialCampanario)
+- **Función:**  
+  Gestiona la visualización en pantalla del dial.
+- **Responsabilidades:**
+  - Muestra menús, mensajes, iconos y la hora.
+  - Gestiona el brillo y el modo sleep del display.
+
+---
+
+### 12. **DialCampanario.ino** (en el DialCampanario)
+- **Función:**  
+  Es el firmware del dispositivo dial (cliente I2C).
+- **Responsabilidades:**
+  - Permite al usuario seleccionar y enviar órdenes al campanario.
+  - Muestra el estado y la hora en pantalla.
+  - Gestiona la interacción con el usuario (botones, encoder).
+
+---
+
+## **Resumen del Flujo General**
+
+1. **Arranque:**  
+   El sistema arranca, inicializa hardware y periféricos, y conecta a WiFi o entra en modo AP para configuración.
+2. **Sincronización:**  
+   Sincroniza la hora con NTP y actualiza el DNS si es necesario.
+3. **Ejecución:**  
+   Atiende órdenes recibidas por WebSocket o I2C, ejecuta secuencias de campanas y controla la calefacción.
+4. **Visualización:**  
+   Muestra el estado y la hora en la pantalla del dial y en la interfaz web.
+5. **Gestión remota:**  
+   Permite el control y la consulta del estado desde cualquier dispositivo conectado a la red o por acceso remoto.
+
+---
+

@@ -183,7 +183,11 @@
             M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
             M5Dial.Display.setTextSize(2);
             char buffer[9];
-            snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", nHora, nMinutos, nSegundos);
+            if (nHora == 255 && nMinutos == 255 && nSegundos == 255) {
+                snprintf(buffer, sizeof(buffer), "--:--:--");
+            }else{
+                snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", nHora, nMinutos, nSegundos);
+            }
             M5Dial.Display.drawString(buffer, x, y + 65);
         }
 

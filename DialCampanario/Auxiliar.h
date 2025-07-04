@@ -66,35 +66,35 @@ int nEstadoMenu = 0;
 
 
 
-struct CampanarioEstado
+struct CampanarioEstado                                     //Estructura para almacenar el estado del campanario
 {
-    uint8_t nEstado;   // Estado del campanario
-    uint8_t nHora;     // Hora actual
-    uint8_t nMinutos;  // Minutos actuales
-    uint8_t nSegundos; // Segundos actuales
+    uint8_t nEstado;                                        // Estado del campanario
+    uint8_t nHora;                                          // Hora actual
+    uint8_t nMinutos;                                       // Minutos actuales
+    uint8_t nSegundos;                                      // Segundos actuales
 };
-CampanarioEstado campanarioEstado; // Estructura para almacenar el estado del campanario
+CampanarioEstado campanarioEstado;                          // Estructura para almacenar el estado del campanario
 
 int nMenuItems = 4;                 // Cambia según el menú activo
 int menuIndex = 0;                  // Índice del menú actual
 
-long nMilisegundoTemporal = 0;      // Variable para almacenar el tiempo temporal
-int nContadorCiclosDisplaySleep = 0;        // Contador de ciclos de sleep del display
+long nMilisegundoTemporal = 0;                              // Variable para almacenar el tiempo temporal
+int nContadorCiclosDisplaySleep = 0;                        // Contador de ciclos de sleep del display
 
 
 
-    int nEstado = EstadoInicio;                 // Estado inicial del sistema
-    uint8_t nEstadoAnterior = EstadoInicio; // Estado anterior del menú
-    uint8_t nEstadoActual = EstadoInicio; // Estado actual del menú
-    int nPosicionAneterior = 0;         // Estado anterior del sistema
-    int nPosicionActual = 0;           // Estado actual del sistema
-    bool lCambioEstado = false;  // Indica si ha habido un cambio de estado
-    bool lSleep = false; // Indica si el display está en modo sleep
+    int nEstado = EstadoInicio;                             // Estado inicial del sistema
+    uint8_t nEstadoAnterior = EstadoInicio;                 // Estado anterior del menú
+    uint8_t nEstadoActual = EstadoInicio;                   // Estado actual del menú
+    int nPosicionAneterior = 0;                             // Estado anterior del sistema
+    int nPosicionActual = 0;                                // Estado actual del sistema
+    bool lCambioEstado = false;                             // Indica si ha habido un cambio de estado
+    bool lSleep = false;                                    // Indica si el display está en modo sleep
 
     void InicioDisplay (void);
     void MostrarOpcion(int seleccionado);
     void EnviarEstado(int nEstadoMenu);
-    void SolicitarEstadoCampanario(void);
+     void SolicitarEstadoCampanario(void);
     void SolicitarEstadoHora(void); // Solicita la hora al esclavo I2C
     void SeleccionaMenu(int nEstadoSeleccionado);
     
@@ -186,7 +186,26 @@ void EnviarEstado(int nEstadoMenu) {
     #endif
 }
 
-void SolicitarEstadoCampanario() {
+/**
+ * @brief Solicita el estado actual del campanario a través del bus I2C.
+ *
+ * Esta función envía una solicitud al dispositivo esclavo I2C identificado por la dirección I2C_SLAVE_ADDR
+ * para obtener el estado actual del campanario. Si se detecta un cambio de estado respecto al anterior,
+ * se actualiza el estado, se selecciona el menú correspondiente y se marca que ha habido un cambio de estado.
+ * 
+ * Mensajes de depuración pueden ser impresos por el puerto serie si están habilitados los flags DEBUGI2CREQUEST o DEBUGI2CTX.
+ *
+ * Variables externas utilizadas:
+ * - I2C_SLAVE_ADDR: Dirección del dispositivo esclavo I2C.
+ * - EstadoCampanario: Comando para solicitar el estado.
+ * - nEstadoActual: Variable donde se almacena el estado recibido.
+ * - nEstadoAnterior: Variable que almacena el estado anterior para detectar cambios.
+ * - SeleccionaMenu(int): Función que selecciona el menú según el estado recibido.
+ * - nEstado: Variable que indica el elemento actual del menú.
+ * - lCambioEstado: Bandera que indica si ha habido un cambio de estado.
+ */
+void SolicitarEstadoCampanario() 
+{
     
     #ifdef DEBUGI2CREQUEST       
         Serial.println("SolicitarEstadoCampanario->Solicitando estado del campanario...");
@@ -195,16 +214,10 @@ void SolicitarEstadoCampanario() {
     Wire.beginTransmission(I2C_SLAVE_ADDR);
     Wire.write(EstadoCampanario); 
     Wire.endTransmission();
-    #ifdef DEBUGI2CTX
-        Serial.println("SolicitarEstadoCampanario->Solicitud de estado enviada al campanario");   
-    #endif 
 
     Wire.requestFrom(I2C_SLAVE_ADDR, 1); // Solicita 1 byte al esclavo
     if (Wire.available()) {
         nEstadoActual = Wire.read();    
-        #ifdef DEBUGI2CREQUEST
-            Serial.printf("SolicitarEstadoCampanario->Estado actual del campanario: %d\n", nEstadoActual);
-        #endif
 
         if (nEstadoActual != nEstadoAnterior) {
             #ifdef DEBUGI2CREQUEST
@@ -221,6 +234,7 @@ void SolicitarEstadoCampanario() {
         #endif
     }    
 }
+
 void SolicitarEstadoHora() {
     #ifdef DEBUGI2CREQUEST 
         Serial.println("SolicitarEstadoHora->Solicitando hora del campanario...");
@@ -241,7 +255,7 @@ void SolicitarEstadoHora() {
         campanarioEstado.nEstado = nEstadoActual; // Actualiza el estado del campanario
         if (nEstadoActual != nEstadoAnterior) {
             #ifdef DEBUGI2CREQUEST
-                Serial.printf("SolicitarEstadoCampanario->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual); 
+                Serial.printf("SolicitarEstadoHora->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual); 
             #endif
             nEstadoAnterior = nEstadoActual;
             SeleccionaMenu(nEstadoActual); // Llama a la función para seleccionar el menú según el estado recibido
@@ -254,42 +268,32 @@ void SolicitarEstadoHora() {
         #endif        
     } else {
         #ifdef DEBUGI2CREQUEST
-            Serial.println("SolicitarEstadoCampanario->No se recibió respuesta del campanario");
+            Serial.println("SolicitarEstadoHora->No se recibió respuesta del campanario");
         #endif
     }            
-
-
     
 }
 
-void SeleccionaMenu(int nEstadoSeleccionado) {
-    #ifdef DEBUGMENU
-        Serial.println("Seleccionando menú según el estado recibido...");
-    #endif
-    
-    if ((nEstadoSeleccionado & (bitEstadoDifuntos | bitEstadoMisa)) && !(nEstadoSeleccionado & bitEstadoCalefaccionOn)) {
-        #ifdef DEBUGMENU
-            Serial.println("Menu2");
-        #endif
-        nEstadoMenu = 2; // Cambia al menú 2
-    } else if ((nEstadoSeleccionado & (bitEstadoDifuntos | bitEstadoMisa)) && (nEstadoSeleccionado & bitEstadoCalefaccionOn)) {
-        #ifdef DEBUGMENU
-            Serial.println("Menu3");
-        #endif
-        nEstadoMenu = 3; // Cambia al menú 3
-    } else if (!(nEstadoSeleccionado & (bitEstadoDifuntos | bitEstadoMisa)) && !(nEstadoSeleccionado & bitEstadoCalefaccionOn)) {
-        #ifdef DEBUGMENU
-            Serial.println("Menu0");
-        #endif
-        nEstadoMenu = 0; // Cambia al menú 0
-    } else if (!(nEstadoSeleccionado & (bitEstadoDifuntos | bitEstadoMisa)) && (nEstadoSeleccionado & bitEstadoCalefaccionOn)) {
-        #ifdef DEBUGMENU
-            Serial.println("Menu1");
-        #endif
-        nEstadoMenu = 1; // Cambia al menú 1
-    }
-}
 
+/**
+ * @brief Selecciona el estado del menú según el estado seleccionado.
+ *
+ * Esta función evalúa el valor de nEstadoSeleccionado utilizando máscaras de bits
+ * (bitEstadoDifuntos, bitEstadoMisa y bitEstadoCalefaccionOn) para determinar el estado
+ * actual del menú. Asigna un valor a nEstadoMenu según las siguientes condiciones:
+ *   - Si está activo Difuntos o Misa y la calefacción está encendida, nEstadoMenu = 3.
+ *   - Si está activo Difuntos o Misa y la calefacción está apagada, nEstadoMenu = 2.
+ *   - Si no está activo Difuntos ni Misa pero la calefacción está encendida, nEstadoMenu = 1.
+ *   - Si no está activo Difuntos ni Misa ni la calefacción, nEstadoMenu = 0.
+ *
+ * @param nEstadoSeleccionado Valor entero que representa el estado actual mediante bits.
+ */
+void SeleccionaMenu(int nEstadoSeleccionado) 
+{
+    bool difuntosMisa = nEstadoSeleccionado & (bitEstadoDifuntos | bitEstadoMisa);
+    bool calefOn = nEstadoSeleccionado & bitEstadoCalefaccionOn;
+    nEstadoMenu = difuntosMisa ? (calefOn ? 3 : 2) : (calefOn ? 1 : 0);
+}
 
             
 #endif
