@@ -110,5 +110,11 @@
   
     TestCampanadas();                                               // Llama a la función para probar las campanadas y enviar el número de campana tocada a los clientes conectados
   
+    if (millis() - ultimoCheckInternet > intervaloCheckInternet) {  // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
+        ultimoCheckInternet = millis();
+        TestInternet();                                            // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
+  
+    }
+
   }
 

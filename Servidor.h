@@ -41,6 +41,7 @@
 
     #define DEBUGSERVIDOR                                 // Descomentar para activar el modo de depuración del servidor
 
+    bool servidorIniciado = false;                        // Variable para indicar si el servidor ha sido iniciado
     //AsyncWebSocket ws;                                  // WebSocket  
     int nToque = 0;                                       // Variable para almacenar la secuencia de botones pulsados
     
@@ -84,36 +85,39 @@
    */
     void ServidorOn(const char* usuario, const char* clave)
     {
+      
         if(!SPIFFS.begin(true)){
             #ifdef DEBUGSERVIDOR
                 Serial.println("ha ocurrido un error montando SPIFFS");
             #endif    
         }
+        if (!servidorIniciado) {
+          ws.onEvent(onEvent);                                            // Configura el manejador de eventos del WebSocket          
+          server.addHandler(&ws);                                         // Añade el manejador de WebSocket al servidor HTTP
 
-        ws.onEvent(onEvent);                                            // Configura el manejador de eventos del WebSocket          
-        server.addHandler(&ws);                                         // Añade el manejador de WebSocket al servidor HTTP
+          server.on("/", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
+            if(!request->authenticate(usuario, clave)) {
+              return request->requestAuthentication();
+            }
+            request->send(SPIFFS, "/index.html", "text/html");
+            nToque = 0; // Resetea la secuencia a 0 al cargar la página principal
+          });
 
-        server.on("/", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
-          if(!request->authenticate(usuario, clave)) {
-            return request->requestAuthentication();
-          }
-          request->send(SPIFFS, "/index.html", "text/html");
-          nToque = 0; // Resetea la secuencia a 0 al cargar la página principal
-        });
-
-        server.on("/Campanas.html", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
-          if(!request->authenticate(usuario, clave)) {
-            return request->requestAuthentication();
-          }
-          request->send(SPIFFS, "/Campanas.html", "text/html");
-        });
-        server.serveStatic("/", SPIFFS, "/");
-        // Iniciar el servidor
-        server.begin();
-        #ifdef DEBUGSERVIDOR
-            Serial.println("Servidor HTTP iniciado en el puerto 80.");
-            Serial.println("Servidor HTTP iniciado. Esperando conexiones...");
-        #endif
+          server.on("/Campanas.html", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
+            if(!request->authenticate(usuario, clave)) {
+              return request->requestAuthentication();
+            }
+            request->send(SPIFFS, "/Campanas.html", "text/html");
+          });
+          server.serveStatic("/", SPIFFS, "/");
+          // Iniciar el servidor
+          server.begin();
+          #ifdef DEBUGSERVIDOR
+              Serial.println("Servidor HTTP iniciado en el puerto 80.");
+              Serial.println("Servidor HTTP iniciado. Esperando conexiones...");
+          #endif
+          servidorIniciado = true;                                       // Marca el servidor como iniciado
+        }
     }
 
 

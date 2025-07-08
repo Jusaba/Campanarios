@@ -63,7 +63,11 @@
     volatile uint8_t secuenciaI2C = 0;
     uint8_t requestI2C = 0;                                    // Variable para almacenar el número de solicitud I2C
     bool lConexionInternet = false;                         // Variable para indicar si hay conexión a Internet
+
+    unsigned long ultimoCheckInternet = 0;
+    const unsigned long intervaloCheckInternet = 5 * 60 * 1000; // 5 minutos en ms
     
+
     void ChekearCuartos(void);                              // Función para chequear los cuartos y las horas y tocar las campanas correspondientes
     void TestCampanadas(void);                              // Función para temporizar las campnas y presentarlas en la pagina correspondiente  
     
@@ -74,6 +78,7 @@
 
     void EjecutaSecuencia (int nSecuencia);                 // Función para ejecutar la secuencia de campanas según el valor recibido por I2C
     
+    void TestInternet(void);                              // Función para comprobar la conexión a Internet y actualizar el DNS si es necesario
 /**
  * @brief Verifica y gestiona las campanadas de horas y cuartos
  * 
@@ -292,6 +297,21 @@ Serial.println ("Ejecutando secuencia: " + String(nSecuencia)); // Imprime la se
                     Serial.println("Secuencia no reconocida.");
                 #endif
                 break;
+        }
+    }
+    void TestInternet(void) {
+        if (!hayInternet()) { // hayInternet() debe comprobar acceso real a internet
+          lConexionInternet = ConectarWifi(configWiFi); // Intenta reconectar
+          if (lConexionInternet) {
+              #ifdef DEBUG
+              Serial.println("Reconectado a internet correctamente.");
+              #endif
+              ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
+          } else {
+              #ifdef DEBUG
+              Serial.println("Sin conexión a internet. Funcionando en modo local.");
+              #endif
+          }
         }
     }
 
