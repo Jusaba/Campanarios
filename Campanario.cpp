@@ -304,11 +304,16 @@
     void CAMPANARIO::TocaHora(int nHora) {
         this->_LimpiaraCampanadas(); // Limpia las campanadas antes de tocar la hora
         int i = 0;
-        for ( i = 0; i < 4; ++i) {
-            this->_aCampanadas[i].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
-            this->_aCampanadas[i].intervaloMs = 1000;       // espaciado 1000 ms
-        }
-        this->_aCampanadas[i-1].intervaloMs = 3000;         // espaciado 3000 ms para separar cuartos de horas
+
+        this->_aCampanadas[0].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
+        this->_aCampanadas[0].intervaloMs = 1000;       // espaciado 1000 ms
+        this->_aCampanadas[1].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
+        this->_aCampanadas[1].intervaloMs = 1000;       // espaciado 1000 ms
+        this->_aCampanadas[2].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
+        this->_aCampanadas[2].intervaloMs = 1000;       // espaciado 1000 ms
+        this->_aCampanadas[3].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
+        this->_aCampanadas[3].intervaloMs = 3000;       // espaciado 1000 ms
+
         int nHoraReal = nHora % 12; // Asegura que la hora esté en el rango de 0 a 11
         int nHoraTocada = (nHoraReal == 0) ? 12 : nHoraReal; // Si es 0, se toca la campana 12
         for ( int i = 0; i < nHoraTocada; ++i) {
