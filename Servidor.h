@@ -91,6 +91,10 @@
                 Serial.println("ha ocurrido un error montando SPIFFS");
             #endif    
         }
+//SPIFFS.format();        
+//listSPIFFS();
+//printFileContent("/index.html");         // Imprime el contenido del archivo index.html en la consola para verificar que se ha cargado correctamente
+
         if (!servidorIniciado) {
           ws.onEvent(onEvent);                                            // Configura el manejador de eventos del WebSocket          
           server.addHandler(&ws);                                         // Añade el manejador de WebSocket al servidor HTTP
