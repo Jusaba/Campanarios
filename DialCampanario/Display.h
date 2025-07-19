@@ -10,12 +10,14 @@
         #define Color_Voltios       0xffff
         #define Color_Seleccion     TFT_ORANGE
         #define Color_Transparente  0x0002
+    
         #define iStop               0                   //!<Posicion del array de sprites con el icono de Stop
         #define iDifuntos           1                   //!<Posicion del array de sprites con el icono de Difuntos
         #define iMisa               2                   //!<Posicion del array de sprites con el icono de Misa
         #define iCalefaccionOn      3                   //!<Posicion del array de sprites con el icono de Calefaccion On
         #define iCalefaccionOff     4                   //!<Posicion del array de sprites con el icono de Calefaccion Off
         #define iCampanario         5                   //!<Posicion del array de sprites con el icono de Campanario
+        #define iNoInternet         6                   //!<Posicion del array de sprites con el icono de No Internet
 
         #define IconoStop    Stop                       //!<Nombre del icono termometro del menu en Imagen.h
         #define IconoDifuntos Difuntos                  //!<Nombre del icono de difuntos del menu en Imagen.h
@@ -23,11 +25,11 @@
         #define IconoCalefaccionOn CalefaccionOn        //!<Nombre del icono de calefaccion On del menu en Imagen.h
         #define IconoCalefaccionOff CalefaccionOff      //!<Nombre del icono de
         #define IconoCampanario Campanario              //!<Nombre del icono de campanario del menu en Imagen.h
-
+        #define IconoNoInternet NoInternet              //!<Nombre del icono de no internet del menu en Imagen.h
         
 
         boolean lBrillo = 1;                            //Indica si hay brillo en el display (1)
-        M5Canvas* aSprites[6];                          //Array de Sprites de Menu
+        M5Canvas* aSprites[7];                          //Array de Sprites de Menu
 
 
         // Prototipos de funciones
@@ -46,7 +48,7 @@
         void MensajeCalefaccionOn()   { MensajeIconoTexto(iCalefaccionOn, "Encender", Color_Info, 50); }// Muestra el mensaje de calefacción encendida en la pantalla principal
         void MensajeCalefaccionOff()  { MensajeIconoTexto(iCalefaccionOff, "Apagar", Color_Info, 50); } // Muestra el mensaje de calefacción apagada en la pantalla principal
         // Funciones de hora
-        // Estas funciones muestran la hora en pantalla, si limpiar es true limpia la pantalla antes de
+        // Estas funciones muestran la hora en pantalla, si limpiar es true limpia la pantalla antes de mostrar la hora
         void MostrarHora(int nHora, int nMinutos, int nSegundos, bool limpiar); //Muestra la hora en pantalla, si limpiar es true limpia la pantalla antes de mostrar la hora
         void MensajeHora(int nHora, int nMinutos, int nSegundos) { MostrarHora(nHora, nMinutos, nSegundos, true); } // Muestra la hora en pantalla, limpiando la pantalla antes de mostrarla
         void EscribeHora(int nHora, int nMinutos, int nSegundos) { MostrarHora(nHora, nMinutos, nSegundos, false); } // Escribe la hora en pantalla sin limpiar la pantalla antes de mostrarla
@@ -175,20 +177,24 @@
                 M5Canvas*& sprite = aSprites[iCampanario];
                 sprite->pushRotateZoom(x, y-20, 0, 1.0, 1.0, Color_Transparente);
             }
-            if (!limpiar) {
-                M5Dial.Display.fillRect(x - 60, y + 65 - 10, 120, 20, Color_Fondo); // Borra la hora dibujando un rectángulo del color de fondo
-            }
-            M5Dial.Display.setTextDatum(middle_center);
-            M5Dial.Display.setTextColor(Color_Info, Color_Fondo);
-            M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
-            M5Dial.Display.setTextSize(2);
-            char buffer[9];
+
             if (nHora == 255 && nMinutos == 255 && nSegundos == 255) {
-                snprintf(buffer, sizeof(buffer), "--:--:--");
+                //snprintf(buffer, sizeof(buffer), "--:--:--");
+                M5Canvas*& sprite = aSprites[iNoInternet];
+                sprite->pushRotateZoom(x, y+60, 0, 0.7, 0.7, Color_Transparente);
             }else{
+                if (!limpiar) {
+                    M5Dial.Display.fillRect(x - 60, y + 65 - 10, 120, 20, Color_Fondo); // Borra la hora dibujando un rectángulo del color de fondo
+                }               
+                M5Dial.Display.setTextDatum(middle_center);
+                M5Dial.Display.setTextColor(Color_Info, Color_Fondo);
+                M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
+                M5Dial.Display.setTextSize(2);
+                char buffer[9];                
                 snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", nHora, nMinutos, nSegundos);
+                M5Dial.Display.drawString(buffer, x, y + 65);
             }
-            M5Dial.Display.drawString(buffer, x, y + 65);
+            
         }
 
 
@@ -209,7 +215,7 @@
             CreaSpriteMenu(aSprites[iCalefaccionOn], IconoCalefaccionOn);
             CreaSpriteMenu(aSprites[iCalefaccionOff], IconoCalefaccionOff);
             CreaSpriteMenu(aSprites[iCampanario], IconoCampanario);
-
+            CreaSpriteMenu(aSprites[iNoInternet], IconoNoInternet);
         }
 
         /**

@@ -42,7 +42,7 @@
     #define SDA_PIN             21                          // Definición del pin SDA para I2C
     #define SCL_PIN             22                          // Definición del pin SCL para I2C
 
-    #define EstadoInicio            0
+    //#define EstadoInicio            0
     #define EstadoDifuntos          1
     #define EstadoMisa              2
     #define EstadoStop              3
@@ -50,6 +50,9 @@
     #define EstadoCalefaccionOff    5
     #define EstadoCampanario        6
     #define EstadoHora              7
+    #define EstadoSinInternet       8
+
+    #define BitEstadoSinInternet  0x20                      // Bit para indicar que no hay conexión a Internet
 
     extern ConfigWiFi configWiFi;                           // Estructura para almacenar la configuración WiFi definida en modo AP
 
@@ -79,22 +82,23 @@
     void EjecutaSecuencia (int nSecuencia);                 // Función para ejecutar la secuencia de campanas según el valor recibido por I2C
     
     void TestInternet(void);                              // Función para comprobar la conexión a Internet y actualizar el DNS si es necesario
+
+
 /**
- * @brief Verifica y gestiona las campanadas de horas y cuartos
- * 
- * Esta función se ejecuta para controlar el toque de campanas según la hora actual:
- * - Detecta cambios de minuto
- * - En las horas en punto (minuto 0), toca las campanadas correspondientes a la hora
- * - En los cuartos (minuto 15, 30, 45), toca las campanadas correspondientes al cuarto
- * 
- * La función obtiene la hora del RTC (Real Time Clock) y si no puede obtenerla,
- * muestra un mensaje de error por el puerto serie.
- * 
- * @note Requiere que el RTC esté configurado y funcionando correctamente
- * @note Usa la clase Campanario para ejecutar los toques
- * @note Si DEBUGAUXILIAR está definido, imprime mensajes de depuración por Serial
+ * @brief Verifica si ha cambiado el minuto actual y, en caso de ser un múltiplo de 15 (cuarto de hora), ejecuta las acciones correspondientes.
+ *
+ * Esta función se encarga de:
+ * - Comprobar si la secuencia de campanadas no está activa.
+ * - Obtener la hora y minuto actual desde el RTC.
+ * - Detectar el cambio de minuto y, si es un cuarto de hora (0, 15, 30, 45), redirigir a la página de campanas.
+ * - Si es la hora en punto (minuto 0), hace sonar la campana correspondiente a la hora y sincroniza el RTC con NTP si es mediodía y hay internet.
+ * - Si es un cuarto distinto de la hora en punto, hace sonar la campana correspondiente al cuarto.
+ * - Actualizar el DNS en cada cuarto si hay conexión a internet, o mostrar un mensaje de depuración si no la hay.
+ *
+ * @note Requiere que las funciones Campanario.GetEstadoSecuencia(), getLocalTime(), Campanario.TocaHora(), Campanario.TocaCuarto(), hayInternet(), RTC::begin(), ActualizaDNS(), y ws.textAll() estén implementadas.
  */
-    void ChekearCuartos(void) {
+    void ChekearCuartos(void) 
+    {
         if (!Campanario.GetEstadoSecuencia()) {                         // Si la secuencia de campanadas no está activa ( aseguramos no tocar horas o cuartos si esta tocando una secuencia )
             if (getLocalTime(&timeinfo)) {                              // Obtiene la hora actual del RTC
                 int hora = timeinfo.tm_hour;                            // Obtiene el valor de la horaº
@@ -156,7 +160,8 @@
  * @note Utiliza comunicación WebSocket para notificar a los clientes
  * @note Requiere la clase Campanario previamente inicializada
  */
-    void TestCampanadas (void) {
+    void TestCampanadas (void) 
+    {
         nCampanaTocada = Campanario.ActualizarSecuenciaCampanadas();        // Llama al método ActualizarSecuenciaCampanadas del campanario para gestionar las campanas
         if (nCampanaTocada > 0) {                                           // Si se ha tocado una campana 
             #ifdef DEBUGAUXILIAR
@@ -184,57 +189,83 @@
  * 
  * @param numBytes Número de bytes a recibir (actualmente solo se lee 1 byte)
  */
-    void recibirSecuencia(int numBytes) {
+    void recibirSecuencia(int numBytes) 
+    {
         if (Wire.available()) {
             secuenciaI2C = Wire.read();
+            #ifdef DEBUGAUXILIAR
+                Serial.println("Secuencia recibida por I2C: " + String(secuenciaI2C));
+            #endif
             if (secuenciaI2C == EstadoCampanario || secuenciaI2C == EstadoHora ) {
                 requestI2C = secuenciaI2C; // Guarda la solicitud I2C para enviar la hora o el estado
                 secuenciaI2C = 0; // Resetea la secuencia si es una solicitud de estado o hora
             }
-            #ifdef DEBUGAUXILIAR
-                Serial.println("Secuencia recibida por I2C: " + String(secuenciaI2C));
-            #endif
         }
     }
-void enviarHoraI2C() {
-    uint8_t hora = 0xFF;
-    uint8_t minuto = 0xFF;
-    uint8_t segundos = 0xFF; // Inicializa las variables de hora, minuto y segundos
-    struct tm localTime;
-    int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
-    if (RTC::isNtpSync() && getLocalTime(&localTime)) {
-        hora = (uint8_t)localTime.tm_hour;
-        minuto = (uint8_t)localTime.tm_min;
-        segundos = (uint8_t)localTime.tm_sec; // Obtiene la hora, minuto y segundos del RTC
-        #ifdef DEBUGAUXILIAR
-            Serial.printf("enviarHoraI2C -> Hora enviada por I2C: %02d:%02d\n", hora, minuto);
-        #endif
-    } else {
-        #ifdef DEBUGAUXILIAR
-            Serial.println("Error obteniendo hora para enviar por I2C");
-        #endif
-    }
-    Wire.write(nEstadoCampanario); // Envía el estado del campanario
-    Wire.write(hora);
-    Wire.write(minuto);
-    Wire.write(segundos); // Envía la hora, minuto y segundos por I2C
-}
 
-void enviarRequest() {
-    #ifdef DEBUGAUXILIAR
-        Serial.print("enviarRequest -> Solicitud recibida por I2C: ");
-        Serial.println (requestI2C);
-    #endif
-    switch (requestI2C) {
-        case EstadoCampanario: // Si se solicita el estado del campanario
-            enviarEstadoI2C(); // Envía el estado del campanario
-            break;
-        case EstadoHora: // Si se solicita la hora
-            enviarHoraI2C(); // Envía la hora actual
-            break;
+/**
+ * @brief Envía la hora actual y el estado del campanario a través del bus I2C.
+ *
+ * Esta función obtiene la hora local desde el RTC si está sincronizado con NTP.
+ * Si la obtención es exitosa, envía el estado del campanario, la hora, los minutos y los segundos por I2C.
+ * En caso de error al obtener la hora, se envían valores por defecto (0xFF) para hora, minuto y segundos.
+ * 
+ * @note Si está definido DEBUGAUXILIAR, se imprime información de depuración por el puerto serie.
+ */
+    void enviarHoraI2C() 
+    {
+        uint8_t hora = 0xFF;
+        uint8_t minuto = 0xFF;
+        uint8_t segundos = 0xFF; // Inicializa las variables de hora, minuto y segundos
+        struct tm localTime;
+        int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
+        if (!lConexionInternet) {                                   // Si no hay conexión a Internet, establece el bit de estado correspondiente
+            nEstadoCampanario |= BitEstadoSinInternet;
+        }      
+        if (RTC::isNtpSync() && getLocalTime(&localTime)) {
+            hora = (uint8_t)localTime.tm_hour;
+            minuto = (uint8_t)localTime.tm_min;
+            segundos = (uint8_t)localTime.tm_sec; // Obtiene la hora, minuto y segundos del RTC
+            #ifdef DEBUGAUXILIAR
+                Serial.printf("enviarHoraI2C -> Hora enviada por I2C: %02d:%02d\n", hora, minuto);
+            #endif
+        } else {
+            #ifdef DEBUGAUXILIAR
+                Serial.println("Error obteniendo hora para enviar por I2C");
+            #endif
+        }
+        Wire.write(nEstadoCampanario); // Envía el estado del campanario
+        Wire.write(hora);
+        Wire.write(minuto);
+        Wire.write(segundos); // Envía la hora, minuto y segundos por I2C
     }
-    requestI2C = 0; // Resetea la solicitud I2C para esperar la siguiente
-}
+
+
+/**
+ * @brief Procesa una solicitud recibida por I2C y responde según el tipo de petición.
+ *
+ * Esta función verifica el valor de la variable 'requestI2C' para determinar el tipo de solicitud recibida.
+ * Dependiendo del caso, envía el estado del campanario o la hora actual a través de I2C.
+ * Después de procesar la solicitud, reinicia 'requestI2C' para esperar una nueva petición.
+ *
+ * @note Si está definido DEBUGAUXILIAR, imprime por el puerto serie información sobre la solicitud recibida.
+ */
+    void enviarRequest() 
+    {
+        #ifdef DEBUGAUXILIAR
+            Serial.print("enviarRequest -> Solicitud recibida por I2C: ");
+            Serial.println (requestI2C);
+        #endif
+        switch (requestI2C) {
+            case EstadoCampanario: // Si se solicita el estado del campanario
+                enviarEstadoI2C(); // Envía el estado del campanario
+                break;
+            case EstadoHora: // Si se solicita la hora
+                enviarHoraI2C(); // Envía la hora actual
+                break;
+        }
+        requestI2C = 0; // Resetea la solicitud I2C para esperar la siguiente
+    }
 /**
  * @brief Envía el estado actual del campanario a través de comunicación I2C
  * 
@@ -269,8 +300,12 @@ void enviarRequest() {
  *          Para el control de calefacción, notifica el estado actual.
  *          Si la secuencia no es reconocida, genera un mensaje de debug si DEBUGSERVIDOR está definido.
  */
-    void EjecutaSecuencia (int nSecuencia) {
-Serial.println ("Ejecutando secuencia: " + String(nSecuencia)); // Imprime la secuencia que se va a ejecutar
+    void EjecutaSecuencia (int nSecuencia) 
+    {
+        #ifdef DEBUGSERVIDOR
+            Serial.print("Ejecutando secuencia: ");
+            Serial.println(nSecuencia);
+        #endif
         switch (nSecuencia) {
             case EstadoDifuntos:
                 Campanario.TocaDifuntos();                  // Toca la secuencia de difuntos

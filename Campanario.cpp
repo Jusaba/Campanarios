@@ -308,12 +308,11 @@
             this->_aCampanadas[i].indiceCampana = 1;        // Toca la campana 2 los cuatro cuartos
             this->_aCampanadas[i].intervaloMs = 1000;       // espaciado 1000 ms
         }
-        this->_aCampanadas[i-1].intervaloMs = 3000;         // espaciado 3000 ms para separar cuartos de horas
         int nHoraReal = nHora % 12; // Asegura que la hora esté en el rango de 0 a 11
         int nHoraTocada = (nHoraReal == 0) ? 12 : nHoraReal; // Si es 0, se toca la campana 12
         for ( int i = 0; i < nHoraTocada; ++i) {
             this->_aCampanadas[i+4].indiceCampana = 0;        // Toca la campana 2 para la hora
-            this->_aCampanadas[i+4].intervaloMs = 1000;       // espaciados 1000 ms
+            this->_aCampanadas[i+4].intervaloMs = ( i== 0) ? 3000 : 1000;       // espaciados 1000 ms o 3000 en el primer toque de hora
         }    
         this->_nCampanadas = nHoraTocada + 4; // Actualiza el número de campanadas a tocar (4 cuartos + hora)
         this->_nEstadoCampanario |= BitHora;                                   // Actualiza el estado del campanario para indicar que se está tocando la hora

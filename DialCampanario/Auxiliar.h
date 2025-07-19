@@ -19,14 +19,16 @@
     #define I2C_SLAVE_ADDR 0x12
 
     
-    #define bitEstadoInicio            0x00
+    //#define bitEstadoInicio            0x00
     #define bitEstadoDifuntos          0x01
     #define bitEstadoMisa              0x02
-    #define bitEstadoStop              0x04
+    //#define bitEstadoStop              0x04
     #define bitEstadoCalefaccionOn     0x10
-    #define bitEstadoCalefaccionOff    0x20
-    #define bitEstadoCampanario        0x40
-    #define bitEstadoHora              0x80
+    //#define bitEstadoCalefaccionOff    0x20
+    //#define bitEstadoCampanario        0x40
+    //#define bitEstadoHora              0x80
+    #define bitEstadoSinInternet        0x20
+
 
 
     #define SLAVE_ADDRESS 0x08
@@ -46,7 +48,8 @@
            EstadoCalefaccionOn,
            EstadoCalefaccionOff,
            EstadoCampanario,
-           EstadoHora
+           EstadoHora,
+           EstadoSinInternet
         };
 
 
@@ -90,6 +93,7 @@ int nContadorCiclosDisplaySleep = 0;                        // Contador de ciclo
     int nPosicionActual = 0;                                // Estado actual del sistema
     bool lCambioEstado = false;                             // Indica si ha habido un cambio de estado
     bool lSleep = false;                                    // Indica si el display está en modo sleep
+    bool lInternet = false;                                 // Indica si no hay conexión a Internet
 
     void InicioDisplay (void);
     void MostrarOpcion(int seleccionado);
@@ -98,8 +102,11 @@ int nContadorCiclosDisplaySleep = 0;                        // Contador de ciclo
     void SolicitarEstadoHora(void); // Solicita la hora al esclavo I2C
     void SeleccionaMenu(int nEstadoSeleccionado);
     
-
-
+    void ReiniciarEstado(int nuevoEstado);
+    void EnviarYReiniciar(int estado);
+    void ManejarBotonA(void);
+    void ManejarEncoder(void);
+    void ActualizarDisplaySleep(void);
 
 
 
@@ -160,9 +167,6 @@ int nContadorCiclosDisplaySleep = 0;                        // Contador de ciclo
                     break;
             }
         }
-
-
-    
 
 /**
  * @brief Envía el estado actual del menú a un dispositivo esclavo a través del bus I2C.
@@ -235,6 +239,29 @@ void SolicitarEstadoCampanario()
     }    
 }
 
+/**
+ * @brief Solicita el estado y la hora actual al dispositivo esclavo a través del bus I2C.
+ *
+ * Esta función envía una solicitud al esclavo I2C identificado por la dirección I2C_SLAVE_ADDR
+ * para obtener el estado actual y la hora (hora, minutos y segundos) del campanario.
+ * Si la respuesta es válida (se reciben al menos 4 bytes), actualiza las variables globales
+ * correspondientes con los valores recibidos. Si detecta un cambio de estado respecto al anterior,
+ * actualiza el menú y marca que ha habido un cambio de estado.
+ *
+ * Mensajes de depuración se imprimen si están habilitados los flags DEBUGI2CREQUEST o DEBUGI2CRX.
+ *
+ * Variables globales modificadas:
+ *  - nEstadoActual: Estado actual recibido del esclavo.
+ *  - campanarioEstado.nHora: Hora recibida.
+ *  - campanarioEstado.nMinutos: Minutos recibidos.
+ *  - campanarioEstado.nSegundos: Segundos recibidos.
+ *  - campanarioEstado.nEstado: Estado recibido.
+ *  - nEstadoAnterior: Estado anterior para detectar cambios.
+ *  - nEstado: Índice del menú, reiniciado si hay cambio de estado.
+ *  - lCambioEstado: Bandera que indica si hubo cambio de estado.
+ *
+ * @note Requiere que la comunicación I2C esté inicializada previamente.
+ */
 void SolicitarEstadoHora() {
     #ifdef DEBUGI2CREQUEST 
         Serial.println("SolicitarEstadoHora->Solicitando hora del campanario...");
@@ -245,10 +272,12 @@ void SolicitarEstadoHora() {
     Wire.write(EstadoHora); 
     Wire.endTransmission();
 
-    Wire.requestFrom(I2C_SLAVE_ADDR, 4); // Solicita 2 bytes: hora y minutos
+    Wire.requestFrom(I2C_SLAVE_ADDR, 4); // Solicita 4 bytes al esclavo
 
     if (Wire.available() >= 4) {
         nEstadoActual = Wire.read();
+        
+        lInternet = (nEstadoActual & bitEstadoSinInternet) ? false : true; // Si el bit bitEstadoSinInternet está activo, no hay conexión a Internet
         campanarioEstado.nHora = Wire.read();
         campanarioEstado.nMinutos = Wire.read();
         campanarioEstado.nSegundos = Wire.read(); // Lee los segundos del esclavo I2C
@@ -295,6 +324,128 @@ void SeleccionaMenu(int nEstadoSeleccionado)
     nEstadoMenu = difuntosMisa ? (calefOn ? 3 : 2) : (calefOn ? 1 : 0);
 }
 
-            
+
+/**
+ * @brief Reinicia el estado actual y asigna un nuevo estado anterior.
+ * 
+ * Esta función establece la variable nEstado a 0 y actualiza nEstadoAnterior
+ * con el valor proporcionado en el parámetro nuevoEstado.
+ * 
+ * @param nuevoEstado Valor que se asignará a nEstadoAnterior.
+ */
+void ReiniciarEstado(int nuevoEstado) {
+    nEstado = 0;
+    nEstadoAnterior = nuevoEstado;
+}
+
+/**
+ * @brief Envía el estado especificado y luego reinicia dicho estado.
+ *
+ * Esta función llama a EnviarEstado para enviar el estado proporcionado como argumento,
+ * y posteriormente llama a ReiniciarEstado para reiniciar ese mismo estado.
+ *
+ * @param estado Valor del estado que se enviará y reiniciará.
+ */
+void EnviarYReiniciar(int estado) {
+    EnviarEstado(estado);
+    ReiniciarEstado(estado);
+}
+
+void ManejarBotonA(void) {
+    #ifdef DEBUG
+        Serial.println("Botón A presionado");
+    #endif
+    if (lSleep) {
+        lSleep = false;
+        nContadorCiclosDisplaySleep = 0;
+        if (M5.Display.getBrightness() < 100) BrilloFull();
+        MostrarOpcion(menuActual[nEstado]);
+    } else {
+        int estadoActual = menuActual[nEstado];
+        #ifdef DEBUGBOTON
+            Serial.printf("Estado Actual: %d\n", estadoActual);
+        #endif
+        switch (estadoActual) {
+            case EstadoInicio:
+                #ifdef DEBUGBOTON
+                    Serial.println("Estado Inicio");
+                #endif
+                break;
+            case EstadoDifuntos:
+                #ifdef DEBUGBOTON
+                    Serial.println("Estado Difuntos");
+                #endif
+                EnviarYReiniciar(EstadoDifuntos);
+                break;
+            case EstadoMisa:
+                #ifdef DEBUGBOTON
+                    Serial.println("Estado Misa");
+                #endif
+                EnviarYReiniciar(EstadoMisa);
+                break;
+            case EstadoStop:
+                #ifdef DEBUGBOTON
+                    Serial.println("Estado Stop");
+                #endif
+                EnviarEstado(EstadoStop);
+                nEstado = (nEstadoAnterior > 0) ? nEstadoAnterior - 1 : 0;
+                break;
+            case EstadoCalefaccionOn:
+                #ifdef DEBUGBOTON
+                    Serial.println("Estado Calefaccion On");
+                #endif
+                EnviarYReiniciar(EstadoCalefaccionOn);
+                break;
+            case EstadoCalefaccionOff:
+                #ifdef DEBUGBOTON
+                    Serial.println("Estado Calefaccion Off");
+                #endif
+                EnviarYReiniciar(EstadoCalefaccionOff);
+                break;
+            default:
+                break;
+        }
+        lCambioEstado = true;
+    }
+}
+void ManejarEncoder(void) {
+    nPosicionActual = M5Dial.Encoder.read();
+    if (nPosicionActual != nPosicionAneterior) {
+        M5Dial.Speaker.tone(8000, 20);
+        if (nPosicionActual > nPosicionAneterior) {
+            if (nEstado < nMenuItems - 1) nEstado++;
+            else nEstado = nMenuItems - 1;
+        } else {
+            if (nEstado > 0) nEstado--;
+            else nEstado = 0;
+        }
+        #ifdef DEBUG
+            Serial.printf("Nueva Posicion Actual: %d, Nuevo Estado Actual: %d\n", nPosicionActual, nEstado);
+        #endif
+        lCambioEstado = true;
+        nPosicionAneterior = nPosicionActual;
+    }
+}
+void ActualizarDisplaySleep(void) {
+    if (lBrillo && !lSleep) {
+        nContadorCiclosDisplaySleep++;
+        if (nContadorCiclosDisplaySleep >= nCiclosDisplaySleep) {
+            BajaBrillo();
+            nContadorCiclosDisplaySleep = 0;
+            lSleep = true;
+        }
+    } else {
+        if (!lBrillo) {
+            MensajeHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos);
+            SubeBrillo(40);
+        } else {
+            EscribeHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos);
+        }
+        #ifdef DEBUG
+            Serial.println("Display activo, se presenta la hora");
+        #endif
+        
+    }
+}
 #endif
 

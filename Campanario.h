@@ -180,7 +180,7 @@
             
             CALEFACCION* _pCalefaccion = nullptr;                       //!< Puntero a la calefacción del campanario
 
-            int _nEstadoCampanario = 0;
+            int _nEstadoCampanario = 0;                                 //!< Estado del campanario, representado por un entero donde cada bit indica un estado específico
 
             bool _tocando = false;                                      //!< Flag que indica si las campanas estan en reposo o tocando (1/0)
             bool _Calefaccion = false;                                  //!< Flag que indica si la calefacción está encendida o apagada (1/0)
