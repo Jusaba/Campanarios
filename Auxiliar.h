@@ -30,7 +30,8 @@
     #include "Servidor.h"
     
 
-    #define DEBUGAUXILIAR
+    #define DEBUG
+    //#define DEBUGAUXILIAR
     
     #define PinCampana1         26                          // Definición del pin para la campana 1
     #define PinCampana2         25                          // Definición del pin para la campana 2
@@ -42,17 +43,22 @@
     #define SDA_PIN             21                          // Definición del pin SDA para I2C
     #define SCL_PIN             22                          // Definición del pin SCL para I2C
 
-    //#define EstadoInicio            0
-    #define EstadoDifuntos          1
-    #define EstadoMisa              2
-    #define EstadoStop              3
-    #define EstadoCalefaccionOn     4
-    #define EstadoCalefaccionOff    5
-    #define EstadoCampanario        6
-    #define EstadoHora              7
-    #define EstadoSinInternet       8
+    //#define EstadoInicio              0
+    #define EstadoDifuntos              1
+    #define EstadoMisa                  2
+    #define EstadoStop                  3
+    #define EstadoCalefaccionOn         4
+    #define EstadoCalefaccionOff        5
+    #define EstadoCampanario            6
+    #define EstadoHora                  7
+    #define EstadoSinInternet           8
+    #define EstadoProteccionCampanadas  9
 
     #define BitEstadoSinInternet  0x20                      // Bit para indicar que no hay conexión a Internet
+    #define BitEstadoProteccionCampanadas 0x40              // Bit para indicar que la protección de campanadas está activa
+
+    #define InicioHorarioNocturno 23                        // Hora de inicio del horario nocturno (23:00)
+    #define FinHorarioNocturno     7                        // Hora de fin del horario noct
 
     extern ConfigWiFi configWiFi;                           // Estructura para almacenar la configuración WiFi definida en modo AP
 
@@ -64,8 +70,10 @@
     int ultimaHora = -1;                                    // Variable para almacenar la última hora tocada
 
     volatile uint8_t secuenciaI2C = 0;
-    uint8_t requestI2C = 0;                                    // Variable para almacenar el número de solicitud I2C
+    uint8_t requestI2C = 0;                                 // Variable para almacenar el número de solicitud I2C
     bool lConexionInternet = false;                         // Variable para indicar si hay conexión a Internet
+    bool lProteccionCampanadas = false;                     // Variable para indicar si la protección de campanadas está activa
+    bool lProteccionCampanadasAnterior = false;             // Variable para almacenar el estado anterior de la protección de campanadas
 
     unsigned long ultimoCheckInternet = 0;
     const unsigned long intervaloCheckInternet = 5 * 60 * 1000; // 5 minutos en ms
@@ -75,27 +83,32 @@
     void TestCampanadas(void);                              // Función para temporizar las campnas y presentarlas en la pagina correspondiente  
     
     void recibirSecuencia(int numBytes);                    // Función para recibir la secuencia de campanas por I2C
-    void enviarRequest();                                  // Función para enviar una solicitud al esclavo I2C
-    void enviarHoraI2C();                                   // Función para enviar la hora actual por I
+    void enviarRequest();                                   // Función para enviar una solicitud al esclavo I2C
+    void enviarHoraI2C();                                   // Función para enviar la hora actual por I2C
+    void enviarFechaHoraI2C();                              // Función para enviar la fecha y hora completa por I2C
     void enviarEstadoI2C();                                 // Función para enviar el estado de la secuencia de campanas por I2C
 
     void EjecutaSecuencia (int nSecuencia);                 // Función para ejecutar la secuencia de campanas según el valor recibido por I2C
     
-    void TestInternet(void);                              // Función para comprobar la conexión a Internet y actualizar el DNS si es necesario
+    void TestInternet(void);                                // Función para comprobar la conexión a Internet y actualizar el DNS si es necesario
+
+    bool EsHorarioNocturno (void);                          // Función para comprobar si es horario nocturno (entre InicioHorarioNocturno y FinHorarioNocturno)
+    bool EsPeriodoToqueCampanas (void);                     // Función para comprobar si estamos ±5 minutos de un toque de hora o media hora
 
 
 /**
- * @brief Verifica si ha cambiado el minuto actual y, en caso de ser un múltiplo de 15 (cuarto de hora), ejecuta las acciones correspondientes.
+ * @brief Verifica el cambio de minuto y ejecuta acciones relacionadas con las campanadas.
  *
- * Esta función se encarga de:
- * - Comprobar si la secuencia de campanadas no está activa.
- * - Obtener la hora y minuto actual desde el RTC.
- * - Detectar el cambio de minuto y, si es un cuarto de hora (0, 15, 30, 45), redirigir a la página de campanas.
- * - Si es la hora en punto (minuto 0), hace sonar la campana correspondiente a la hora y sincroniza el RTC con NTP si es mediodía y hay internet.
- * - Si es un cuarto distinto de la hora en punto, hace sonar la campana correspondiente al cuarto.
- * - Actualizar el DNS en cada cuarto si hay conexión a internet, o mostrar un mensaje de depuración si no la hay.
- *
- * @note Requiere que las funciones Campanario.GetEstadoSecuencia(), getLocalTime(), Campanario.TocaHora(), Campanario.TocaCuarto(), hayInternet(), RTC::begin(), ActualizaDNS(), y ws.textAll() estén implementadas.
+ * Esta función debe ser llamada periódicamente para comprobar si ha cambiado el minuto actual.
+ * Si la secuencia de campanadas no está activa y el minuto ha cambiado, realiza las siguientes acciones:
+ *   - Si es una hora en punto (minuto 0) y no es horario nocturno, hace sonar la campana correspondiente a la hora.
+ *   - Si es mediodía (hora 12 y minuto 0) y hay conexión a Internet, sincroniza el RTC con NTP.
+ *   - Si es media hora (minuto 30) y no es horario nocturno, hace sonar la campana de la media hora.
+ *   - Redirige a la página de campanas en todos los casos de media hora.
+ *   - Si hay conexión a Internet, actualiza el DNS con el dominio configurado.
+ *   - Si no hay conexión a Internet, muestra un mensaje de depuración (si está habilitado).
+ * Si no se puede obtener la hora del RTC, muestra un mensaje de depuración (si está habilitado).
+ * @note Requiere que las funciones Campanario.GetEstadoSecuencia(), getLocalTime(), Campanario.TocaHoraSinCuarto(), Campanario.TocaMediaHora(), hayInternet(), RTC::begin(), ActualizaDNS(), y ws.textAll() estén implementadas.
  */
     void ChekearCuartos(void) 
     {
@@ -105,10 +118,14 @@
                 int minuto = timeinfo.tm_min;                           // Obtiene el valor del minuto
                 if (minuto != ultimoMinuto) {                           // Si el minuto ha cambiado desde la última vez que se comprobó          
                     ultimoMinuto = minuto;
-                    if (minuto % 15 == 0) {                             // Si es un cuarto (0, 15, 30, 45)
+
+                    if (minuto % 30 == 0) {                             // Si es una media hora (0 o 30 minutos)
                         ws.textAll("REDIRECT:/Campanas.html");          // Redirige a la página de campanas
                         if (minuto == 0) {                              // Si es la hora en punto (minuto 0)
-                            Campanario.TocaHora(hora);                  // Toca la campana correspondiente a la hora
+                            if(!EsHorarioNocturno())                    // Si no es horario nocturno
+                            {
+                                Campanario.TocaHoraSinCuartos(hora);    // Toca la campana correspondiente a la hora
+                            }
                             if (hora == 12 )
                             {
                                 if(hayInternet()){
@@ -116,10 +133,13 @@
                                 }
                             }   
                         } else {
-                            Campanario.TocaCuarto(minuto / 15);         // Toca la campana correspondiente al cuarto (1, 2, 3)
+                            if (!EsHorarioNocturno())                   // Si no es horario nocturno
+                            {
+                                Campanario.TocaMediaHora();             // Toca la campana correspondiente a la media hora
+                            }
                         }
                         if (hayInternet()){                             // Verifica si hay conexión a Internet
-                            ActualizaDNS(configWiFi.dominio);          // Actualiza el DNS con el dominio configurado
+                            ActualizaDNS(configWiFi.dominio);           // Actualiza el DNS con el dominio configurado
                         } else {
                             #ifdef DEBUGAUXILIAR
                                 Serial.println("Sin conexión a internet. No se actualiza DNS.");
@@ -219,9 +239,7 @@
         uint8_t segundos = 0xFF; // Inicializa las variables de hora, minuto y segundos
         struct tm localTime;
         int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
-        if (!lConexionInternet) {                                   // Si no hay conexión a Internet, establece el bit de estado correspondiente
-            nEstadoCampanario |= BitEstadoSinInternet;
-        }      
+    
         if (RTC::isNtpSync() && getLocalTime(&localTime)) {
             hora = (uint8_t)localTime.tm_hour;
             minuto = (uint8_t)localTime.tm_min;
@@ -238,6 +256,60 @@
         Wire.write(hora);
         Wire.write(minuto);
         Wire.write(segundos); // Envía la hora, minuto y segundos por I2C
+    }
+
+/**
+ * @brief Envía la fecha y hora completa junto con el estado del campanario a través del bus I2C.
+ *
+ * Esta función obtiene la fecha y hora local desde el RTC si está sincronizado con NTP.
+ * Si la obtención es exitosa, envía el estado del campanario, día, mes, año, hora, minutos y segundos por I2C.
+ * En caso de error al obtener la fecha/hora, se envían valores por defecto (0xFF) para todos los campos.
+ * 
+ * Orden de envío por I2C:
+ * 1. Estado del campanario (1 byte)
+ * 2. Día (1 byte)
+ * 3. Mes (1 byte) 
+ * 4. Año (1 byte - solo los dos últimos dígitos)
+ * 5. Hora (1 byte)
+ * 6. Minutos (1 byte)
+ * 7. Segundos (1 byte)
+ * 
+ * @note Si está definido DEBUGAUXILIAR, se imprime información de depuración por el puerto serie.
+ */
+    void enviarFechaHoraI2C() 
+    {
+        uint8_t dia = 0xFF;
+        uint8_t mes = 0xFF;
+        uint8_t ano = 0xFF;
+        uint8_t hora = 0xFF;
+        uint8_t minuto = 0xFF;
+        uint8_t segundos = 0xFF; // Inicializa las variables de fecha y hora
+        struct tm localTime;
+        int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
+    
+        if (RTC::isNtpSync() && getLocalTime(&localTime)) {
+            dia = (uint8_t)localTime.tm_mday;        // Día del mes (1-31)
+            mes = (uint8_t)(localTime.tm_mon + 1);   // Mes (1-12) - tm_mon va de 0-11
+            ano = (uint8_t)(localTime.tm_year % 100); // Año (solo los 2 últimos dígitos)
+            hora = (uint8_t)localTime.tm_hour;       // Hora (0-23)
+            minuto = (uint8_t)localTime.tm_min;      // Minutos (0-59)
+            segundos = (uint8_t)localTime.tm_sec;    // Segundos (0-59)
+            #ifdef DEBUGAUXILIAR
+                Serial.printf("enviarFechaHoraI2C -> Fecha y hora enviada por I2C: %02d/%02d/%02d %02d:%02d:%02d\n", 
+                             dia, mes, ano, hora, minuto, segundos);
+            #endif
+        } else {
+            #ifdef DEBUGAUXILIAR
+                Serial.println("Error obteniendo fecha y hora para enviar por I2C");
+            #endif
+        }
+        Wire.write(nEstadoCampanario); // Envía el estado del campanario
+        Wire.write(dia);               // Envía el día
+        Wire.write(mes);               // Envía el mes
+        Wire.write(ano);               // Envía el año (2 dígitos)
+        Wire.write(hora);              // Envía la hora
+        Wire.write(minuto);            // Envía los minutos
+        Wire.write(segundos);          // Envía los segundos
     }
 
 
@@ -320,12 +392,19 @@
                 ws.textAll("REDIRECT:/index.html");         // Indica a los clientes que deben redirigir a la página principal
                 break;
             case EstadoCalefaccionOn:
-                Campanario.EnciendeCalefaccion();           // Llama a la función para encender la calefacción
+                Campanario.EnciendeCalefaccion(45);         // Llama a la función para encender la calefacción
                 ws.textAll("CALEFACCION:ON");               // Envía el estado de la calefacción a todos los clientes conectados
                 break;
             case EstadoCalefaccionOff:
                 Campanario.ApagaCalefaccion();              // Llama a la función para apagar la calefacción
                 ws.textAll("CALEFACCION:OFF");              // Envía el estado de la calefacción a todos los clientes conectados
+                break;
+            case EstadoProteccionCampanadas:
+                // Notifica el estado de la protección de campanadas a todos los clientes conectados
+                ws.textAll(lProteccionCampanadas ? "PROTECCION:ON" : "PROTECCION:OFF");
+                #ifdef DEBUGAUXILIAR
+                    Serial.printf("EjecutaSecuencia -> Protección campanadas notificada: %s\n", lProteccionCampanadas ? "ACTIVA" : "INACTIVA");
+                #endif
                 break;
             default:
                 #ifdef DEBUGSERVIDOR
@@ -335,21 +414,148 @@
         }
     }
     void TestInternet(void) {
+        bool estadoAnteriorInternet = lConexionInternet; // Guarda el estado anterior de la conexión
         if (!hayInternet()) { // hayInternet() debe comprobar acceso real a internet
           lConexionInternet = ConectarWifi(configWiFi); // Intenta reconectar
           if (lConexionInternet) {
               #ifdef DEBUG
-              Serial.println("Reconectado a internet correctamente.");
+                Serial.println("TestInternet -> Reconectado a internet correctamente.");
               #endif
               ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
+              if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
+                  Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
+              }
           } else {
               #ifdef DEBUG
-              Serial.println("Sin conexión a internet. Funcionando en modo local.");
+                Serial.println("TestInternet -> Sin conexión a internet. Funcionando en modo local.");
               #endif
+              if (estadoAnteriorInternet) { // Si el estado cambió de conectado a desconectado
+                  Campanario.ClearInternetConectado(); // Notifica al campanario que no hay internet
+              }
           }
+        }else{
+            lConexionInternet = true; // Asegura que la variable esté actualizada
+            if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
+                Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
+            }
+            #ifdef DEBUG
+                Serial.println("TestInternet -> Conexión a internet activa.");
+            #endif
         }
     }
 
-#endif
-    
+    /**
+     * @brief Comprueba si la hora actual se encuentra dentro del horario nocturno.
+     *
+     * Esta función obtiene la hora local actual y verifica si está dentro del rango definido
+     * por las variables globales InicioHorarioNocturno y FinHorarioNocturno. El horario nocturno
+     * se considera desde InicioHorarioNocturno (inclusive) hasta FinHorarioNocturno (exclusive).
+     *
+     * @return true si la hora actual está en el horario nocturno, false en caso contrario o si no se pudo obtener la hora.
+     */
+    bool EsHorarioNocturno (void) {// Función para comprobar si es horario nocturno
+        if (!RTC::isNtpSync()) {
+            #ifdef DEBUG
+                Serial.println("EsHorarioNocturno -> RTC no sincronizado con NTP.");
+            #endif
+            return false; // Si el RTC no está sincronizado, no se puede determinar el horario nocturno
+        }
+        struct tm localTime;
+        if (getLocalTime(&localTime)) { // Obtiene la hora local
+            int hora = localTime.tm_hour; // Obtiene la hora actual
+            return (hora >= InicioHorarioNocturno || hora < FinHorarioNocturno); // Comprueba si está en horario nocturno
+        }
+        return false; // Si no se pudo obtener la hora, devuelve false
+    }    
 
+    /**
+     * @brief Comprueba si estamos en el período de ±5 minutos alrededor de un toque de campanas.
+     *
+     * Esta función determina si el momento actual está dentro de la ventana de 5 minutos antes
+     * o 5 minutos después de los momentos en que suenan las campanas:
+     * - Toques de hora: minuto 0 (en punto)
+     * - Toques de media hora: minuto 30
+     * 
+     * Períodos de actividad:
+     * - Para hora en punto: entre 55-59 y 0-5 minutos
+     * - Para media hora: entre 25-29 y 30-35 minutos
+     *
+     * @return true si estamos en período de toque de campanas (±5 min), false en caso contrario o si no se pudo obtener la hora.
+     * 
+     * @note Requiere que el RTC esté sincronizado con NTP para funcionar correctamente.
+     */
+    bool EsPeriodoToqueCampanas (void) {
+        
+        if (!RTC::isNtpSync()) {
+            #ifdef DEBUGAUXILIAR
+                Serial.println("EsPeriodoToqueCampanas -> RTC no sincronizado con NTP.");
+            #endif
+            // Detecta cambio de estado y notifica si es necesario
+            if (lProteccionCampanadas != false) {
+                lProteccionCampanadasAnterior = lProteccionCampanadas;
+                lProteccionCampanadas = false;
+                EjecutaSecuencia(EstadoProteccionCampanadas); // Notifica el cambio de estado
+                Campanario.ClearProteccionCampanadas(); // Desactiva la protección de campanadas
+                #ifdef DEBUGAUXILIAR
+                    Serial.println("EsPeriodoToqueCampanas -> Protección desactivada (RTC no sincronizado)");
+                #endif
+            }
+            return false; // Si el RTC no está sincronizado, no se puede determinar el período
+        }
+        
+        struct tm localTime;
+        if (getLocalTime(&localTime)) { // Obtiene la hora local
+            int minuto = localTime.tm_min; // Obtiene el minuto actual
+            
+            // Comprueba si estamos ±5 minutos de la hora en punto (minuto 0)
+            bool periodoHoraEnPunto = (minuto >= 55) || (minuto < 5);
+            
+            // Comprueba si estamos ±5 minutos de la media hora (minuto 30)
+            bool periodoMediaHora = (minuto >= 25 && minuto <= 35);
+            
+            bool nuevoEstadoProteccion = (periodoHoraEnPunto || periodoMediaHora);
+            
+            // Detecta cambio de estado y notifica si es necesario
+            if (lProteccionCampanadas != nuevoEstadoProteccion) {
+                lProteccionCampanadasAnterior = lProteccionCampanadas;
+                lProteccionCampanadas = nuevoEstadoProteccion;
+                if (lProteccionCampanadas) {
+                    Campanario.SetProteccionCampanadas(); // Activa la protección de campanadas
+                    #ifdef DEBUGAUXILIAR
+                        Serial.printf("EsPeriodoToqueCampanas -> Activando protección de campanadas (minuto %d)\n", minuto);
+                    #endif
+                } else {
+                    Campanario.ClearProteccionCampanadas(); // Desactiva la protección de campanadas
+                    #ifdef DEBUGAUXILIAR
+                        Serial.printf("EsPeriodoToqueCampanas -> Desactivando protección de campanadas (minuto %d)\n", minuto);
+                    #endif
+                }
+                EjecutaSecuencia(EstadoProteccionCampanadas); // Notifica el cambio de estado
+                #ifdef DEBUGAUXILIAR
+                    Serial.printf("EsPeriodoToqueCampanas -> Cambio de protección: %s -> %s (minuto %d)\n", lProteccionCampanadasAnterior ? "ACTIVA" : "INACTIVA",lProteccionCampanadas ? "ACTIVA" : "INACTIVA",minuto);
+                #endif
+            }
+            #ifdef DEBUGAUXILIAR
+                if (nuevoEstadoProteccion) {
+                    Serial.printf("EsPeriodoToqueCampanas -> Período activo (minuto %d): %s\n", minuto, periodoHoraEnPunto ? "Hora en punto" : "Media hora");
+                }
+            #endif
+            
+            return nuevoEstadoProteccion;
+        }
+        
+        #ifdef DEBUGAUXILIAR
+            Serial.println("EsPeriodoToqueCampanas -> Error obteniendo hora del RTC");
+        #endif
+        // Detecta cambio de estado y notifica si es necesario
+        if (lProteccionCampanadas != false) {
+            lProteccionCampanadasAnterior = lProteccionCampanadas;
+            lProteccionCampanadas = false;
+            EjecutaSecuencia(EstadoProteccionCampanadas); // Notifica el cambio de estado
+            #ifdef DEBUGAUXILIAR
+                Serial.println("EsPeriodoToqueCampanas -> Protección desactivada (error obteniendo hora)");
+            #endif
+        }
+        return false; // Si no se pudo obtener la hora, devuelve false
+    }
+#endif

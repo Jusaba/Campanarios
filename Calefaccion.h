@@ -24,20 +24,25 @@
 	#define CALEFACCION_H
 
         #include <Arduino.h>
+        #include <time.h>
 
 
         class CALEFACCION
         {
             public:
 
-                CALEFACCION(int nPin );                                         //!< Constructor con pin 
+                CALEFACCION(int nPin );                                                 //!< Constructor con pin 
                 ~CALEFACCION();
-                void Enciende(void);                                          //!< Enciende la calefacción
-                void Apaga(void);                                             //!< Apaga la calefacción
-                bool GetEstado(void);                                         //!< Devuelve el estado de la calefacción (true si está encendida, false si está apagada)
+                void Enciende(int nMinutos);                                            //!< Enciende la calefacción
+                void Apaga(void);                                                       //!< Apaga la calefacción
+                bool GetEstado(void);                                                   //!< Devuelve el estado de la calefacción (true si está encendida, false si está apagada)
+                double VerificarTemporizador(void);                                     //!< Verifica si debe apagarse automáticamente por temporizador y devuelve los segundos que faltan para apagarse
            private:
 
-                int _nPin;                                                  //!< Pin de la campana    
-                bool _lCalefaccion = false;                                 //!< Estado de la calefacción del campanario
+                int _nPin;                                                              //!< Pin de la campana    
+                bool _lCalefaccion = false;                                             //!< Estado de la calefacción del campanario
+                int _nMinutosOn = 0;                                                    //!< Número de minutos que se ha solicitado encender la calefacción
+                struct tm _tiempoEncendido;                                             //!< Tiempo (RTC) cuando se encendió la calefacción
+                 
         };
 #endif

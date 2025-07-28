@@ -34,9 +34,13 @@
  * @pre El pin debe estar correctamente configurado como salida
  * @post La calefacción quedará encendida y el estado interno actualizado
  */
-    void CALEFACCION::Enciende(void) {
-        digitalWrite(this->_nPin, HIGH);    // Activa el pin de la calefacción
-        this->_lCalefaccion = true;         // Actualiza el estado de la calefacción
+    void CALEFACCION::Enciende(int nMinutos) {
+        
+        if (getLocalTime(&_tiempoEncendido)) {
+            this->_nMinutosOn = nMinutos;      // Establece el tiempo solicitado para la calefacción
+            this->_lCalefaccion = true;         // Actualiza el estado de la calefacción
+            digitalWrite(this->_nPin, HIGH);    // Activa el pin de la calefacción
+        }    
     }
 
 /**
@@ -57,4 +61,26 @@
  */
     bool CALEFACCION::GetEstado(void) {
         return this->_lCalefaccion;         // Devuelve el estado de la calefacción
+    }
+
+    double CALEFACCION::VerificarTemporizador(void) {
+        double seconds = 0;
+        if (this->_lCalefaccion) {
+            struct tm tiempoActual;
+            if (getLocalTime(&tiempoActual)) {
+                time_t tiempoEncendido = mktime(&this->_tiempoEncendido);
+                time_t ahora = mktime(&tiempoActual);
+                seconds = difftime(ahora, tiempoEncendido);
+                if (seconds >= this->_nMinutosOn * 60) {
+                    this->Apaga();
+                    return 0;
+                }
+            } else {
+                // Si no se puede obtener la hora del RTC, no hacer nada por seguridad
+                #ifdef DEBUGCALEFACCION
+                    Serial.println("VerificarTemporizador: Error obteniendo hora del RTC");
+                #endif
+            }
+        }
+        return ((this->_nMinutosOn * 60) - seconds); // Retorna los segundos restantes para apagar la calefacción
     }

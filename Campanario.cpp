@@ -301,7 +301,7 @@
  * 
  * @note Si la hora es 0 o 12, sonará 12 campanadas
  */
-    void CAMPANARIO::TocaHora(int nHora) {
+    void CAMPANARIO::TocaHorayCuartos(int nHora) {
         this->_LimpiaraCampanadas(); // Limpia las campanadas antes de tocar la hora
         int i = 0;
         for ( i = 0; i < 4; ++i) {
@@ -319,11 +319,48 @@
         this->_nEstadoCampanario |= BitHora;                                   // Actualiza el estado del campanario para indicar que se está tocando la hora
         this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
         #ifdef DEBUGCAMPANARIO
-            Serial.print("Tocando hora: ");
+            Serial.print("Tocando hora con cuartos: ");
             Serial.println(nHora);    
         #endif
     }
 
+    void CAMPANARIO::TocaHoraSinCuartos(int nHora) {
+        this->_LimpiaraCampanadas();                            // Limpia las campanadas antes de tocar la hora
+        int nHoraReal = nHora % 12;                             // Asegura que la hora esté en el rango de 0 a 11
+        int nHoraTocada = (nHoraReal == 0) ? 12 : nHoraReal;    // Si es 0, se toca la campana 12
+        for (int i = 0; i < nHoraTocada; ++i) {
+            this->_aCampanadas[i].indiceCampana = 0;            // Toca la campana 2 para la hora
+            this->_aCampanadas[i].intervaloMs = (i == 0) ? 3000 : 1000; // espaciados 1000 ms o 3000 en el primer toque de hora
+        }
+        this->_nCampanadas = nHoraTocada;                       // Actualiza el número de campanadas a tocar (solo la hora)
+        this->_nEstadoCampanario |= BitHora;                    // Actualiza el estado del campanario para indicar que se está tocando la hora
+        this->IniciarSecuenciaCampanadas();                     // Inicia la secuencia de campanadas
+        #ifdef DEBUGCAMPANARIO
+            Serial.print("Tocando hora sin cuartos: ");
+            Serial.println(nHora);
+        #endif
+    }
+
+    /**
+     * @brief Toca la campanada correspondiente a la media hora.
+     *
+     * Este método limpia cualquier campanada previa, configura una sola campanada
+     * (utilizando la campana 2) con un intervalo de 1000 ms, actualiza el estado
+     * interno para indicar que se está tocando la media hora e inicia la secuencia
+     * de campanadas. Si está habilitado DEBUGCAMPANARIO, imprime un mensaje por
+     * el puerto serie.
+     */
+    void CAMPANARIO::TocaMediaHora(void) {
+        this->_LimpiaraCampanadas(); // Limpia las campanadas antes de tocar la media hora
+        this->_aCampanadas[0].indiceCampana = 1; // Toca la campana 2 para la media hora
+        this->_aCampanadas[0].intervaloMs = 1000; // espaciado 1000 ms
+        this->_nCampanadas = 1; // Actualiza el número de campanadas a tocar (1 para media hora)
+        this->_nEstadoCampanario |= BitHora; // Actualiza el estado del campanario para indicar que se está tocando la media hora
+        this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Tocando media hora.");
+        #endif
+    }
 /**
  * @brief Obtiene el estado actual de la secuencia de campanadas
  * 
@@ -361,7 +398,7 @@
  */
     bool CAMPANARIO::GetEstadoCalefaccion() {
         if (this->_pCalefaccion != nullptr) {
-            return this->_pCalefaccion->GetEstado(); // Retorna el estado de la calefacción
+            return (this->_nEstadoCampanario & BitCalefaccion) != 0; // Retorna true si el bit de calefacción está activado
         } else {
             #ifdef DEBUGCAMPANARIO
                 Serial.println("No hay calefacción añadida al campanario.");
@@ -375,9 +412,9 @@
  * Si hay una calefacción añadida, la enciende. Si no, imprime un mensaje de error.
  * Actualiza el estado del campanario para indicar que la calefacción está encendida.
  */
-    void CAMPANARIO::EnciendeCalefaccion() {
+    void CAMPANARIO::EnciendeCalefaccion(int nMinutos) {
         if (this->_pCalefaccion != nullptr) {
-            this->_pCalefaccion->Enciende(); // Enciende la calefacción
+            this->_pCalefaccion->Enciende(nMinutos); // Enciende la calefacción
             this->_nEstadoCampanario |= BitCalefaccion; // Actualiza el estado del campanario para indicar que la calefacción está encendida
             #ifdef DEBUGCAMPANARIO
                 Serial.println("Calefacción encendida.");
@@ -406,6 +443,45 @@
                 Serial.println("No hay calefacción añadida al campanario.");
             #endif
         }
+    }
+
+    double CAMPANARIO::TestTemporizacionCalefaccion(void) {
+        if (this->_pCalefaccion != nullptr) {
+            return this->_pCalefaccion->VerificarTemporizador(); // Retorna el estado de la temporización de la calefacción y los segundos que faltan para apagar
+        } else {
+            #ifdef DEBUGCAMPANARIO
+                Serial.println("No hay calefacción añadida al campanario.");
+            #endif
+            return -1; // Si no hay calefacción, retorna false
+        }
+    }
+
+    void CAMPANARIO::SetInternetConectado (void) {
+        this->_nEstadoCampanario &= ~BitEstadoSinInternet; // Actualiza el estado del campanario para indicar que hay conexión a Internet
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Internet conectado.");
+        #endif
+    }
+
+    void CAMPANARIO::ClearInternetConectado (void) {
+        this->_nEstadoCampanario |= BitEstadoSinInternet; // Actualiza el estado del campanario para indicar que no hay conexión a Internet
+        #ifdef DEBUGCAMPANARIO
+            Serial.println("Internet desconectado.");
+        #endif
+    }
+
+    void CAMPANARIO::SetProteccionCampanadas(void) {
+        this->_nEstadoCampanario |= BitEstadoProteccionCampanadas; // Establece el estado de protección de campanadas
+        #ifdef DEBUGCAMPANARIO
+            Serial.print("Protección de campanadas activada");
+        #endif
+    }
+
+    void CAMPANARIO::ClearProteccionCampanadas(void) {
+        this->_nEstadoCampanario &= ~BitEstadoProteccionCampanadas; // Limpia el estado de protección de campanadas
+        #ifdef DEBUGCAMPANARIO
+            Serial.print("Protección de campanadas desactivada");
+        #endif
     }
 
 /**

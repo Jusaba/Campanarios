@@ -29,11 +29,13 @@
     #define DEBUGCAMPANARIO
 
     // Definición de los bits que representan el estado del campanario
-    #define BitDifuntos     0x01  // 0000 0001                  // Bit para indicar si la secuencia de difuntos está activa
-    #define BitMisa         0x02  // 0000 0010                  // Bit para indicar si la secuencia de misa está activa
-    #define BitHora         0x04  // 0000 0100                  // Bit para indicar si la secuencia de horas está activa
-    #define BitCuartos      0x08  // 0000 1000                  // Bit para indicar si la secuencia de cuartos está activa
-    #define BitCalefaccion  0x10  // 0001 0000                  // Bit para indicar si la calefacción está activa
+    #define BitDifuntos     0x01                    // 0000 0001                  // Bit para indicar si la secuencia de difuntos está activa
+    #define BitMisa         0x02                    // 0000 0010                  // Bit para indicar si la secuencia de misa está activa
+    #define BitHora         0x04                    // 0000 0100                  // Bit para indicar si la secuencia de horas está activa
+    #define BitCuartos      0x08                    // 0000 1000                  // Bit para indicar si la secuencia de cuartos está activa
+    #define BitCalefaccion  0x10                    // 0001 0000                  // Bit para indicar si la calefacción está activa
+    #define BitEstadoSinInternet  0x20              // 0010 0000                  // Bit para indicar que no hay conexión a Internet
+    #define BitEstadoProteccionCampanadas 0x40      // 0100 0000                  // Bit para indicar que la protección de campanadas está activa
 
     #define MAX_CAMPANAS 2                                      //!< Número máximo de campanas en el campanario
 
@@ -153,14 +155,21 @@
             int ActualizarSecuenciaCampanadas(void);                    //!< Actualiza la secuencia de campanadas, tocando las campanas según el intervalo definido
             void ResetCampanaTocada(void);                              //!< Resetea el número de campana tocada
             void ParaSecuencia(void);                                   //!< Detiene la secuencia de campanadas
-            void TocaHora(int nHora);                                   //!< Toca la campana de la hora
+            void TocaHorayCuartos(int nHora);                           //!< Toca la campana 4 cuartos y la hora
+            void TocaHoraSinCuartos(int nHora);                         //!< Toca la campana de la hora sin cuartos
             void TocaCuarto(int nCuarto);                               //!< Toca la campana del cuarto correspondiente
+            void TocaMediaHora(void);                                   //!< Toca la campana de la media hora
             bool GetEstadoSecuencia (void);                             //!< Devuelve el estado de la secuencia de campanadas (true si está activa, false si no lo está)
             void AddCalefaccion(CALEFACCION* pCalefaccion);             //!< Añade la calefacción al campanario
-            void EnciendeCalefaccion(void);                             //!< Enciende la calefacción del campanario
+            void EnciendeCalefaccion(int nMinutos);                     //!< Enciende la calefacción del campanario
             void ApagaCalefaccion(void);                                //!< Apaga la calefacción del campanario
+            double TestTemporizacionCalefaccion(void);                    //!< Testea la temporización de la calefacción del campanario
             bool GetEstadoCalefaccion(void);                            //!< Devuelve el estado de la calefacción del campanario (true si está encendida, false si está apagada)
             int GetEstadoCampanario(void);                              //!< Devuelve el estado del campanario
+            void SetInternetConectado(void);                            //!< Establece el estado de conexión a Internet del campanario
+            void ClearInternetConectado(void);                          //!< Limpia el estado de conexión a Internet del campanario
+            void SetProteccionCampanadas(void);                         //!< Establece el estado de protección de campanadas
+            void ClearProteccionCampanadas(void);                       //!< Limpia el estado de protección de campanadas
             private:
 
             CAMPANA* _pCampanas[MAX_CAMPANAS];                          //!< Array de punteros a las campanas del campanario

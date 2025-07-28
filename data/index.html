@@ -48,6 +48,24 @@
             .button:hover {
                 opacity: 0.8;
             }
+            .button:disabled {
+                opacity: 0.5 !important;
+                pointer-events: none !important;
+                cursor: not-allowed !important;
+                background-color: #888 !important;
+            }
+            .button.disabled-mobile {
+                opacity: 0.5 !important;
+                pointer-events: none !important;
+                cursor: not-allowed !important;
+                background-color: #888 !important;
+                -webkit-touch-callout: none !important;
+                -webkit-user-select: none !important;
+                -khtml-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+                user-select: none !important;
+            }
             .button svg {
                 vertical-align: middle;
                 margin-right: 8px;
@@ -58,6 +76,172 @@
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
+                flex-direction: column;
+            }
+            .calefaccion-container {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 15px;
+            }
+            .button-reloj {
+                width: 50px;
+                height: 50px;
+                border: 2px solid #41bde3;
+                background-color: #f8f8f8;
+                border-radius: 50%;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #41bde3;
+                transition: all 0.3s ease;
+            }
+            .button-reloj:hover {
+                background-color: #41bde3;
+                color: white;
+                transform: scale(1.1);
+            }
+            .minutos-display {
+                font-size: 14px; /* Aumentado de 12px a 14px */
+                color: #fff;
+                background-color: rgba(0,0,0,0.2);
+                padding: 3px 8px; /* Aumentado el padding para más espacio */
+                border-radius: 10px;
+                margin-top: 2px;
+                font-family: 'Courier New', monospace; /* Fuente monoespaciada para mejor alineación */
+                min-width: 60px; /* Aumentado para acomodar formato mmm:ss */
+                text-align: center;
+                font-weight: bold; /* Hacer el texto más bold para mayor visibilidad */
+            }
+            /* Estilos del Modal */
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.5);
+            }
+            .modal-content {
+                background-color: #fefefe;
+                margin: 15% auto;
+                padding: 0;
+                border: none;
+                border-radius: 10px;
+                width: 90%;
+                max-width: 400px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .modal-header {
+                background-color: #41bde3;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 10px 10px 0 0;
+                text-align: center;
+            }
+            .modal-header h3 {
+                margin: 0;
+                font-size: 18px;
+            }
+            .modal-body {
+                padding: 20px;
+            }
+            .minutos-control {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+            .minutos-label {
+                font-size: 16px;
+                font-weight: bold;
+                color: #333;
+            }
+            .digitos-container {
+                display: flex;
+                gap: 20px;
+            }
+            .digito-control {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+            }
+            .digito-btn {
+                width: 35px;
+                height: 30px;
+                border: 1px solid #ccc;
+                background-color: #f8f8f8;
+                cursor: pointer;
+                font-size: 16px;
+                font-family: Arial, sans-serif;
+                border-radius: 5px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background-color 0.2s;
+                color: #333;
+                font-weight: bold;
+            }
+            .digito-btn:hover {
+                background-color: #e0e0e0;
+            }
+            .digito-btn:active {
+                background-color: #d0d0d0;
+            }
+            .digito {
+                font-size: 28px;
+                font-weight: bold;
+                color: #333;
+                min-width: 25px;
+                text-align: center;
+                background-color: #fff;
+                border: 2px solid #41bde3;
+                border-radius: 8px;
+                padding: 8px 10px;
+            }
+            .total-minutos {
+                font-size: 16px;
+                font-weight: bold;
+                color: #333;
+                background-color: #f0f8ff;
+                padding: 10px 15px;
+                border-radius: 8px;
+                border: 1px solid #41bde3;
+            }
+            .modal-footer {
+                padding: 15px 20px;
+                display: flex;
+                justify-content: space-between;
+                gap: 10px;
+                border-top: 1px solid #eee;
+            }
+            .modal-btn {
+                flex: 1;
+                padding: 12px 20px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: bold;
+                transition: background-color 0.3s;
+            }
+            .modal-btn.cancel {
+                background-color: #e74c3c;
+                color: white;
+            }
+            .modal-btn.cancel:hover {
+                background-color: #c0392b;
+            }
+            .modal-btn.accept {
+                background-color: #27ae60;
+                color: white;
+            }
+            .modal-btn.accept:hover {
+                background-color: #229954;
             }            
         </style>
     </head>
@@ -69,18 +253,73 @@
             <div class="button-grid">
                 <button class="button Misa" onclick="SelMisa()">Misa</button>
                 <button class="button Difuntos" onclick="SelDifuntos()">Difuntos</button>
-                <button class="button Calefaccion" id="btnCalefaccion" onclick="toggleCalefaccion()">
-                    <svg id="iconoCalefaccion" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="orange" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2C12 2 7 8 7 13a5 5 0 0 0 10 0c0-5-5-11-5-11z"/>
-                        <path d="M12 22a3 3 0 0 1-3-3c0-2 3-5 3-5s3 3 3 5a3 3 0 0 1-3 3z"/>
-                    </svg>
-                    Calefaccion
-                </button>
+                <div class="calefaccion-container">
+                    <button class="button Calefaccion" id="btnCalefaccion" onclick="toggleCalefaccion()">
+                        <svg id="iconoCalefaccion" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="orange" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2C12 2 7 8 7 13a5 5 0 0 0 10 0c0-5-5-11-5-11z"/>
+                            <path d="M12 22a3 3 0 0 1-3-3c0-2 3-5 3-5s3 3 3 5a3 3 0 0 1-3 3z"/>
+                        </svg>
+                        <span>Calefaccion</span>
+                        <span id="minutosCalefaccion" class="minutos-display">000m</span>
+                    </button>
+                    <button class="button-reloj" onclick="abrirModalMinutos()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12,6 12,12 16,14"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal para selector de minutos -->
+            <div id="modalMinutos" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Seleccionar Minutos de Calefaccion</h3>
+                    </div>
+                    <div class="modal-body">
+                        <div class="minutos-control">
+                            <label class="minutos-label">Minutos:</label>
+                            <div class="digitos-container">
+                                <div class="digito-control">
+                                    <button class="digito-btn" onclick="incrementarDigito(0)">+</button>
+                                    <span class="digito" id="digito0">0</span>
+                                    <button class="digito-btn" onclick="decrementarDigito(0)">-</button>
+                                </div>
+                                <div class="digito-control">
+                                    <button class="digito-btn" onclick="incrementarDigito(1)">+</button>
+                                    <span class="digito" id="digito1">0</span>
+                                    <button class="digito-btn" onclick="decrementarDigito(1)">-</button>
+                                </div>
+                                <div class="digito-control">
+                                    <button class="digito-btn" onclick="incrementarDigito(2)">+</button>
+                                    <span class="digito" id="digito2">0</span>
+                                    <button class="digito-btn" onclick="decrementarDigito(2)">-</button>
+                                </div>
+                            </div>
+                            <div class="total-minutos">
+                                Total: <span id="totalMinutos">000</span> minutos
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="modal-btn cancel" onclick="cerrarModalMinutos()">Cancelar</button>
+                        <button class="modal-btn accept" onclick="aceptarMinutos()">Aceptar</button>
+                    </div>
+                </div>
             </div>
         </div>
 
         <script>
+            // Array para almacenar los valores de los 3 dígitos (centenas, decenas, unidades)
+            let minutosDigitos = [0, 0, 0]; // Inicialmente 000 minutos
+            let minutosDigitosTemp = [0, 0, 0]; // Valores temporales para el modal
+            
+            // Variables para el contador regresivo
+            let tiempoRestante = 0; // Tiempo restante en segundos
+            let intervaloCuentaRegresiva = null; // Referencia al intervalo del contador
+
             function SelMisa() {
                 websocket.send("Misa");
             }
@@ -100,17 +339,232 @@
                     .catch(error => console.error('Error:', error));
             }
 
+            /**
+             * Abre el modal para seleccionar minutos
+             */
+            function abrirModalMinutos() {
+                // Copiar valores actuales a los temporales
+                minutosDigitosTemp = [...minutosDigitos];
+                actualizarVisualizacionDigitos();
+                actualizarTotalMinutos();
+                document.getElementById('modalMinutos').style.display = 'block';
+            }
+
+            /**
+             * Cierra el modal sin guardar cambios
+             */
+            function cerrarModalMinutos() {
+                document.getElementById('modalMinutos').style.display = 'none';
+            }
+
+            /**
+             * Acepta los minutos seleccionados y cierra el modal
+             */
+            function aceptarMinutos() {
+                // Guardar valores temporales como definitivos
+                minutosDigitos = [...minutosDigitosTemp];
+                actualizarDisplayMinutos();
+                cerrarModalMinutos();
+                console.log("Minutos aceptados: " + obtenerMinutosTotales());
+            }
+
+            /**
+             * Incrementa el dígito especificado (0=centenas, 1=decenas, 2=unidades)
+             * @param {number} posicion - Posición del dígito (0, 1, 2)
+             */
+            function incrementarDigito(posicion) {
+                minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] + 1) % 10;
+                actualizarVisualizacionDigitos();
+                actualizarTotalMinutos();
+            }
+
+            /**
+             * Decrementa el dígito especificado (0=centenas, 1=decenas, 2=unidades)
+             * @param {number} posicion - Posición del dígito (0, 1, 2)
+             */
+            function decrementarDigito(posicion) {
+                minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] - 1 + 10) % 10;
+                actualizarVisualizacionDigitos();
+                actualizarTotalMinutos();
+            }
+
+            /**
+             * Actualiza la visualización de los dígitos en el modal
+             */
+            function actualizarVisualizacionDigitos() {
+                for (let i = 0; i < 3; i++) {
+                    document.getElementById(`digito${i}`).textContent = minutosDigitosTemp[i];
+                }
+            }
+
+            /**
+             * Actualiza el total de minutos en el modal
+             */
+            function actualizarTotalMinutos() {
+                const total = minutosDigitosTemp[0] * 100 + minutosDigitosTemp[1] * 10 + minutosDigitosTemp[2];
+                document.getElementById('totalMinutos').textContent = String(total).padStart(3, '0');
+            }
+
+            /**
+             * Actualiza la visualización de minutos en el botón de calefacción
+             */
+            function actualizarDisplayMinutos() {
+                const total = obtenerMinutosTotales();
+                document.getElementById('minutosCalefaccion').textContent = String(total).padStart(3, '0') + 'm';
+            }
+
+            /**
+             * Inicia el contador regresivo desde los minutos especificados
+             * @param {number} minutosIniciales - Minutos para el contador regresivo
+             */
+            function iniciarCuentaRegresiva(minutosIniciales) {
+                // Detener contador anterior si existe
+                detenerCuentaRegresiva();
+                
+                // Establecer tiempo restante en segundos
+                tiempoRestante = minutosIniciales * 60;
+                
+                // Actualizar inmediatamente la visualización
+                actualizarVisualizacionCuentaRegresiva();
+                
+                // Iniciar el intervalo que se ejecuta cada segundo
+                intervaloCuentaRegresiva = setInterval(function() {
+                    tiempoRestante--;
+                    
+                    if (tiempoRestante <= 0) {
+                        // Tiempo agotado
+                        detenerCuentaRegresiva();
+                        actualizarDisplayMinutos(); // Volver a mostrar minutos configurados
+                    } else {
+                        actualizarVisualizacionCuentaRegresiva();
+                    }
+                }, 1000);
+            }
+
+            /**
+             * Inicia el contador regresivo desde los segundos especificados
+             * @param {number} segundosIniciales - Segundos para el contador regresivo
+             */
+            function iniciarCuentaRegresivaSegundos(segundosIniciales) {
+                // Detener contador anterior si existe
+                detenerCuentaRegresiva();
+                
+                // Establecer tiempo restante en segundos directamente
+                tiempoRestante = segundosIniciales;
+                
+                // Actualizar inmediatamente la visualización
+                actualizarVisualizacionCuentaRegresiva();
+                
+                // Iniciar el intervalo que se ejecuta cada segundo
+                intervaloCuentaRegresiva = setInterval(function() {
+                    tiempoRestante--;
+                    
+                    if (tiempoRestante <= 0) {
+                        // Tiempo agotado
+                        detenerCuentaRegresiva();
+                        actualizarDisplayMinutos(); // Volver a mostrar minutos configurados
+                    } else {
+                        actualizarVisualizacionCuentaRegresiva();
+                    }
+                }, 1000);
+            }
+
+            /**
+             * Detiene el contador regresivo
+             */
+            function detenerCuentaRegresiva() {
+                if (intervaloCuentaRegresiva) {
+                    clearInterval(intervaloCuentaRegresiva);
+                    intervaloCuentaRegresiva = null;
+                }
+                tiempoRestante = 0;
+            }
+
+            /**
+             * Actualiza la visualización del tiempo restante en formato mmm:ss
+             */
+            function actualizarVisualizacionCuentaRegresiva() {
+                const minutos = Math.floor(tiempoRestante / 60);
+                const segundos = tiempoRestante % 60;
+                const textoTiempo = String(minutos).padStart(3, '0') + ':' + String(segundos).padStart(2, '0');
+                document.getElementById('minutosCalefaccion').textContent = textoTiempo;
+            }
+
+            /**
+             * Muestra u oculta el botón del reloj según el estado de la calefacción
+             * @param {boolean} mostrar - true para mostrar, false para ocultar
+             */
+            function mostrarBotonReloj(mostrar) {
+                const botonReloj = document.querySelector('.button-reloj');
+                if (botonReloj) {
+                    botonReloj.style.display = mostrar ? 'flex' : 'none';
+                }
+            }
+
+            /**
+             * Obtiene el valor total de minutos basado en los 3 dígitos
+             * @returns {number} Total de minutos (0-999)
+             */
+            function obtenerMinutosTotales() {
+                return minutosDigitos[0] * 100 + minutosDigitos[1] * 10 + minutosDigitos[2];
+            }
+
+            /**
+             * Establece los minutos desde un valor numérico
+             * @param {number} minutos - Minutos a establecer (0-999)
+             */
+            function establecerMinutos(minutos) {
+                // Asegurar que está en el rango 0-999
+                minutos = Math.max(0, Math.min(999, minutos));
+                
+                minutosDigitos[0] = Math.floor(minutos / 100); // Centenas
+                minutosDigitos[1] = Math.floor((minutos % 100) / 10); // Decenas
+                minutosDigitos[2] = minutos % 10; // Unidades
+                
+                actualizarDisplayMinutos();
+            }
 
             function toggleCalefaccion() {
-                
                 lCalefaccion = !lCalefaccion;               // Cambia el estado de la variable global lCalefaccion
 
                 document.getElementById("iconoCalefaccion").setAttribute("stroke", lCalefaccion ? "red" : "orange");      // Cambia el color del icono según el estado
+                
+                // Mostrar/ocultar botón del reloj según el estado
+                mostrarBotonReloj(!lCalefaccion);
     
                 if (typeof websocket !== "undefined") {                 // Envía el comando por WebSocket si está definido
-                    websocket.send(lCalefaccion ? "CALEFACCION_ON" : "CALEFACCION_OFF");
+                    if (lCalefaccion) {
+                        const minutos = obtenerMinutosTotales();
+                        websocket.send(`CALEFACCION_ON:${minutos}`); // Envía los minutos junto con el comando
+                        console.log(`Calefacción encendida por ${minutos} minutos`);
+                        
+                        // Iniciar cuenta regresiva si hay minutos configurados
+                        if (minutos > 0) {
+                            iniciarCuentaRegresiva(minutos);
+                        }
+                    } else {
+                        websocket.send("CALEFACCION_OFF");
+                        // Detener cuenta regresiva y resetear visualización
+                        detenerCuentaRegresiva();
+                        actualizarDisplayMinutos();
+                    }
                 }
             }
+
+            // Cerrar modal si se hace clic fuera de él
+            window.onclick = function(event) {
+                const modal = document.getElementById('modalMinutos');
+                if (event.target == modal) {
+                    cerrarModalMinutos();
+                }
+            }
+
+            // Inicializar la visualización al cargar la página
+            window.addEventListener('load', function() {
+                actualizarDisplayMinutos();
+                // Asegurar que el botón del reloj esté visible al inicio (calefacción OFF por defecto)
+                mostrarBotonReloj(true);
+            });
         </script>
         
     </body>

@@ -39,11 +39,12 @@
     #define EstadoCalefaccionOff    5
 
 
-    #define DEBUGSERVIDOR                                 // Descomentar para activar el modo de depuración del servidor
 
-    bool servidorIniciado = false;                        // Variable para indicar si el servidor ha sido iniciado
-    //AsyncWebSocket ws;                                  // WebSocket  
-    int nToque = 0;                                       // Variable para almacenar la secuencia de botones pulsados
+    #define DEBUGSERVIDOR                                               // Descomentar para activar el modo de depuración del servidor
+
+    bool servidorIniciado = false;                                      // Variable para indicar si el servidor ha sido iniciado
+    //AsyncWebSocket ws;                                                // WebSocket  
+    int nToque = 0;                                                     // Variable para almacenar la secuencia de botones pulsados
     
     // Pines de los relés para controlar las campanas
     const int Rele0 = 26;                           
@@ -61,9 +62,9 @@
 
     extern CAMPANARIO Campanario;
 
-    void ServidorOn(const char* usuario, const char* clave);             // Función para iniciar el servidor HTTP y WebSocket
+    void ServidorOn(const char* usuario, const char* clave);            // Función para iniciar el servidor HTTP y WebSocket
     void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);  // Callback para manejar eventos del WebSocket
-    void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len);  // Procesa los mensajes recibidos por WebSocket
+    void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len); // Procesa los mensajes recibidos por WebSocket
     bool hayInternet(void);                                             // Comprueba si hay conexión a Internet
 
     // Funciones auxiliares
@@ -95,7 +96,7 @@
 //listSPIFFS();
 //printFileContent("/index.html");         // Imprime el contenido del archivo index.html en la consola para verificar que se ha cargado correctamente
 
-        if (!servidorIniciado) {
+        if (!servidorIniciado) {                                          // Si el servidor no ha sido iniciado
           ws.onEvent(onEvent);                                            // Configura el manejador de eventos del WebSocket          
           server.addHandler(&ws);                                         // Añade el manejador de WebSocket al servidor HTTP
 
@@ -113,6 +114,7 @@
             }
             request->send(SPIFFS, "/Campanas.html", "text/html");
           });
+
           server.serveStatic("/", SPIFFS, "/");
           // Iniciar el servidor
           server.begin();
@@ -206,7 +208,7 @@
           Serial.println(" ");
         #endif
         //switch para procesar el mensaje recibido
-        if (mensaje == "Difuntos") {                               // 
+        if (mensaje == "Difuntos") {                               // Si el mensaje es "Difuntos"
             nToque = EstadoDifuntos;                               // Establece la secuencia a EstadoDifuntos para tocar difuntos
             ws.textAll("REDIRECT:/Campanas.html");                 // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             #ifdef DEBUGSERVIDOR
@@ -225,11 +227,20 @@
             #ifdef DEBUGSERVIDOR
               Serial.println("Procesando mensaje: Parar");
             #endif   
-        } else if (mensaje == "CALEFACCION_ON") {                 // Si el mensaje es "CALEFACCION_ON"  
-            Campanario.EnciendeCalefaccion();                     // Enciende la calefacción
-            ws.textAll("CALEFACCION:ON");                         // Envía el estado de la calefacción a todos los clientes conectados
+        } else if (mensaje.startsWith("CALEFACCION_ON:")) {       // Si el mensaje comienza con "CALEFACCION_ON:"
+            String minutosStr = mensaje.substring(15);            // Extrae los minutos después de "CALEFACCION_ON:"
+            int minutos = minutosStr.toInt();                     // Convierte la cadena de minutos a entero
+            if (minutos < 0 || minutos > 120) {                   // Validación del rango de minutos
+                minutos = 0;                                      // Si está fuera del rango, establece a 0
+                #ifdef DEBUGSERVIDOR
+                  Serial.printf("Minutos fuera de rango, establecido a 0. Valor recibido: %s\n", minutosStr.c_str());
+                #endif
+            }
+            Campanario.EnciendeCalefaccion(minutos);                     // Enciende la calefacción
+            // TODO: Aquí se puede agregar lógica para usar los minutos (temporizador, etc.)
+            ws.textAll("CALEFACCION:ON:" + String(minutos));      // Envía el estado con los minutos programados
             #ifdef DEBUGSERVIDOR
-              Serial.println("Procesando mensaje: Calefacción ON");
+              Serial.printf("Procesando mensaje: Calefacción ON por %d minutos\n", minutos);
             #endif
         } else if (mensaje == "CALEFACCION_OFF") {                // Si el mensaje es "CALEFACCION_OFF"
             Campanario.ApagaCalefaccion();                        // Apaga la calefacción
@@ -243,6 +254,9 @@
             #ifdef DEBUGSERVIDOR
               Serial.printf("Estado de la calefacción enviado: %s\n", estadoCalefaccion.c_str());
             #endif
+        } else if (mensaje == "GET_TIEMPOCALEFACCION") {                 // Si el mensaje es "GET_TIEMPOCALEFACCION"
+            String tiempoCalefaccion = String(Campanario.TestTemporizacionCalefaccion());
+            ws.textAll("TIEMPO_CALEFACCION:" + tiempoCalefaccion);  // Envía el tiempo de calefacción al cliente que lo pidió
         } else if (mensaje == "GET_CAMPANARIO") {                 // Si el mensaje es "GET_CAMPANARIO"  
             String EstadoCampanario = String(Campanario.GetEstadoCampanario()); // Obtiene el estado del campanario 
             ws.textAll("ESTADO_CAMPANARIO:" + EstadoCampanario);  // Envía el estado al cliente que lo pidió
@@ -255,11 +269,29 @@
     }    
 
 
+    /**
+     * @brief Verifica si hay conexión a Internet realizando una petición HTTP a una URL ligera de Google.
+     *
+     * Esta función utiliza la clase HTTPClient para enviar una solicitud GET a "http://clients3.google.com/generate_204".
+     * Si la respuesta es el código HTTP 204, se considera que hay acceso a Internet.
+     *
+     * @return true si hay conexión a Internet, false en caso contrario.
+     */
     bool hayInternet() {
+
       HTTPClient http;
       http.begin("http://clients3.google.com/generate_204"); // URL ligera y rápida de Google
       int httpCode = http.GET();
       http.end();
+      #ifdef DEBUGSERVIDOR
+        Serial.print("hayInternet -> Código HTTP recibido: ");
+        Serial.println(httpCode);
+        if (httpCode == 204) {
+            Serial.println("hayInternet -> Conexión a Internet disponible.");
+        } else {
+            Serial.println("hayInternet -> No hay conexión a Internet.");
+        }
+      #endif
       return (httpCode == 204); // Google responde 204 si hay Internet
   }
 
