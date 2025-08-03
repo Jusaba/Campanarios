@@ -31,7 +31,8 @@
     
 
     #define DEBUG
-    //#define DEBUGAUXILIAR
+    #define DEBUGAUXILIAR
+    #define DEBUGREQUEST
     
     #define PinCampana1         26                          // Definición del pin para la campana 1
     #define PinCampana2         25                          // Definición del pin para la campana 2
@@ -53,6 +54,8 @@
     #define EstadoHora                  7
     #define EstadoSinInternet           8
     #define EstadoProteccionCampanadas  9
+    #define EstadoFechaHora              10
+    #define EstadoSetTemporizador        11
 
     #define BitEstadoSinInternet  0x20                      // Bit para indicar que no hay conexión a Internet
     #define BitEstadoProteccionCampanadas 0x40              // Bit para indicar que la protección de campanadas está activa
@@ -71,13 +74,14 @@
 
     volatile uint8_t secuenciaI2C = 0;
     uint8_t requestI2C = 0;                                 // Variable para almacenar el número de solicitud I2C
+    uint8_t ParametroI2C = 0;                               // Variable para almacenar el parametro recibido por I2C ( cuando se recibe )
     bool lConexionInternet = false;                         // Variable para indicar si hay conexión a Internet
     bool lProteccionCampanadas = false;                     // Variable para indicar si la protección de campanadas está activa
     bool lProteccionCampanadasAnterior = false;             // Variable para almacenar el estado anterior de la protección de campanadas
 
     unsigned long ultimoCheckInternet = 0;
     const unsigned long intervaloCheckInternet = 5 * 60 * 1000; // 5 minutos en ms
-    
+    int nTemporizacionCalefaccion = 45;                     // Variable para almacenar la temporización de la calefacción
 
     void ChekearCuartos(void);                              // Función para chequear los cuartos y las horas y tocar las campanas correspondientes
     void TestCampanadas(void);                              // Función para temporizar las campnas y presentarlas en la pagina correspondiente  
@@ -190,7 +194,7 @@
             #endif  
             Campanario.ResetCampanaTocada();                                // Resetea el número de campana tocada
             ws.textAll("CAMPANA:"+String(nCampanaTocada));                  // Envía el número de campana tocada a todos los clientes conectados
-            if (!Campanario.GetEstadoSecuencia()) {                         // Si la secuencia de campanadas no está activa ( no esta tocando ninguna secuencia )
+            if (!Campanario.GetEstadoSecuencia()) {                                        // Si la secuencia de campanadas no está activa ( no esta tocando ninguna secuencia )
                 #ifdef DEBUGAUXILIAR
                     Serial.println("Secuencia de campanadas finalizada.");
                 #endif
@@ -200,25 +204,41 @@
         }
     }
 
-/**
- * @brief Recibe una secuencia por comunicación I2C
- * 
- * Este método lee un byte de datos desde el bus I2C cuando hay datos disponibles
- * y lo almacena en la variable secuenciaI2C. Si está definido DEBUGAUXILIAR,
- * imprime por el puerto serie el valor recibido.
- * 
- * @param numBytes Número de bytes a recibir (actualmente solo se lee 1 byte)
- */
+
+    /**
+     * @brief Recibe una secuencia de datos por I2C y procesa los bytes recibidos.
+     * 
+     * Esta función lee los datos disponibles en el bus I2C utilizando la librería Wire.
+     * El primer byte recibido se almacena en 'secuenciaI2C'. Si se reciben dos bytes,
+     * el segundo byte se interpreta como un parámetro adicional y se almacena en 'ParametroI2C'.
+     * 
+     * Si la secuencia recibida corresponde a una solicitud de estado, hora o fecha/hora,
+     * se guarda la solicitud en 'requestI2C' y se resetea 'secuenciaI2C'.
+     * 
+     * En modo depuración (DEBUGAUXILIAR), se imprime por el puerto serie la información recibida.
+     * 
+     * @param numBytes Número de bytes esperados en la secuencia recibida (1 o 2).
+     */
     void recibirSecuencia(int numBytes) 
     {
-        if (Wire.available()) {
+        if (Wire.available()) { 
+
             secuenciaI2C = Wire.read();
+            if (numBytes == 2) {
+                ParametroI2C = Wire.read(); // Lee el primer byte que es el comando de solicitud
+            }
             #ifdef DEBUGAUXILIAR
                 Serial.println("Secuencia recibida por I2C: " + String(secuenciaI2C));
             #endif
-            if (secuenciaI2C == EstadoCampanario || secuenciaI2C == EstadoHora ) {
-                requestI2C = secuenciaI2C; // Guarda la solicitud I2C para enviar la hora o el estado
-                secuenciaI2C = 0; // Resetea la secuencia si es una solicitud de estado o hora
+            if (numBytes == 2 )
+            {
+                #ifdef DEBUGAUXILIAR
+                    Serial.printf("Parametro recibido por I2C: %d\n", ParametroI2C);
+                #endif
+            }
+            if (secuenciaI2C == EstadoCampanario || secuenciaI2C == EstadoHora || secuenciaI2C == EstadoFechaHora) {
+                requestI2C = secuenciaI2C;              // Guarda la solicitud I2C para enviar la hora o el estado
+                secuenciaI2C = 0;                        // Resetea la secuencia si es una solicitud de estado o hora
             }
         }
     }
@@ -286,7 +306,6 @@
         uint8_t segundos = 0xFF; // Inicializa las variables de fecha y hora
         struct tm localTime;
         int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
-    
         if (RTC::isNtpSync() && getLocalTime(&localTime)) {
             dia = (uint8_t)localTime.tm_mday;        // Día del mes (1-31)
             mes = (uint8_t)(localTime.tm_mon + 1);   // Mes (1-12) - tm_mon va de 0-11
@@ -335,6 +354,9 @@
             case EstadoHora: // Si se solicita la hora
                 enviarHoraI2C(); // Envía la hora actual
                 break;
+            case EstadoFechaHora:
+                enviarFechaHoraI2C(); // Envía la fecha actual
+                break;
         }
         requestI2C = 0; // Resetea la solicitud I2C para esperar la siguiente
     }
@@ -365,6 +387,7 @@
  *                   - EstadoStop: Detiene cualquier secuencia en ejecución
  *                   - EstadoCalefaccionOn: Enciende el sistema de calefacción
  *                   - EstadoCalefaccionOff: Apaga el sistema de calefacción
+ *                   - EstadoProteccionCampanadas: Notifica el estado de la protección de campanadas
  * 
  * @details La función maneja diferentes estados del campanario y notifica a los
  *          clientes web conectados mediante websockets sobre los cambios realizados.
@@ -375,7 +398,7 @@
     void EjecutaSecuencia (int nSecuencia) 
     {
         #ifdef DEBUGSERVIDOR
-            Serial.print("Ejecutando secuencia: ");
+            Serial.println("Ejecutando secuencia: ");
             Serial.println(nSecuencia);
         #endif
         switch (nSecuencia) {
@@ -392,7 +415,7 @@
                 ws.textAll("REDIRECT:/index.html");         // Indica a los clientes que deben redirigir a la página principal
                 break;
             case EstadoCalefaccionOn:
-                Campanario.EnciendeCalefaccion(45);         // Llama a la función para encender la calefacción
+                Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion);         // Llama a la función para encender la calefacción con temporizacion
                 ws.textAll("CALEFACCION:ON");               // Envía el estado de la calefacción a todos los clientes conectados
                 break;
             case EstadoCalefaccionOff:
@@ -404,6 +427,14 @@
                 ws.textAll(lProteccionCampanadas ? "PROTECCION:ON" : "PROTECCION:OFF");
                 #ifdef DEBUGAUXILIAR
                     Serial.printf("EjecutaSecuencia -> Protección campanadas notificada: %s\n", lProteccionCampanadas ? "ACTIVA" : "INACTIVA");
+                #endif
+                break;
+            case EstadoSetTemporizador:                     //Fija el temporizador de la calefacción
+                nTemporizacionCalefaccion = (int)ParametroI2C; // Asigna el valor del parámetro recibido al temporizador de calefacción
+                Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion); // Llama a la función para fijar el temporizador de calefacción
+                ws.textAll("CALEFACCION:ON:" + String(nTemporizacionCalefaccion));
+                #ifdef DEBUGAUXILIAR
+                    Serial.printf("EjecutaSecuencia -> Temporizador de calefacción fijado a %d minutos.\n", nTemporizacionCalefaccion);
                 #endif
                 break;
             default:
@@ -453,7 +484,7 @@
      *
      * @return true si la hora actual está en el horario nocturno, false en caso contrario o si no se pudo obtener la hora.
      */
-    bool EsHorarioNocturno (void) {// Función para comprobar si es horario nocturno
+    bool EsHorarioNocturno (void) {
         if (!RTC::isNtpSync()) {
             #ifdef DEBUG
                 Serial.println("EsHorarioNocturno -> RTC no sincronizado con NTP.");
@@ -486,56 +517,49 @@
      */
     bool EsPeriodoToqueCampanas (void) {
         
-        if (!RTC::isNtpSync()) {
-            #ifdef DEBUGAUXILIAR
+        if (!RTC::isNtpSync()) {                                                            // Verifica si el RTC está sincronizado con NTP y si no lo esta           
+            #ifdef DEBUGPROTECCION
                 Serial.println("EsPeriodoToqueCampanas -> RTC no sincronizado con NTP.");
             #endif
             // Detecta cambio de estado y notifica si es necesario
-            if (lProteccionCampanadas != false) {
+            if (lProteccionCampanadas != false) {                                           //Si esta la proteccion de campanadas la deshabilitamos
                 lProteccionCampanadasAnterior = lProteccionCampanadas;
                 lProteccionCampanadas = false;
-                EjecutaSecuencia(EstadoProteccionCampanadas); // Notifica el cambio de estado
-                Campanario.ClearProteccionCampanadas(); // Desactiva la protección de campanadas
-                #ifdef DEBUGAUXILIAR
+                EjecutaSecuencia(EstadoProteccionCampanadas);                               // Notifica el cambio de estado a cliente web
+                Campanario.ClearProteccionCampanadas();                                     // Desactiva la protección de campanadas
+                #ifdef DEBUGPROTECCION
                     Serial.println("EsPeriodoToqueCampanas -> Protección desactivada (RTC no sincronizado)");
                 #endif
             }
             return false; // Si el RTC no está sincronizado, no se puede determinar el período
         }
         
-        struct tm localTime;
-        if (getLocalTime(&localTime)) { // Obtiene la hora local
-            int minuto = localTime.tm_min; // Obtiene el minuto actual
-            
-            // Comprueba si estamos ±5 minutos de la hora en punto (minuto 0)
-            bool periodoHoraEnPunto = (minuto >= 55) || (minuto < 5);
-            
-            // Comprueba si estamos ±5 minutos de la media hora (minuto 30)
-            bool periodoMediaHora = (minuto >= 25 && minuto <= 35);
-            
-            bool nuevoEstadoProteccion = (periodoHoraEnPunto || periodoMediaHora);
-            
-            // Detecta cambio de estado y notifica si es necesario
-            if (lProteccionCampanadas != nuevoEstadoProteccion) {
-                lProteccionCampanadasAnterior = lProteccionCampanadas;
-                lProteccionCampanadas = nuevoEstadoProteccion;
-                if (lProteccionCampanadas) {
-                    Campanario.SetProteccionCampanadas(); // Activa la protección de campanadas
-                    #ifdef DEBUGAUXILIAR
+        struct tm localTime;                                                                //Si hay sincronizacion
+        if (getLocalTime(&localTime)) {                                                     // Obtiene la hora local                            
+            int minuto = localTime.tm_min;                                                  //Obtenemos el minuto actual
+            bool periodoHoraEnPunto = (minuto >= 55) || (minuto < 5);                       // Comprueba si estamos ±5 minutos de la hora en punto (minuto 0)
+            bool periodoMediaHora = (minuto >= 25 && minuto <= 35);                         // Comprueba si estamos ±5 minutos de la media hora (minuto 30)
+            bool nuevoEstadoProteccion = (periodoHoraEnPunto || periodoMediaHora);          //Si esta en algun periodo de proteccion
+            if (lProteccionCampanadas != nuevoEstadoProteccion) {                           // Si el estado de protección ha cambiado     
+                lProteccionCampanadasAnterior = lProteccionCampanadas;                      // Guarda el estado anterior de la protección de campanadas 
+                lProteccionCampanadas = nuevoEstadoProteccion;                              // Actualiza el estado de la protección de campanadas
+                if (lProteccionCampanadas) {                                                // Si estamos en un período de toque de campanas
+                    Campanario.SetProteccionCampanadas();                                   // Activa la protección de campanadas
+                    #ifdef DEBUGPROTECCION
                         Serial.printf("EsPeriodoToqueCampanas -> Activando protección de campanadas (minuto %d)\n", minuto);
                     #endif
-                } else {
-                    Campanario.ClearProteccionCampanadas(); // Desactiva la protección de campanadas
-                    #ifdef DEBUGAUXILIAR
+                } else {                                                                    // Si no estamos en un período de toque de campanas
+                    Campanario.ClearProteccionCampanadas();                                 // Desactiva la protección de campanadas
+                    #ifdef DEBUGPROTECCION
                         Serial.printf("EsPeriodoToqueCampanas -> Desactivando protección de campanadas (minuto %d)\n", minuto);
                     #endif
                 }
-                EjecutaSecuencia(EstadoProteccionCampanadas); // Notifica el cambio de estado
-                #ifdef DEBUGAUXILIAR
+                EjecutaSecuencia(EstadoProteccionCampanadas);                               // Notifica el cambio de estado Al cliete web
+                #ifdef DEBUGPROTECCION
                     Serial.printf("EsPeriodoToqueCampanas -> Cambio de protección: %s -> %s (minuto %d)\n", lProteccionCampanadasAnterior ? "ACTIVA" : "INACTIVA",lProteccionCampanadas ? "ACTIVA" : "INACTIVA",minuto);
                 #endif
             }
-            #ifdef DEBUGAUXILIAR
+            #ifdef DEBUGPROTECCION
                 if (nuevoEstadoProteccion) {
                     Serial.printf("EsPeriodoToqueCampanas -> Período activo (minuto %d): %s\n", minuto, periodoHoraEnPunto ? "Hora en punto" : "Media hora");
                 }
@@ -543,16 +567,16 @@
             
             return nuevoEstadoProteccion;
         }
-        
-        #ifdef DEBUGAUXILIAR
+
+        #ifdef DEBUGPROTECCION
             Serial.println("EsPeriodoToqueCampanas -> Error obteniendo hora del RTC");
         #endif
-        // Detecta cambio de estado y notifica si es necesario
-        if (lProteccionCampanadas != false) {
+        
+        if (lProteccionCampanadas != false) {                                                   // Si no se pudo obtener la hora, desactiva la protección de campanadas si estaba activa
             lProteccionCampanadasAnterior = lProteccionCampanadas;
             lProteccionCampanadas = false;
             EjecutaSecuencia(EstadoProteccionCampanadas); // Notifica el cambio de estado
-            #ifdef DEBUGAUXILIAR
+            #ifdef DEBUGPROTECCION
                 Serial.println("EsPeriodoToqueCampanas -> Protección desactivada (error obteniendo hora)");
             #endif
         }

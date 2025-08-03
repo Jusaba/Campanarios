@@ -94,12 +94,17 @@
     }
   
   void loop() {
-  
-    if (RTC::isNtpSync()){
-      ChekearCuartos();                                             // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
-    }
-    
-    EsPeriodoToqueCampanas();                                       // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
+
+    if (!Campanario.GetEstadoSecuencia()) {
+      if (RTC::isNtpSync()) {
+        ChekearCuartos();                                             // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
+      }
+      EsPeriodoToqueCampanas();                                       // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
+      if (millis() - ultimoCheckInternet > intervaloCheckInternet) {  // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
+          ultimoCheckInternet = millis();
+          TestInternet();                                            // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
+      }
+    }  
   
     if (secuenciaI2C > 0) {                                         // Si se ha recibido orden por I2C
       EjecutaSecuencia(secuenciaI2C);                               // Llama a la función para ejecutar la orden recibida 
@@ -115,20 +120,11 @@
     TestCampanadas();                                               // Llama a la función para probar las campanadas y enviar el número de campana tocada a los clientes conectados
   
     if ( Campanario.GetEstadoCalefaccion())
-    {
-      
+    {  
       double segundos = Campanario.TestTemporizacionCalefaccion(); // Verifica el estado de la calefacción y obtiene el tiempo restante
       
       if (segundos == 0) {                                        // Verifica si la calefacción debe apagarse automáticamente
         nToque = EstadoCalefaccionOff;                            // Establece el estado de la calefacción a apagada
-/*
-        Campanario.ApagaCalefaccion();                            // Apaga la calefacción si el temporizador ha expirado
-        secuencia = "CALEFACCION:OFF";
-        ws.textAll(secuencia);                                    // Envía el estado de la calefacción a todos los clientes conectados
-        #ifdef DEBUGSERVIDOR
-          Serial.println("Calefacción apagada automáticamente por temporizador.");
-        #endif
-*/
         } else {
         #ifdef DEBUGSERVIDOR
           Serial.print("Calefacción aún activa, quedan.");
@@ -139,11 +135,6 @@
 
     }
 
-    if (millis() - ultimoCheckInternet > intervaloCheckInternet) {  // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
-        ultimoCheckInternet = millis();
-        TestInternet();                                            // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
-  
-    }
 
   }
 

@@ -52,6 +52,11 @@
         void MostrarHora(int nHora, int nMinutos, int nSegundos, bool limpiar); //Muestra la hora en pantalla, si limpiar es true limpia la pantalla antes de mostrar la hora
         void MensajeHora(int nHora, int nMinutos, int nSegundos) { MostrarHora(nHora, nMinutos, nSegundos, true); } // Muestra la hora en pantalla, limpiando la pantalla antes de mostrarla
         void EscribeHora(int nHora, int nMinutos, int nSegundos) { MostrarHora(nHora, nMinutos, nSegundos, false); } // Escribe la hora en pantalla sin limpiar la pantalla antes de mostrarla
+        void MostrarFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno, bool limpiar = false); // Muestra la fecha y hora en pantalla, si limpiar es true limpia la pantalla antes de mostrar la fecha y hora
+        void MensajeFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno) { MostrarFechaHora(nHora, nMinutos, nSegundos, nDia, nMes, nAno, true); } // Muestra la fecha y hora en pantalla, limpiando la pantalla antes de mostrarla
+        void EscribeFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno) { MostrarFechaHora(nHora, nMinutos, nSegundos, nDia, nMes, nAno, false); } // Escribe la fecha y hora en pantalla sin limpiar la pantalla antes de mostrarla
+        
+        void MensajeTemporizacion (int nMinutos, bool lLimpiar);
         // Funciones de creación de sprites
         // Estas funciones crean los sprites que se utilizan en el menú principal
         void CreaSpritesMenu (void);                                            //Crea todos los Sprites del menu ( On, Off, Consigna, Automatico....)
@@ -168,7 +173,7 @@
          * @param nSegundos    Segundos a mostrar (0-59).
          * @param limpiar      Si es true, limpia la pantalla antes de mostrar la hora (por defecto es false).
          */
-        void MostrarHora(int nHora, int nMinutos, int nSegundos, bool limpiar = false) 
+        void MostrarHora(int nHora, int nMinutos, int nSegundos, bool limpiar) 
         {
             if (limpiar) ClearPantalla();
             int x = M5Dial.Display.width() / 2;
@@ -196,6 +201,57 @@
             }
             
         }
+
+        void MostrarFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno, bool limpiar) 
+        {
+            if (limpiar) ClearPantalla();
+            int x = M5Dial.Display.width() / 2;
+            int y = ( M5Dial.Display.height()  / 2 );
+    
+            if (nHora == 255 && nMinutos == 255 && nSegundos == 255) {
+                //snprintf(buffer, sizeof(buffer), "--:--:--");
+                M5Canvas*& sprite = aSprites[iNoInternet];
+                sprite->pushRotateZoom(x, y+60, 0, 0.7, 0.7, Color_Transparente);
+            }else{
+                if (!limpiar) {
+                    M5Dial.Display.fillRect(x - 60, y + 45 - 10, 120, 20, Color_Fondo); // Borra la hora dibujando un rectángulo del color de fondo
+                    M5Dial.Display.fillRect(x - 60, y - 40 - 10, 120, 20, Color_Fondo); // Borra la Fecha dibujando un rectángulo del color de fondo
+                }               
+                M5Dial.Display.setTextDatum(middle_center);
+                M5Dial.Display.setTextColor(Color_Info, Color_Fondo);
+                M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
+                M5Dial.Display.setTextSize(2);
+                char buffer[13];                
+                snprintf(buffer, sizeof(buffer), "%02d : %02d : %02d", nHora, nMinutos, nSegundos);
+                M5Dial.Display.drawString(buffer, x, y + 45);
+                snprintf(buffer, sizeof(buffer), "%02d / %02d / %02d", nDia, nMes, nAno);
+                M5Dial.Display.drawString(buffer, x, y -40);
+
+            }
+            
+        }
+        void MensajeTemporizacion (int nMinutos, bool lLimpiar)
+        {
+ 
+            ClearPantalla();
+            int x = M5Dial.Display.width() / 2;
+            int y = M5Dial.Display.height() / 2;
+            if ( lLimpiar ) {
+                ClearPantalla();
+            }else{
+                M5Dial.Display.fillRect(x - 60, y + 40 - 10, 120, 20, Color_Fondo); // Borra la hora dibujando un rectángulo del color de fondo 
+            }            
+            M5Dial.Display.setTextDatum(middle_center);
+            M5Dial.Display.setTextColor(Color_Info, Color_Fondo);
+            M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
+            M5Dial.Display.setTextSize(2);
+            char buffer[20];
+            snprintf(buffer, sizeof(buffer), "Temporizacion");
+            M5Dial.Display.drawString(buffer, x, y - 30);
+            snprintf(buffer, sizeof(buffer), " %d min", nMinutos);
+            M5Dial.Display.drawString(buffer, x, y + 40);
+        }
+
 
 
         /**
