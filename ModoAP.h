@@ -110,12 +110,19 @@ void cargarConfigWiFi() {
     #endif    
 }
 
+// Formulario estático. La IP se introduce en 4 campos separados (ip1..ip4) para evitar asumir subred fija.
+// Nota: No se pre-rellena con la IP guardada porque mantenemos html estático (sin generación dinámica).
 const char* htmlForm = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>Configuración WiFi</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:14px;}
+    input{margin-bottom:6px;padding:4px;}
+    .ip-group input{width:60px;display:inline-block;text-align:center;}
+  </style>
 </head>
 <body>
   <h2>Configuración WiFi</h2>
@@ -124,17 +131,22 @@ const char* htmlForm = R"rawliteral(
     <input type="text" name="ssid" maxlength="31" required><br>
     <label>Password WiFi:</label><br>
     <input type="password" name="password" maxlength="31" required><br>
-    <label>IP deseada:</label><br>
-    <input type="text" name="ip" maxlength="15" required><br>
+    <label>IP deseada (4 octetos):</label><br>
+    <div class="ip-group">
+      <input type="number" name="ip1" min="0" max="255" placeholder="0-255" required> .
+      <input type="number" name="ip2" min="0" max="255" placeholder="0-255" required> .
+      <input type="number" name="ip3" min="0" max="255" placeholder="0-255" required> .
+      <input type="number" name="ip4" min="0" max="255" placeholder="0-255" required>
+    </div>
     <label>Dominio:</label><br>
     <input type="text" name="dominio" maxlength="31" required><br><br>
     <label>Usuario:</label><br>
     <input type="text" name="usuario" maxlength="31" required><br><br>
     <label>Clave:</label><br>
     <input type="text" name="clave" maxlength="31" required><br><br>
-    
     <input type="submit" value="Guardar">
   </form>
+  <p style="font-size:12px;color:#555;">Tras guardar, reinicie el dispositivo para aplicar la configuración. La IP se almacenará como texto en configWiFi.ip.</p>
 </body>
 </html>
 )rawliteral";
@@ -157,31 +169,45 @@ void iniciarModoAP() {
     
     dnsServer.start(53, "*", WiFi.softAPIP());                          // Portal cautivo DNS
    
-    server.onNotFound([](AsyncWebServerRequest *request){               // Redirige todas las peticiones a la página de configuración
-        request->send(200, "text/html", htmlForm);
-    });
+  server.onNotFound([](AsyncWebServerRequest *request){               // Redirige todas las peticiones a la página de configuración
+    request->send(200, "text/html", htmlForm);
+  });
 
     // Página principal
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){        // Redirige a la página de configuración
-        request->send(200, "text/html", htmlForm);
-    });
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){        // Redirige a la página de configuración
+    request->send(200, "text/html", htmlForm);
+  });
 
     // Guardar configuración
-    server.on("/guardar", HTTP_POST, [](AsyncWebServerRequest *request){
-        if (request->hasParam("ssid", true) && request->hasParam("password", true) &&
-            request->hasParam("ip", true) && request->hasParam("dominio", true)) {
-            strncpy(configWiFi.ssid, request->getParam("ssid", true)->value().c_str(), sizeof(configWiFi.ssid));
-            strncpy(configWiFi.password, request->getParam("password", true)->value().c_str(), sizeof(configWiFi.password));
-            strncpy(configWiFi.ip, request->getParam("ip", true)->value().c_str(), sizeof(configWiFi.ip));
-            strncpy(configWiFi.dominio, request->getParam("dominio", true)->value().c_str(), sizeof(configWiFi.dominio));
-            strncpy(configWiFi.usuario, request->getParam("usuario", true)->value().c_str(), sizeof(configWiFi.usuario));
-            strncpy(configWiFi.clave, request->getParam("clave", true)->value().c_str(), sizeof(configWiFi.clave));
-            guardarConfigWiFi();
-            request->send(200, "text/html", "<h2>Configuración guardada. Reinicie el dispositivo.</h2>");
-        } else {
-            request->send(400, "text/html", "<h2>Error en los datos enviados.</h2>");
-        }
-    });
+  server.on("/guardar", HTTP_POST, [](AsyncWebServerRequest *request){
+    // Validamos presencia de todos los parámetros necesarios.
+    if (request->hasParam("ssid", true) && request->hasParam("password", true) &&
+      request->hasParam("ip1", true) && request->hasParam("ip2", true) &&
+      request->hasParam("ip3", true) && request->hasParam("ip4", true) &&
+      request->hasParam("dominio", true) && request->hasParam("usuario", true) && request->hasParam("clave", true)) {
+
+      int ip1 = request->getParam("ip1", true)->value().toInt();
+      int ip2 = request->getParam("ip2", true)->value().toInt();
+      int ip3 = request->getParam("ip3", true)->value().toInt();
+      int ip4 = request->getParam("ip4", true)->value().toInt();
+      bool ipOk = (ip1>=0 && ip1<=255 && ip2>=0 && ip2<=255 && ip3>=0 && ip3<=255 && ip4>=0 && ip4<=255);
+      if(!ipOk){
+        request->send(400, "text/html", "<h2>IP inválida (cada octeto 0-255).</h2>");
+        return;
+      }
+      // Copiamos strings (se truncarán automáticamente si exceden tamaño del buffer destino).
+      strncpy(configWiFi.ssid, request->getParam("ssid", true)->value().c_str(), sizeof(configWiFi.ssid));
+      strncpy(configWiFi.password, request->getParam("password", true)->value().c_str(), sizeof(configWiFi.password));
+      snprintf(configWiFi.ip, sizeof(configWiFi.ip), "%d.%d.%d.%d", ip1, ip2, ip3, ip4);
+      strncpy(configWiFi.dominio, request->getParam("dominio", true)->value().c_str(), sizeof(configWiFi.dominio));
+      strncpy(configWiFi.usuario, request->getParam("usuario", true)->value().c_str(), sizeof(configWiFi.usuario));
+      strncpy(configWiFi.clave, request->getParam("clave", true)->value().c_str(), sizeof(configWiFi.clave));
+      guardarConfigWiFi();
+      request->send(200, "text/html", "<h2>Configuración guardada. Reinicie el dispositivo.</h2>");
+    } else {
+      request->send(400, "text/html", "<h2>Error en los datos enviados.</h2>");
+    }
+  });
 
     server.begin();
 }

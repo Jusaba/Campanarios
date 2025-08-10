@@ -51,17 +51,34 @@ bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms)
  */
 bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms = 10000) // timeout por defecto: 10 segundos
 {
-    uint8_t ultimoOcteto = atoi(ConfiguracionWiFi.ip);
-    IPAddress local_IP(192, 168, 1, ultimoOcteto);
-    IPAddress gateway(192, 168, 1, 1);
-    IPAddress subnet(255, 255, 255, 0);
+    // Parseo de IP completa a.b.c.d desde ConfiguracionWiFi.ip
+    int a=-1,b=-1,c=-1,d=-1;
+    bool ipValida = (sscanf(ConfiguracionWiFi.ip, "%d.%d.%d.%d", &a,&b,&c,&d) == 4) &&
+                    (a>=0 && a<=255 && b>=0 && b<=255 && c>=0 && c<=255 && d>=0 && d<=255);
+
+    IPAddress local_IP;      // Se rellenará si ipValida
+    IPAddress gateway;       // Derivamos gateway como a.b.c.1 (heurística) si no se dispone de otro dato
+    IPAddress subnet(255, 255, 255, 0); // Mantener /24 por defecto
     IPAddress primaryDNS(8, 8, 8, 8);
     IPAddress secondaryDNS(8, 8, 4, 4);
 
-    if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
-      #ifdef DEBUGWIFI
-        Serial.println("Configuración de IP estática fallida");
-      #endif
+    if(ipValida) {
+        local_IP = IPAddress((uint8_t)a,(uint8_t)b,(uint8_t)c,(uint8_t)d);
+        gateway  = IPAddress((uint8_t)a,(uint8_t)b,(uint8_t)c,1); // suposición habitual
+        if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
+          #ifdef DEBUGWIFI
+            Serial.println("Configuración de IP estática fallida");
+          #endif
+        } else {
+          #ifdef DEBUGWIFI
+            Serial.print("IP estática configurada: "); Serial.println(local_IP);
+            Serial.print("Gateway: "); Serial.println(gateway);
+          #endif
+        }
+    } else {
+        #ifdef DEBUGWIFI
+          Serial.print("IP inválida en configuración ('"); Serial.print(ConfiguracionWiFi.ip); Serial.println("'). Usando DHCP.");
+        #endif
     }
 
     #ifdef DEBUGWIFI
@@ -80,7 +97,7 @@ bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms 
       #endif
     }
 
-    if (WiFi.status() == WL_CONNECTED) {
+  if (WiFi.status() == WL_CONNECTED) {
       #ifdef DEBUGWIFI
         Serial.println();
         Serial.println("\nConexión Wi-Fi establecida.");
