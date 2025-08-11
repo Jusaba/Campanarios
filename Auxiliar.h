@@ -60,8 +60,8 @@
     #define BitEstadoSinInternet  0x20                      // Bit para indicar que no hay conexión a Internet
     #define BitEstadoProteccionCampanadas 0x40              // Bit para indicar que la protección de campanadas está activa
 
-    #define InicioHorarioNocturno 23                        // Hora de inicio del horario nocturno (23:00)
-    #define FinHorarioNocturno     7                        // Hora de fin del horario noct
+    #define InicioHorarioNocturno 22                        // Hora de inicio del horario nocturno (23:00)
+    #define FinHorarioNocturno     8                        // Hora de fin del horario noct
 
     extern ConfigWiFi configWiFi;                           // Estructura para almacenar la configuración WiFi definida en modo AP
 
@@ -537,8 +537,8 @@
         struct tm localTime;                                                                //Si hay sincronizacion
         if (getLocalTime(&localTime)) {                                                     // Obtiene la hora local                            
             int minuto = localTime.tm_min;                                                  //Obtenemos el minuto actual
-            bool periodoHoraEnPunto = (minuto >= 55) || (minuto < 5);                       // Comprueba si estamos ±5 minutos de la hora en punto (minuto 0)
-            bool periodoMediaHora = (minuto >= 25 && minuto <= 35);                         // Comprueba si estamos ±5 minutos de la media hora (minuto 30)
+            bool periodoHoraEnPunto = (minuto >= 58) || (minuto < 8);                       // Comprueba si estamos ±5 minutos de la hora en punto (minuto 0)
+            bool periodoMediaHora = (minuto >= 28 && minuto <= 32);                         // Comprueba si estamos ±5 minutos de la media hora (minuto 30)
             bool nuevoEstadoProteccion = (periodoHoraEnPunto || periodoMediaHora);          //Si esta en algun periodo de proteccion
             if (lProteccionCampanadas != nuevoEstadoProteccion) {                           // Si el estado de protección ha cambiado     
                 lProteccionCampanadasAnterior = lProteccionCampanadas;                      // Guarda el estado anterior de la protección de campanadas 
