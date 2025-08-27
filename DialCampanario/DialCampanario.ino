@@ -60,7 +60,8 @@ Serial.println("  ");
         if (nEstado != EstadoSetTemporizador) {
             if (millis() - nMilisegundoTemporal > nmsGetEstadoCampanario) { // Cada 500 ms
                 nMilisegundoTemporal = millis();
-                SolicitarEstadoFechaHora(); // Solicitar la hora al esclavo I2C
+                //SolicitarEstadoFechaHora(); // Solicitar la hora al esclavo I2C
+                SolicitarEstadoFechaHoraoTemporizacion(); // Solicitar el estado del campanario al esclavo I2C
                 ActualizarDisplaySleep(); // Actualizar el estado del display
             }
         }

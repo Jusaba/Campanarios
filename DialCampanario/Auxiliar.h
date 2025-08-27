@@ -7,7 +7,9 @@
 /*    
     #define DEBUGAUXILIAR
     #define DEBUGI2CTX
+*/
     #define DEBUGI2CREQUEST
+/*    
     #define DEBUGI2CRX
     #define DEBUGI2CREQUEST
     #define DEBUGMENU
@@ -55,7 +57,9 @@
            EstadoProteccionCampanadas,
            EstadoFechaHora,
            EstadoSetTemporizador,
-           EstadoFin
+           EstadoFin,
+           EstadoFechaHoraoTemporizacion,
+           EstadoTemporizacion
         };
 
 
@@ -113,6 +117,7 @@
     void SolicitarEstadoCampanario(void);                   //!< Solicita el estado del campanario al esclavo I2C
     void SolicitarEstadoHora(void);                         //!< Solicita el estado y la hora al esclavo I2C
     void SolicitarEstadoFechaHora(void);                    //!< Solicita la fecha y hora al esclavo I2C
+    void SolicitarEstadoFechaHoraoTemporizacion(void);       //!< Solicita  la temporizacion de la calefaccion
 
     void SeleccionaMenu(int nEstadoSeleccionado);           //!< Selecciona el menú según el estado recibido
 
@@ -475,6 +480,49 @@
 
         }
 
+        void SolicitarEstadoFechaHoraoTemporizacion ()
+        {
+            #ifdef DEBUGI2CREQUEST 
+                Serial.println("SolicitarEstadoFechaHoraoTemporizacion->Solicitando estado de fecha/hora y temporización del campanario...");
+            #endif
+        
+            // Solicita la hora al esclavo I2C
+            Wire.beginTransmission(I2C_SLAVE_ADDR);                                     //Hacemos Request I2C al esclavo para solicitar Fecha y Hora
+            Wire.write(EstadoFechaHoraoTemporizacion); 
+            Wire.endTransmission();
+        
+            Wire.requestFrom(I2C_SLAVE_ADDR, 7);                                        // Solicita 7 bytes al esclavo
+        
+            if (Wire.available() >= 7) {
+                nEstadoActual = Wire.read();                                            // Lee el estado del esclavo I2C
+                lInternet = (nEstadoActual & bitEstadoSinInternet) ? false : true;      // Si el bit bitEstadoSinInternet está activo, no hay conexión a Internet
+                campanarioEstado.nDia = Wire.read();                                    // Lee el día del esclavo I2C
+                campanarioEstado.nMes = Wire.read();                                    // Lee el mes del esclavo I2C
+                campanarioEstado.nAno = Wire.read();                                    // Lee el año del esclavo I2C
+                campanarioEstado.nHora = Wire.read();                                   // Lee la hora del esclavo I2C
+                campanarioEstado.nMinutos = Wire.read();                                // Lee los minutos del esclavo I2C
+                campanarioEstado.nSegundos = Wire.read();                               // Lee los segundos del esclavo I2C
+                campanarioEstado.nEstado = nEstadoActual;                               // Actualiza el estado del campanario
+                if (nEstadoActual != nEstadoAnterior) {                                 // Si hay un cambio de estado
+                    #ifdef DEBUGI2CREQUEST
+                       Serial.printf("SolicitarEstadoFechaHoraoTemporizacion->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual);
+                    #endif
+                    nEstadoAnterior = nEstadoActual;
+                    SeleccionaMenu(nEstadoActual);                                      // Llama a la función para seleccionar el menú según el estado recibido
+                    nEstado = 0;                                                        // Reinicia el estado al primer elemento del menú
+                    lCambioEstado = true;                                               // Marca que ha habido un cambio de estado
+                }
+                #ifdef DEBUGI2CREQUEST
+                    Serial.printf("SolicitarEstadoFechaHoraoTemporizacion->Estado actual del campanario: %d\n", nEstadoActual);
+                    Serial.printf("SolicitarEstadoFechaHoraoTemporizacion->Hora recibida: %02d:%02d:%02d %02d/%02d/%02d\n", campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
+                #endif        
+            } else {
+                #ifdef DEBUGI2CREQUEST
+                    Serial.println("SolicitarEstadoFechaHoraoTemporizacion->No se recibió respuesta del campanario");
+                #endif
+            }                   
+        }
+
 
     /**
      * @brief Reinicia el estado actual y asigna un nuevo estado anterior.
@@ -732,10 +780,18 @@
             }
         } else {
             if (!lBrillo) {
-                MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
+                if (nEstadoActual & (1 << 4)) {
+                    MostrarCalefaccionTemporizada(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, true);
+                }else{
+                    MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
+                }
                 SubeBrillo(40);
             } else {
-                EscribeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
+                if (nEstadoActual & (1 << 4)) {
+                    MostrarCalefaccionTemporizada(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, false);
+                }else{
+                    MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
+                }
             }
             #ifdef DEBUG
                 Serial.println("Display activo, se presenta la hora");

@@ -34,11 +34,14 @@
   #include <Wire.h>
   #include "Auxiliar.h"
   #include "ModoAp.h"
+  //#include "Alarmas.h"
+  //#include "Acciones.h"
   
   
   #define DEBUG
   
-  
+
+//AlarmScheduler Alarmas;
   
   void setup() {
     
@@ -55,7 +58,6 @@
           delay(100);
         }
       } else {
-      
         cargarConfigWiFi();                                         // Carga la configuración guardada
         #ifdef DEBUG
           Serial.println("Iniciando Campanario...");
@@ -74,30 +76,35 @@
         Campanario.AddCampana(campana1);                            // Añade la campana 1 al campanario
         Campanario.AddCampana(campana2);                            // Añade la campana 2 al campanario
         Campanario.AddCalefaccion(calefaccion);                     // Añade la calefacción al campanario  
-      
+
+
         lConexionInternet = ConectarWifi(configWiFi);               // Llama a la función para conectar a la red Wi-Fi con la configuración cargada
         if (lConexionInternet)                                      // Llama a la función para conectar a la red Wi-Fi
         {                                                           // Si la conexión es exitosa
             ServidorOn(configWiFi.usuario, configWiFi.clave);       // Llama a la función para iniciar el servidor
-            Campanario.SetInternetConectado();                     // Notifica al campanario que hay conexión a Internet
+            Campanario.SetInternetConectado();                      // Notifica al campanario que hay conexión a Internet
             #ifdef DEBUG
               Serial.println("Conexión Wi-Fi exitosa.");
             #endif
         } else {
-          Campanario.ClearInternetConectado(); // Notifica al campanario que no hay conexión a Internet
+          Campanario.ClearInternetConectado();                      // Notifica al campanario que no hay conexión a Internet
           #ifdef DEBUG
             Serial.println("Error al conectar a la red Wi-Fi.");
           #endif
         }
-      
-    }  
+//Alarmas.begin(); // carga alarmas por defecto
+        // Alarmas.add(DOW_TODOS, 8, 30, 300); // añadir más
+        //Alarmas.add(DOW_TODOS, 8, 0, 0, &AlarmScheduler::accionTocaHora); // cada día a las 08:00
+        //Alarmas.add(DOW_TODOS, ALARMA_WILDCARD, ALARMA_WILDCARD, 10, &AlarmScheduler::accionSecuencia, 300); // cada 10 min secuencia 300
+      }  
     }
   
   void loop() {
 
     if (!Campanario.GetEstadoSecuencia()) {
       if (RTC::isNtpSync()) {
-        ChekearCuartos();                                             // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
+        //ChekearCuartos();                                             // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
+//Alarmas.check();                                              // Llama a la función para comprobar las alarmas programadas
       }
       EsPeriodoToqueCampanas();                                       // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
       if (millis() - ultimoCheckInternet > intervaloCheckInternet) {  // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
@@ -121,15 +128,15 @@
   
     if ( Campanario.GetEstadoCalefaccion())
     {  
-      double segundos = Campanario.TestTemporizacionCalefaccion(); // Verifica el estado de la calefacción y obtiene el tiempo restante
+      nSegundosTemporizacion = Campanario.TestTemporizacionCalefaccion(); // Verifica el estado de la calefacción y obtiene el tiempo restante
       
-      if (segundos == 0) {                                        // Verifica si la calefacción debe apagarse automáticamente
+      if (nSegundosTemporizacion == 0) {                                        // Verifica si la calefacción debe apagarse automáticamente
         nToque = EstadoCalefaccionOff;                            // Establece el estado de la calefacción a apagada
         } else {
         #ifdef DEBUGSERVIDOR
-          Serial.print("Calefacción aún activa, quedan.");
-          Serial.print(segundos);
-          Serial.println(" segundos para apagarse.");
+//          Serial.print("Calefacción aún activa, quedan.");
+//          Serial.print(segundos);
+//          Serial.println(" segundos para apagarse.");
         #endif
       }
 

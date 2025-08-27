@@ -18,6 +18,7 @@
         #define iCalefaccionOff     4                   //!<Posicion del array de sprites con el icono de Calefaccion Off
         #define iCampanario         5                   //!<Posicion del array de sprites con el icono de Campanario
         #define iNoInternet         6                   //!<Posicion del array de sprites con el icono de No Internet
+        #define iCalefaccionTemp    7                   //!<Posicion del array de sprites con el icono de Calefaccion Temp
 
         #define IconoStop    Stop                       //!<Nombre del icono termometro del menu en Imagen.h
         #define IconoDifuntos Difuntos                  //!<Nombre del icono de difuntos del menu en Imagen.h
@@ -26,10 +27,10 @@
         #define IconoCalefaccionOff CalefaccionOff      //!<Nombre del icono de
         #define IconoCampanario Campanario              //!<Nombre del icono de campanario del menu en Imagen.h
         #define IconoNoInternet NoInternet              //!<Nombre del icono de no internet del menu en Imagen.h
-        
+        #define IconoCalefaccionTemp CalefaccionTemp    //!<Nombre del icono de calefaccion temp del menu en Imagen.h
 
         boolean lBrillo = 1;                            //Indica si hay brillo en el display (1)
-        M5Canvas* aSprites[7];                          //Array de Sprites de Menu
+        M5Canvas* aSprites[8];                          //Array de Sprites de Menu
 
 
         // Prototipos de funciones
@@ -47,6 +48,7 @@
         void MensajeStop()            { MensajeIconoTexto(iStop, "Stop", Color_Info, 50); }             // Muestra el mensaje de stop en la pantalla principal
         void MensajeCalefaccionOn()   { MensajeIconoTexto(iCalefaccionOn, "Encender", Color_Info, 50); }// Muestra el mensaje de calefacción encendida en la pantalla principal
         void MensajeCalefaccionOff()  { MensajeIconoTexto(iCalefaccionOff, "Apagar", Color_Info, 50); } // Muestra el mensaje de calefacción apagada en la pantalla principal
+
         // Funciones de hora
         // Estas funciones muestran la hora en pantalla, si limpiar es true limpia la pantalla antes de mostrar la hora
         void MostrarHora(int nHora, int nMinutos, int nSegundos, bool limpiar); //Muestra la hora en pantalla, si limpiar es true limpia la pantalla antes de mostrar la hora
@@ -55,7 +57,7 @@
         void MostrarFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno, bool limpiar = false); // Muestra la fecha y hora en pantalla, si limpiar es true limpia la pantalla antes de mostrar la fecha y hora
         void MensajeFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno) { MostrarFechaHora(nHora, nMinutos, nSegundos, nDia, nMes, nAno, true); } // Muestra la fecha y hora en pantalla, limpiando la pantalla antes de mostrarla
         void EscribeFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno) { MostrarFechaHora(nHora, nMinutos, nSegundos, nDia, nMes, nAno, false); } // Escribe la fecha y hora en pantalla sin limpiar la pantalla antes de mostrarla
-        
+        void MostrarCalefaccionTemporizada (int nHora, int nMinutos, int nSegundos, bool limpiar);
         void MensajeTemporizacion (int nMinutos, bool lLimpiar);
         // Funciones de creación de sprites
         // Estas funciones crean los sprites que se utilizan en el menú principal
@@ -252,7 +254,28 @@
             M5Dial.Display.drawString(buffer, x, y + 40);
         }
 
+        void MostrarCalefaccionTemporizada (int nHora, int nMinutos, int nSegundos, bool limpiar)
+        {
+            int x = M5Dial.Display.width() / 2;
+            int y = ( M5Dial.Display.height()  / 2 );
 
+            if (limpiar) 
+            {
+                ClearPantalla();
+                M5Canvas*& sprite = aSprites[iCalefaccionTemp];
+                sprite->pushRotateZoom(x, y-15, 0, 1.2, 1.2, Color_Transparente);
+            }
+            
+            M5Dial.Display.fillRect(x - 60, y + 65 - 10, 120, 20, Color_Fondo); // Borra la hora dibujando un rectángulo del color de fondo
+            M5Dial.Display.setTextDatum(middle_center);
+            M5Dial.Display.setTextColor(Color_Info, Color_Fondo);
+            M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
+            M5Dial.Display.setTextSize(2);
+            char buffer[9];                
+            snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", nHora, nMinutos, nSegundos);
+            M5Dial.Display.drawString(buffer, x, y + 65);
+            
+        }
 
         /**
          * @brief Crea los sprites del menú principal.
@@ -272,6 +295,7 @@
             CreaSpriteMenu(aSprites[iCalefaccionOff], IconoCalefaccionOff);
             CreaSpriteMenu(aSprites[iCampanario], IconoCampanario);
             CreaSpriteMenu(aSprites[iNoInternet], IconoNoInternet);
+            CreaSpriteMenu(aSprites[iCalefaccionTemp], IconoCalefaccionTemp);
         }
 
         /**

@@ -330,7 +330,7 @@
         int nHoraTocada = (nHoraReal == 0) ? 12 : nHoraReal;    // Si es 0, se toca la campana 12
         for (int i = 0; i < nHoraTocada; ++i) {
             this->_aCampanadas[i].indiceCampana = 0;            // Toca la campana 2 para la hora
-            this->_aCampanadas[i].intervaloMs = (i == 0) ? 3000 : 1000; // espaciados 1000 ms o 3000 en el primer toque de hora
+            this->_aCampanadas[i].intervaloMs = (i == 0) ? 3000 : 2000; // espaciados 1000 ms o 3000 en el primer toque de hora
         }
         this->_nCampanadas = nHoraTocada;                       // Actualiza el número de campanadas a tocar (solo la hora)
         this->_nEstadoCampanario |= BitHora;                    // Actualiza el estado del campanario para indicar que se está tocando la hora
