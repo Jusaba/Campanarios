@@ -34,6 +34,8 @@
   #include <Wire.h>
   #include "Auxiliar.h"
   #include "ModoAp.h"
+  #include "Configuracion.h"
+  #include "TimeManager.h"
   //#include "Alarmas.h"
   //#include "Acciones.h"
   
@@ -104,9 +106,11 @@
     if (!Campanario.GetEstadoSecuencia()) {
       if (RTC::isNtpSync()) {
         //ChekearCuartos();                                             // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
+        TimeManager::checkCuartos();                                  // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
 //Alarmas.check();                                              // Llama a la función para comprobar las alarmas programadas
       }
-      EsPeriodoToqueCampanas();                                       // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
+      //EsPeriodoToqueCampanas();                                       // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
+      TimeManager::ActualizaEstadoProteccionCampanadas();                        // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
       if (millis() - ultimoCheckInternet > intervaloCheckInternet) {  // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
           ultimoCheckInternet = millis();
           TestInternet();                                            // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
