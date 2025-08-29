@@ -4,7 +4,7 @@
 #include "Servidor.h"
 #include "DNSServicio.h"
 
-int TimeManager::_lUltimoMinuto = -1;
+
 bool TimeManager::_lProteccionCampanadasAnterior = false;
 
 /**
@@ -118,33 +118,7 @@ void TimeManager::ActualizaEstadoProteccionCampanadas()
  *
  * La función no realiza ninguna acción si hay una secuencia de campanas activa o si no se puede obtener la hora actual.
  */
-void TimeManager::checkCuartos() 
-{
-    if (Campanario.GetEstadoSecuencia()) return;
-    struct tm timeinfo;
-    if (!getCurrentTime(timeinfo)) return;
-    int hora = timeinfo.tm_hour;
-    int minuto = timeinfo.tm_min;
-    if (minuto != _lUltimoMinuto) {
-        _lUltimoMinuto = minuto;
-        if (minuto % 30 == 0) {
-            ws.textAll("REDIRECT:/Campanas.html");
-            if (minuto == 0) {
-                if (!EsHorarioNocturno()) Campanario.TocaHoraSinCuartos(hora);
-                if (hora == Config::Time::NTP_SYNC_HORA && hayInternet()){
-                    autoSyncNTP();
-                } 
-            } else {
-                if (!EsHorarioNocturno()){
-                    Campanario.TocaMediaHora();
-                }
-            }
-            if (hayInternet()) {
-                ActualizaDNS(configWiFi.dominio);
-            }
-        }
-    }
-}
+
 
 /**
  * @brief Sincroniza automáticamente la hora utilizando NTP.
@@ -152,11 +126,12 @@ void TimeManager::checkCuartos()
  * Inicializa el módulo RTC para comenzar la sincronización con un servidor NTP.
  * Esta función debe ser llamada para asegurar que el reloj del sistema esté actualizado.
  */
+/*
 void TimeManager::autoSyncNTP() 
 {
     RTC::begin();
 }
-
+*/
 /**
  * @brief Restablece el estado interno del gestor de tiempo.
  *
@@ -165,6 +140,5 @@ void TimeManager::autoSyncNTP()
  */
 void TimeManager::reset() 
 {
-    _lUltimoMinuto = -1;
     _lProteccionCampanadasAnterior = false;
 }

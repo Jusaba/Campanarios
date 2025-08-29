@@ -36,14 +36,14 @@
   #include "ModoAp.h"
   #include "Configuracion.h"
   #include "TimeManager.h"
-  //#include "Alarmas.h"
+  #include "Alarmas.h"
   //#include "Acciones.h"
   
   
   #define DEBUG
   
 
-//AlarmScheduler Alarmas;
+AlarmScheduler Alarmas;
   
   void setup() {
     
@@ -94,7 +94,7 @@
             Serial.println("Error al conectar a la red Wi-Fi.");
           #endif
         }
-//Alarmas.begin(); // carga alarmas por defecto
+Alarmas.begin(); // carga alarmas por defecto
         // Alarmas.add(DOW_TODOS, 8, 30, 300); // añadir más
         //Alarmas.add(DOW_TODOS, 8, 0, 0, &AlarmScheduler::accionTocaHora); // cada día a las 08:00
         //Alarmas.add(DOW_TODOS, ALARMA_WILDCARD, ALARMA_WILDCARD, 10, &AlarmScheduler::accionSecuencia, 300); // cada 10 min secuencia 300
@@ -106,8 +106,8 @@
     if (!Campanario.GetEstadoSecuencia()) {
       if (RTC::isNtpSync()) {
         //ChekearCuartos();                                             // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
-        TimeManager::checkCuartos();                                  // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
-//Alarmas.check();                                              // Llama a la función para comprobar las alarmas programadas
+//TimeManager::checkCuartos();                                  // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
+Alarmas.check();                                              // Llama a la función para comprobar las alarmas programadas
       }
       //EsPeriodoToqueCampanas();                                       // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
       TimeManager::ActualizaEstadoProteccionCampanadas();                        // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas

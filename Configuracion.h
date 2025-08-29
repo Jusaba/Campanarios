@@ -24,7 +24,7 @@
         // ==================== TIMING ====================
         namespace Time {
             // Horario nocturno (campanas silenciadas)
-            constexpr int NOCHE_INICIO_HORA = 24;   // Hora Inicio Horario Nocturno
+            constexpr int NOCHE_INICIO_HORA = 23;   // Hora Inicio Horario Nocturno
             constexpr int NOCHE_FIN_HORA   = 7;     // Hora Fin Horario Nocturno
 
             // Protección de campanadas (±X minutos alrededor de toques)

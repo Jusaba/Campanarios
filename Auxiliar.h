@@ -72,9 +72,6 @@ void enviarEstadoTemporizacionI2C();
 void enviarFechaoTemporizacionI2C();
 void EjecutaSecuencia(int nSecuencia);
 void TestInternet(void);
-void SincronizaNTP(void);
-void TocaHora(void);
-void TocaMediaHora(void);
 bool EsHorarioNocturno(void);
 bool EsPeriodoToqueCampanas(void);
 

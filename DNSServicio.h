@@ -32,6 +32,7 @@
     #define DEBUGDNS
 
     void ActualizaDNS (const char* cDominio);
+    void ActualizaDNSSiNecesario(void);
 
 
 

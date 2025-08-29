@@ -4,10 +4,8 @@
 #include <time.h>
 #include <Arduino.h>
 #include "Acciones.h"
+#include "Configuracion.h"
 
-// Config horario nocturno
-#define InicioHorarioNocturno 23
-#define FinHorarioNocturno     8
 //#define DebugAlarma
 
 // Máscaras días (bit0 = Domingo ... bit6 = Sábado)
@@ -129,15 +127,6 @@ public:
         return _num++;
     }
 
-    // Envoltorio: secuencia
-    uint8_t addSecuencia(uint8_t dowMask,
-                         uint8_t hour,
-                         uint8_t minute,
-                         uint16_t secuenciaId,
-                         bool enabled = true)
-    {
-        return add(dowMask, hour, minute, 0, &AlarmScheduler::accionSecuencia, secuenciaId, enabled);
-    }
 
     void disable(uint8_t idx) { if (idx < _num) _alarmas[idx].enabled = false; }
     void enable(uint8_t idx)  { if (idx < _num) _alarmas[idx].enabled = true;  }
@@ -209,17 +198,7 @@ public:
         }
     }
 
-    // Acciones miembro ejemplo
-    void accionSecuencia(uint16_t seqId) { EjecutaSecuencia(seqId); }
-    void accionTocaHora(uint16_t) {
-        if (!esHorarioNocturno()) Campanario.TocaHoraSinCuartos(t.tm_hour);
-    }
-    void accionTocaMedia(uint16_t) {
-        if (!esHorarioNocturno()) Campanario.TocaMediaHora();
-    }
-    void accionMinutos(uint16_t) {
-        // ejemplo cada minuto
-    }
+
 
 private:
     Alarm  _alarmas[MAX_ALARMAS];
@@ -229,10 +208,12 @@ private:
         return (wday >= 0 && wday <= 6) ? (1 << wday) : 0;
     }
     bool esHorarioNocturno() const {
-        return (t.tm_hour >= InicioHorarioNocturno || t.tm_hour < FinHorarioNocturno);
+        return (t.tm_hour >= InicioHorarioNocturno || 
+            t.tm_hour < FinHorarioNocturno);
     }
 
     void initDefaults() {
+    /*
         // Domingos (misa)
         addSecuencia(DOW_DOMINGO, 11, 5,  101);
         addSecuencia(DOW_DOMINGO, 11, 25, 102);
@@ -245,6 +226,24 @@ private:
         // addExternal(DOW_TODOS, 12, 15, 0, MiFuncion, 123);
         // Función externa sin parámetro (ej: SincronizaNTP)
         addExternal0(DOW_TODOS, 18, 35, 0, SincronizaNTP);
+    */
+
+    // ===== MISAS DOMINICALES =====
+    addExternal(DOW_DOMINGO, 11, 5,  0, accionSecuencia, EstadoMisa, true);
+    addExternal(DOW_DOMINGO, 11, 25, 0, accionSecuencia, EstadoMisa, true);
+
+    // ===== CUARTOS Y MEDIAS (FUNCIONALIDAD MIGRADA DE TIMEMANAGER) =====
+    // Tocar horas en punto (wildcards = todas las horas)
+    addExternal0(DOW_TODOS, ALARMA_WILDCARD, 0, 0, accionTocaHora, true);
+    
+    // Tocar medias horas
+    addExternal0(DOW_TODOS, ALARMA_WILDCARD, 30, 0, accionTocaMedia, true);
+
+    // ===== FUNCIONES EXTERNAS =====
+    // Sincronización NTP al mediodía
+    addExternal0(DOW_TODOS, 12, 2, 0, SincronizaNTP, true);
+    addExternal0(DOW_TODOS, 12, 5, 0, ActualizaDNSSiNecesario, true);
+
     }
 };
 
