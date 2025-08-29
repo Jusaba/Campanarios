@@ -78,9 +78,22 @@
         namespace Debug {
             // Flags de debug (puedes activar/desactivar módulos específicos)
             constexpr bool AUXILIAR_DEBUG    = true;   // Era #ifdef DEBUGAUXILIAR
-            constexpr bool PROTECTION_DEBUG  = true;   // Era #ifdef DEBUGPROTECCION  
+            constexpr bool PROTECTION_DEBUG  = true;   // Era #ifdef DEBUGPROTECCION
             constexpr bool SERVER_DEBUG      = true;   // Era #ifdef DEBUGSERVIDOR
             constexpr bool GENERAL_DEBUG     = true;   // Era #ifdef DEBUG
+            constexpr bool CAMPANARIO_DEBUG  = true;   // Era #ifdef DEBUGCAMPANARIO
+            constexpr bool WIFI_DEBUG        = true;   // Era #ifdef DEBUGWIFI
+            constexpr bool DNS_DEBUG         = true;   // Era #ifdef DEBUGDNS
+            constexpr bool RTC_DEBUG         = true;   // Era #ifdef DEBUGRTC
+            constexpr bool HEATING_DEBUG     = true;   // Era #ifdef DEBUGCALEFACCION
+            constexpr bool AP_DEBUG          = true;   // Era #ifdef DebugAP
+            constexpr bool ACTIONS_DEBUG     = true;   // Era #ifdef DebugAcciones
+            constexpr bool ALARM_DEBUG       = true;   // Era #ifdef DebugAlarma
+            constexpr bool BUTTON_DEBUG      = true;   // Era #ifdef DEBUGBOTON
+            constexpr bool I2C_TX_DEBUG      = true;   // Era #ifdef DEBUGI2CTX
+            constexpr bool I2C_REQUEST_DEBUG = true;   // Era #ifdef DEBUGI2CREQUEST
+            constexpr bool I2C_RX_DEBUG      = true;   // Era #ifdef DEBUGI2CRX
+            constexpr bool MENU_DEBUG        = true;   // Era #ifdef DEBUGMENU
         }
     }
 

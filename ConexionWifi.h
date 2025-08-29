@@ -30,9 +30,6 @@
   #define CONEXIONWIFI_H
 
   #include "ModoAP.h"
-
-  #define DEBUGWIFI
-
   bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms = 10000);
 
 #endif

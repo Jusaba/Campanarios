@@ -6,7 +6,7 @@
 #include "Acciones.h"
 #include "Configuracion.h"
 
-//#define DebugAlarma
+// La depuración de alarmas se controla con Config::Debug::ALARM_DEBUG
 
 // Máscaras días (bit0 = Domingo ... bit6 = Sábado)
 enum : uint8_t {
@@ -142,14 +142,14 @@ public:
         int     curYDay   = t.tm_yday;
         time_t  nowEpoch  = time(nullptr);
 
-        #ifdef DebugAlarma
+        if constexpr (Config::Debug::ALARM_DEBUG) {
         static uint32_t lastDbg = 0;
         if (millis() - lastDbg > 5000) {
             Serial.printf("[ALRMCHK] %02u:%02u DOW=%d YDay=%d\n",
                           curHour, curMinute, t.tm_wday, curYDay);
             lastDbg = millis();
         }
-        #endif
+        }
 
         for (uint8_t i = 0; i < _num; ++i) {
             Alarm &a = _alarmas[i];
@@ -192,9 +192,9 @@ public:
             a.lastMinute    = curMinute;
             a.lastExecEpoch = nowEpoch;
 
-            #ifdef DebugAlarma
+            if constexpr (Config::Debug::ALARM_DEBUG) {
             Serial.printf("[ALARM] idx=%u ok param=%u\n", i, a.param);
-            #endif
+            }
         }
     }
 

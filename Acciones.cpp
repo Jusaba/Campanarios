@@ -69,7 +69,7 @@ void accionTocaMedia(void) {
 
 void NTPSync ( void ) {
     SincronizaNTP();
-    #ifdef DebugAcciones
+    if constexpr (Config::Debug::ACTIONS_DEBUG) {
         Serial.println("Acciones->NTPSync->[NTP] Sincronización NTP iniciada");
-    #endif
+    }
 }

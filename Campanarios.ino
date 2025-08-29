@@ -40,9 +40,6 @@
   //#include "Acciones.h"
   
   
-  #define DEBUG
-  
-
 AlarmScheduler Alarmas;
   
   void setup() {
@@ -51,9 +48,9 @@ AlarmScheduler Alarmas;
   
       pinMode(PinConfiguracion, INPUT_PULLUP);                      // Comprueba el estado del pin PinConfiguracion para iniciar el modo AP si está en LOW para configurar el dispositivo
       if (digitalRead(PinConfiguracion) == LOW) {
-        #ifdef DEBUG
-          Serial.println("Pin PinConfiguracion a 0: Iniciando modo AP..."); 
-        #endif  
+        if constexpr (Config::Debug::GENERAL_DEBUG) {
+          Serial.println("Pin PinConfiguracion a 0: Iniciando modo AP...");
+        }
         iniciarModoAP();
         while(1)                                                    // Bucle infinito para esperar a que se configure el Wifi                              
         {
@@ -61,9 +58,9 @@ AlarmScheduler Alarmas;
         }
       } else {
         cargarConfigWiFi();                                         // Carga la configuración guardada
-        #ifdef DEBUG
+        if constexpr (Config::Debug::GENERAL_DEBUG) {
           Serial.println("Iniciando Campanario...");
-        #endif
+        }
       
         Wire.begin(I2C_SLAVE_ADDR);                                 // Iniciar el bus I2C como esclavo con la dirección definida
         Wire.setClock(100000);
@@ -85,14 +82,14 @@ AlarmScheduler Alarmas;
         {                                                           // Si la conexión es exitosa
             ServidorOn(configWiFi.usuario, configWiFi.clave);       // Llama a la función para iniciar el servidor
             Campanario.SetInternetConectado();                      // Notifica al campanario que hay conexión a Internet
-            #ifdef DEBUG
+            if constexpr (Config::Debug::GENERAL_DEBUG) {
               Serial.println("Conexión Wi-Fi exitosa.");
-            #endif
+            }
         } else {
           Campanario.ClearInternetConectado();                      // Notifica al campanario que no hay conexión a Internet
-          #ifdef DEBUG
+          if constexpr (Config::Debug::GENERAL_DEBUG) {
             Serial.println("Error al conectar a la red Wi-Fi.");
-          #endif
+          }
         }
 Alarmas.begin(); // carga alarmas por defecto
         // Alarmas.add(DOW_TODOS, 8, 30, 300); // añadir más
@@ -137,11 +134,11 @@ Alarmas.check();                                              // Llama a la func
       if (nSegundosTemporizacion == 0) {                                        // Verifica si la calefacción debe apagarse automáticamente
         nToque = EstadoCalefaccionOff;                            // Establece el estado de la calefacción a apagada
         } else {
-        #ifdef DEBUGSERVIDOR
+        if constexpr (Config::Debug::SERVER_DEBUG) {
 //          Serial.print("Calefacción aún activa, quedan.");
 //          Serial.print(segundos);
 //          Serial.println(" segundos para apagarse.");
-        #endif
+        }
       }
 
     }

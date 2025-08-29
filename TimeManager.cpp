@@ -3,6 +3,7 @@
 #include "Auxiliar.h"
 #include "Servidor.h"
 #include "DNSServicio.h"
+#include "Configuracion.h"
 
 
 bool TimeManager::_lProteccionCampanadasAnterior = false;

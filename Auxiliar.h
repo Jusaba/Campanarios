@@ -8,8 +8,6 @@
 #include "ConexionWifi.h"  // Para ConfigWiFi
 #include "Configuracion.h"
 
-#define DEBUGAUXILIAR
-#define DEBUGPROTECCION
 /*
 // Defines (OK mantener)
 #define PinCampana1         26

@@ -25,9 +25,6 @@
 
     #include  "CAMPANA.h"
     #include "Calefaccion.h"
-
-    #define DEBUGCAMPANARIO
-
     // Definición de los bits que representan el estado del campanario
     #define BitDifuntos     0x01                    // 0000 0001                  // Bit para indicar si la secuencia de difuntos está activa
     #define BitMisa         0x02                    // 0000 0010                  // Bit para indicar si la secuencia de misa está activa

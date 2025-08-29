@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "Servidor.h"
+#include "Configuracion.h"
 
     // Variable estática para cachear el dominio
     static String dominioCache = "";
@@ -35,7 +36,7 @@
         http1.begin(serverUrl1);
         http1.setAuthorization(cDominio, userPassword);
         int httRespuesta = http1.GET();
-        #ifdef DEBUGDNS
+        if constexpr (Config::Debug::DNS_DEBUG) {
             if (httRespuesta > 0) {
               Serial.print("HTTP Codigo de respuesta: ");
               Serial.println(httRespuesta);
@@ -46,13 +47,13 @@
               Serial.print("Error on HTTP request: ");
               Serial.println(httRespuesta);
             }
-        #endif
+        }
         http1.end();
         // http al servidor DNS 2
         http2.begin(serverUrl2);
         http2.setAuthorization(cDominio, userPassword);
         httRespuesta = http2.GET();
-        #ifdef DEBUGDNS
+        if constexpr (Config::Debug::DNS_DEBUG) {
             if (httRespuesta > 0) {
               Serial.print("HTTP Codigo de respuesta: ");
               Serial.println(httRespuesta);
@@ -63,7 +64,7 @@
               Serial.print("Error on HTTP request: ");
               Serial.println(httRespuesta);
             }
-        #endif
+        }
         http2.end();    
        }
 
@@ -82,9 +83,9 @@
               static String lastIP = "";
 
               if (dominioCache.isEmpty()) {
-                  #ifdef DEBUGDNS
+                  if constexpr (Config::Debug::DNS_DEBUG) {
                     Serial.println("DNS: No hay dominio cacheado, saltando actualización");
-                  #endif
+                  }
                   return;
               }
               if (!hayInternet()) return;
@@ -95,8 +96,8 @@
               if (currentIP != lastIP) {
                   ActualizaDNS(dominioCache.c_str());
                   lastIP = currentIP;
-                 #ifdef DEBUGDNS
+                 if constexpr (Config::Debug::DNS_DEBUG) {
                     Serial.println("DNS actualizado - IP: " + currentIP);
-                  #endif
+                  }
               }
         }

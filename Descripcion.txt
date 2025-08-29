@@ -141,8 +141,17 @@ un dispositivo maestro por I2C.
    Atiende órdenes recibidas por WebSocket o I2C, ejecuta secuencias de campanas y controla la calefacción.
 4. **Visualización:**  
    Muestra el estado y la hora en la pantalla del dial y en la interfaz web.
-5. **Gestión remota:**  
+5. **Gestión remota:**
    Permite el control y la consulta del estado desde cualquier dispositivo conectado a la red o por acceso remoto.
 
 ---
+
+## **Depuración**
+
+Las opciones de depuración se gestionan desde `Configuracion.h` usando las banderas del espacio `Config::Debug`.
+Cada módulo verifica su bandera con `if constexpr`, por ejemplo `if constexpr (Config::Debug::SERVER_DEBUG)`.
+Para activar o desactivar la depuración cambia los valores `true`/`false` de estas banderas.
+
+---
+
 

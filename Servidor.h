@@ -40,9 +40,6 @@
     #define EstadoCalefaccionOff    5
 
 
-
-    #define DEBUGSERVIDOR                                               // Descomentar para activar el modo de depuración del servidor
-
     extern bool servidorIniciado;
     extern int  nToque;
     extern AsyncWebSocket ws;

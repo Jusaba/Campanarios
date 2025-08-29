@@ -34,8 +34,6 @@
   #include <ESPAsyncWebServer.h>
   #include <EEPROM.h>
 
-  #define DebugAP
-
   #define EEPROM_SIZE 256                                   // Tamaño de la EEPROM para almacenar la configuración WiFi
 
     struct ConfigWiFi {

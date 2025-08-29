@@ -2,21 +2,11 @@
 #ifndef DIAL_H
     #define DIAL_H
 
-//    #define DEBUG
-    #define DEBUGBOTON
-/*    
-    #define DEBUGAUXILIAR
-    #define DEBUGI2CTX
-*/
-    #define DEBUGI2CREQUEST
-/*    
-    #define DEBUGI2CRX
-    #define DEBUGI2CREQUEST
-    #define DEBUGMENU
-*/
+// Las opciones de depuración se controlan desde Config::Debug
     #include <Wire.h>
     #include "Display.h"
     #include <M5Dial.h>
+    #include "Configuracion.h"
 
 
     #define I2C_SLAVE_ADDR 0x12
@@ -168,9 +158,9 @@
      */
         void MostrarOpcion(int seleccionado) 
         {
-            #ifdef DEBUGMENU
+            if constexpr (Config::Debug::MENU_DEBUG) {
                 Serial.printf("MostrarOpcion->Seleccionado: %d\n", seleccionado);
-            #endif
+            }
             switch (seleccionado) {
                 case EstadoInicio:          
                      MensajeInicio();
@@ -272,13 +262,13 @@
             Wire.beginTransmission(I2C_SLAVE_ADDR);
             Wire.write(nEstadoMenu); 
             uint8_t result = Wire.endTransmission();
-            #ifdef DEBUGI2CTX
+            if constexpr (Config::Debug::I2C_TX_DEBUG) {
                 if (result == 0) {
                     Serial.printf("EnviarEstado->Estado %d enviado correctamente al esclavo I2C\n", nEstadoMenu);
                 } else {
                     Serial.printf("EnviarEstado->Error al enviar el estado %d al esclavo I2C, código de error: %d\n", nEstadoMenu, result);
                 }
-            #endif        
+            }        
         }
 
     /**
@@ -298,13 +288,13 @@
             Wire.write(nEstadoTx);                                              // Envía el estado/orden
             Wire.write(nParametroTx);                                           // Envía el parámetro asociado al estado/orden
             uint8_t result = Wire.endTransmission();
-            #ifdef DEBUGI2CTX
+            if constexpr (Config::Debug::I2C_TX_DEBUG) {
                 if (result == 0) {
                     Serial.printf("EnviarEstadoConParametro->Estado %d con parámetro %d enviado correctamente al esclavo I2C\n", nEstadoTx, nParametroTx);
                 } else {
                     Serial.printf("EnviarEstadoConParametro->Error al enviar el estado %d con parámetro %d al esclavo I2C, código de error: %d\n", nEstadoTx, nParametroTx, result);
                 }
-            #endif
+            }
         }
 
     //======================================================================================================
@@ -334,9 +324,9 @@
         void SolicitarEstadoCampanario() 
         {
 
-            #ifdef DEBUGI2CREQUEST       
+            if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                 Serial.println("SolicitarEstadoCampanario->Solicitando estado del campanario...");
-            #endif 
+            } 
         
             Wire.beginTransmission(I2C_SLAVE_ADDR);                                     // Inicia la transmisión I2C al esclavo
             Wire.write(EstadoCampanario);                                               // Envía el comando para solicitar el estado del campanario                 
@@ -347,18 +337,18 @@
                 nEstadoActual = Wire.read();    
                 campanarioEstado.nEstado = nEstadoActual;                               // Actualiza el estado del campanario            
                 if (nEstadoActual != nEstadoAnterior) {
-                    #ifdef DEBUGI2CREQUEST
+                    if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                         Serial.printf("SolicitarEstadoCampanario->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual); 
-                    #endif
+                    }
                     nEstadoAnterior = nEstadoActual;
                     SeleccionaMenu(nEstadoActual); // Llama a la función para seleccionar el menú según el estado recibido
                     nEstado = 0; // Reinicia el estado al primer elemento del menú
                     lCambioEstado = true; // Marca que ha habido un cambio de estado
                 } 
             } else {
-                #ifdef DEBUGI2CREQUEST
+                if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                     Serial.println("SolicitarEstadoCampanario->No se recibió respuesta del campanario");
-                #endif
+                }
             }    
         }
 
@@ -386,9 +376,9 @@
      * @note Requiere que la comunicación I2C esté inicializada previamente.
      */
         void SolicitarEstadoHora() {
-            #ifdef DEBUGI2CREQUEST 
+            if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                 Serial.println("SolicitarEstadoHora->Solicitando hora del campanario...");
-            #endif
+            }
         
             // Solicita la hora al esclavo I2C
             Wire.beginTransmission(I2C_SLAVE_ADDR);
@@ -405,22 +395,22 @@
                 campanarioEstado.nSegundos = Wire.read();                           // Lee los segundos del esclavo I2C
                 campanarioEstado.nEstado = nEstadoActual;                           // Actualiza el estado del campanario
                 if (nEstadoActual != nEstadoAnterior) {
-                    #ifdef DEBUGI2CREQUEST
+                    if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                         Serial.printf("SolicitarEstadoHora->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual); 
-                    #endif
+                    }
                     nEstadoAnterior = nEstadoActual;                                // Actualiza el estado anterior
                     SeleccionaMenu(nEstadoActual);                                  // Llama a la función para seleccionar el menú según el estado recibido
                     nEstado = 0;                                                    // Reinicia el estado al primer elemento del menú
                     lCambioEstado = true;                                           // Marca que ha habido un cambio de estado
                 } 
-                #ifdef DEBUGI2CRX
+                if constexpr (Config::Debug::I2C_RX_DEBUG) {
                     Serial.printf("SolicitarEstadoHora->Estado actual del campanario: %d\n", nEstadoActual);
                     Serial.printf("SolicitarEstadoHora->Hora recibida: %02d:%02d:%02d\n", campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos);
-                #endif        
+                }        
             } else {
-                #ifdef DEBUGI2CREQUEST
+                if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                     Serial.println("SolicitarEstadoHora->No se recibió respuesta del campanario");
-                #endif
+                }
             }            
 
         }
@@ -438,9 +428,9 @@
      * @note Utiliza las macros DEBUGI2CREQUEST y DEBUGI2CRX para imprimir información de depuración por Serial.
      */
         void SolicitarEstadoFechaHora() {
-            #ifdef DEBUGI2CREQUEST 
+            if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                 Serial.println("SolicitarEstadoFechaHora->Solicitando fecha y hora del campanario...");
-            #endif
+            }
         
             // Solicita la hora al esclavo I2C
             Wire.beginTransmission(I2C_SLAVE_ADDR);                                     //Hacemos Request I2C al esclavo para solicitar Fecha y Hora
@@ -460,31 +450,31 @@
                 campanarioEstado.nSegundos = Wire.read();                               // Lee los segundos del esclavo I2C
                 campanarioEstado.nEstado = nEstadoActual;                               // Actualiza el estado del campanario
                 if (nEstadoActual != nEstadoAnterior) {                                 // Si hay un cambio de estado
-                    #ifdef DEBUGI2CREQUEST
+                    if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                         Serial.printf("SolicitarEstadoFechaHora->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual);
-                    #endif
+                    }
                     nEstadoAnterior = nEstadoActual;
                     SeleccionaMenu(nEstadoActual);                                      // Llama a la función para seleccionar el menú según el estado recibido
                     nEstado = 0;                                                        // Reinicia el estado al primer elemento del menú
                     lCambioEstado = true;                                               // Marca que ha habido un cambio de estado
                 }
-                #ifdef DEBUGI2CRX
+                if constexpr (Config::Debug::I2C_RX_DEBUG) {
                     Serial.printf("SolicitarEstadoFechaHora->Estado actual del campanario: %d\n", nEstadoActual);
                     Serial.printf("SolicitarEstadoFechaHora->Hora recibida: %02d:%02d:%02d %02d/%02d/%02d\n", campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
-                #endif        
+                }        
             } else {
-                #ifdef DEBUGI2CREQUEST
+                if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                     Serial.println("SolicitarEstadoFechaHora->No se recibió respuesta del campanario");
-                #endif
+                }
             }            
 
         }
 
         void SolicitarEstadoFechaHoraoTemporizacion ()
         {
-            #ifdef DEBUGI2CREQUEST 
+            if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                 Serial.println("SolicitarEstadoFechaHoraoTemporizacion->Solicitando estado de fecha/hora y temporización del campanario...");
-            #endif
+            }
         
             // Solicita la hora al esclavo I2C
             Wire.beginTransmission(I2C_SLAVE_ADDR);                                     //Hacemos Request I2C al esclavo para solicitar Fecha y Hora
@@ -504,22 +494,22 @@
                 campanarioEstado.nSegundos = Wire.read();                               // Lee los segundos del esclavo I2C
                 campanarioEstado.nEstado = nEstadoActual;                               // Actualiza el estado del campanario
                 if (nEstadoActual != nEstadoAnterior) {                                 // Si hay un cambio de estado
-                    #ifdef DEBUGI2CREQUEST
+                    if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                        Serial.printf("SolicitarEstadoFechaHoraoTemporizacion->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual);
-                    #endif
+                    }
                     nEstadoAnterior = nEstadoActual;
                     SeleccionaMenu(nEstadoActual);                                      // Llama a la función para seleccionar el menú según el estado recibido
                     nEstado = 0;                                                        // Reinicia el estado al primer elemento del menú
                     lCambioEstado = true;                                               // Marca que ha habido un cambio de estado
                 }
-                #ifdef DEBUGI2CREQUEST
+                if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                     Serial.printf("SolicitarEstadoFechaHoraoTemporizacion->Estado actual del campanario: %d\n", nEstadoActual);
                     Serial.printf("SolicitarEstadoFechaHoraoTemporizacion->Hora recibida: %02d:%02d:%02d %02d/%02d/%02d\n", campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
-                #endif        
+                }        
             } else {
-                #ifdef DEBUGI2CREQUEST
+                if constexpr (Config::Debug::I2C_REQUEST_DEBUG) {
                     Serial.println("SolicitarEstadoFechaHoraoTemporizacion->No se recibió respuesta del campanario");
-                #endif
+                }
             }                   
         }
 
@@ -563,9 +553,9 @@
 
             int estadoActual;
 
-            #ifdef DEBUG
+            if constexpr (Config::Debug::GENERAL_DEBUG) {
                 Serial.println("Botón A presionado");
-            #endif
+            }
 
             // Manejo del modo sleep
             if (lSleep) {
@@ -574,10 +564,10 @@
             }
 
             // Procesar acción según el estado actual
-            #ifdef DEBUGBOTON
+            if constexpr (Config::Debug::BUTTON_DEBUG) {
                 Serial.printf("ManejarBotonA->Estado Actual: %d\n", nEstado);
                 Serial.print(menuActual[0]);
-            #endif
+            }
 
             if (nEstado != EstadoSetTemporizador) {
                 estadoActual = menuActual[nEstado];
@@ -614,61 +604,61 @@
          */
         void ProcesarAccionEstado(int estadoActual) 
         {
-            #ifdef DEBUGBOTON
+            if constexpr (Config::Debug::BUTTON_DEBUG) {
                 Serial.printf("ProcesarAccionEstado->Estado Actual: %d\n", estadoActual);
-            #endif
+            }
 
             switch (estadoActual) {
                 case EstadoInicio:
-                    #ifdef DEBUGBOTON
+                    if constexpr (Config::Debug::BUTTON_DEBUG) {
                         Serial.println("Estado Inicio");
-                    #endif
+                    }
                     break;
 
                 case EstadoDifuntos:
-                    #ifdef DEBUGBOTON
+                    if constexpr (Config::Debug::BUTTON_DEBUG) {
                         Serial.println("Estado Difuntos");
-                    #endif
+                    }
                     EnviarEstado(EstadoDifuntos);                       // Envía orden de Difuntos
                     lCambioEstado = true;
                     break;
 
                 case EstadoMisa:
-                    #ifdef DEBUGBOTON
+                    if constexpr (Config::Debug::BUTTON_DEBUG) {
                         Serial.println("Estado Misa");
-                    #endif
+                    }
                     EnviarEstado(EstadoMisa);                           // Envía orden de Misa
                     lCambioEstado = true;
                     break;
 
                 case EstadoStop:
-                    #ifdef DEBUGBOTON
+                    if constexpr (Config::Debug::BUTTON_DEBUG) {
                         Serial.println("Estado Stop");
-                    #endif
+                    }
                     EnviarEstado(EstadoStop);                           // Envía orden de Stop
                     lCambioEstado = true;
                     break;
 
                 case EstadoCalefaccionOn:
-                    #ifdef DEBUGBOTON
+                    if constexpr (Config::Debug::BUTTON_DEBUG) {
                         Serial.println("Estado Calefaccion On");
-                    #endif
+                    }
                     SetTemporizacion();
                     lCambioEstado = false;
                     break;
 
                 case EstadoCalefaccionOff:
-                    #ifdef DEBUGBOTON
+                    if constexpr (Config::Debug::BUTTON_DEBUG) {
                         Serial.println("Estado Calefaccion Off");
-                    #endif
+                    }
                     EnviarEstado(EstadoCalefaccionOff);                 // Envía orden de Calefacción Off
                     lCambioEstado = true;
                     break;
 
                 case EstadoSetTemporizador:
-                    //#ifdef DEBUGBOTON
+                    //if constexpr (Config::Debug::BUTTON_DEBUG) {
                         Serial.println("Estado Set Temporizador");
-                    //#endif
+                    //}
                     EnviarTemporizacion();
                     break;
 
@@ -696,10 +686,10 @@
             nEstadoAnterior = EstadoSetTemporizador;
             lCambioEstado = false;
 
-            #ifdef DEBUGBOTON
+            if constexpr (Config::Debug::BUTTON_DEBUG) {
                 Serial.println("SetTemporizacion->Estado Set Temporizador iniciado");
                 Serial.printf("SetTemporizacion->nEstado: %d, nEstadoAnterior: %d\n", nEstado, nEstadoAnterior);
-            #endif
+            }
         }
 
     /**
@@ -714,10 +704,10 @@
             EnviarEstadoConParametro(EstadoSetTemporizador, nTemporizacion); // Envía el estado de temporización con el valor actual
             nEstado = EstadoCalefaccionOn; // Cambia al estado de calefacción encendida
             nEstadoAnterior = EstadoSetTemporizador; // Actualiza el estado anterior al de
-            #ifdef DEBUGBOTON
+            if constexpr (Config::Debug::BUTTON_DEBUG) {
                 Serial.printf("EnviarTemporizacion->Estado Set Temporizador enviado con valor: %d\n", nTemporizacion);
                 Serial.printf("EnviarTemporizacion->Nuevo Estado: %d, Estado Anterior: %d\n", nEstado, nEstadoAnterior);
-            #endif
+            }
         }
 
         void ManejarEncoder(void) {
@@ -750,9 +740,9 @@
                         nEstado = 0;
                     }
                 }
-                #ifdef DEBUG
+                if constexpr (Config::Debug::GENERAL_DEBUG) {
                     Serial.printf("Nueva Posicion Actual: %d, Nuevo Estado Actual: %d\n", nPosicionActual, nEstado);
-                #endif
+                }
                 lCambioEstado = true;
                 nPosicionAneterior = nPosicionActual;
             }
@@ -793,9 +783,9 @@
                     MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
                 }
             }
-            #ifdef DEBUG
+            if constexpr (Config::Debug::GENERAL_DEBUG) {
                 Serial.println("Display activo, se presenta la hora");
-            #endif
+            }
                 
         }
     }

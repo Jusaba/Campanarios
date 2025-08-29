@@ -20,9 +20,6 @@
  */
 #ifndef RTC_H
     #define RTC_H
-
-    #define DEBUGRTC
-
     #include <WiFi.h>
     #include <time.h>
 

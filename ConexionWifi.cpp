@@ -5,12 +5,14 @@
 #include "Servidor.h"
 #include "RTC.h"
 #include "ModoAp.h"
+#include "Configuracion.h"
 
-#ifdef DEBUGWIFI
-  #define DBG(x) Serial.println(x)
-#else
-  #define DBG(x)
-#endif
+template <typename T>
+void DBG(T x) {
+  if constexpr (Config::Debug::WIFI_DEBUG) {
+    Serial.println(x);
+  }
+}
 
 /**
  * @brief Establece la conexión Wi-Fi utilizando una configuración específica y un tiempo de espera.
@@ -58,26 +60,26 @@ bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms 
     unsigned long startAttemptTime = millis();
     while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime) < timeout_ms) {
       delay(500);
-      #ifdef DEBUGWIFI
+      if constexpr (Config::Debug::WIFI_DEBUG) {
         Serial.print(".");
-      #endif
+      }
     }
 
   if (WiFi.status() == WL_CONNECTED) {
-      #ifdef DEBUGWIFI
+      if constexpr (Config::Debug::WIFI_DEBUG) {
         Serial.println();
         Serial.println("\nConexión Wi-Fi establecida.");
         Serial.print("Direccion IP: ");
         Serial.println(WiFi.localIP());
-      #endif
+      }
       ActualizaDNS(ConfiguracionWiFi.dominio);
       RTC::begin();
       return true;
     } else {
-      #ifdef DEBUGWIFI
+      if constexpr (Config::Debug::WIFI_DEBUG) {
         Serial.println();
         Serial.println("Error al conectar a la red Wi-Fi (timeout).");
-      #endif
+      }
       return false;
     }
 }

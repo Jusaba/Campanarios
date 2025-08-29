@@ -1,11 +1,13 @@
 // RTC.cpp - Implementaciones
 #include "RTC.h"
+#include "Configuracion.h"
 
-#ifdef DEBUGRTC
-  #define DBG(x) Serial.println(x)
-#else
-  #define DBG(x)
-#endif
+template <typename T>
+void DBG(T x) {
+  if constexpr (Config::Debug::RTC_DEBUG) {
+    Serial.println(x);
+  }
+}
 
     bool RTC::ntpSyncOk = false;  // Única definición
 

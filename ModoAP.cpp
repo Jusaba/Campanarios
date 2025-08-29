@@ -1,12 +1,19 @@
 #include "ModoAP.h"
+#include "Configuracion.h"
 
-#ifdef DebugAP
-  #define DBGln(x) Serial.println(x)
-  #define DBG(x) Serial.print(x)
-#else
-  #define DBGln(x)
-  #define DBG(x)
-#endif
+template <typename T>
+void DBGln(T x) {
+  if constexpr (Config::Debug::AP_DEBUG) {
+    Serial.println(x);
+  }
+}
+
+template <typename T>
+void DBG(T x) {
+  if constexpr (Config::Debug::AP_DEBUG) {
+    Serial.print(x);
+  }
+}
 
 
 // Definiciones únicas de variables

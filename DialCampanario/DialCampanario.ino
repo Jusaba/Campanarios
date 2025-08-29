@@ -1,6 +1,7 @@
 #include "Auxiliar.h"
 
 
+#include "Configuracion.h"
 
     void setup() {
         delay (3000);
@@ -21,9 +22,9 @@
         delay(5000);
         menuActual = menu0;
         
-        #ifdef DEBUG
+        if constexpr (Config::Debug::GENERAL_DEBUG) {
             Serial.println("Setup completado exitosamente");
-        #endif
+        }
     }
 
     void loop() {

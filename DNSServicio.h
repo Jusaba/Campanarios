@@ -28,9 +28,6 @@
 	#define DNSSERVICIO_H
     #include <WiFi.h>
     #include <HTTPClient.h>
-    
-    #define DEBUGDNS
-
     void ActualizaDNS (const char* cDominio);
     void ActualizaDNSSiNecesario(void);
 

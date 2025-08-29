@@ -51,16 +51,16 @@ void ChekearCuartos(void)
                     if (hayInternet()){
                         ActualizaDNS(configWiFi.dominio);
                     } else {
-                        #ifdef DEBUGAUXILIAR
+                        if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                             Serial.println("Sin conexión a internet. No se actualiza DNS.");
-                        #endif
+                        }
                     }
                 }
             }    
         } else {
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 Serial.println("No se pudo obtener la hora del RTC");
-            #endif
+            }
         }
     }    
 }
@@ -69,16 +69,16 @@ void TestCampanadas(void)
 {
     nCampanaTocada = Campanario.ActualizarSecuenciaCampanadas();
     if (nCampanaTocada > 0) {
-        #ifdef DEBUGAUXILIAR
+        if constexpr (Config::Debug::AUXILIAR_DEBUG) {
             Serial.print("Campana tocada: ");
             Serial.println(nCampanaTocada);
-        #endif
+        }
         Campanario.ResetCampanaTocada();
         ws.textAll("CAMPANA:"+String(nCampanaTocada));
         if (!Campanario.GetEstadoSecuencia()) {
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 Serial.println("Secuencia de campanadas finalizada.");
-            #endif
+            }
             Campanario.ParaSecuencia();
             ws.textAll("REDIRECT:/index.html");
         }
@@ -106,15 +106,15 @@ void TestCampanadas(void)
             if (numBytes == 2) {
                 ParametroI2C = Wire.read(); // Lee el primer byte que es el comando de solicitud
             }
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 Serial.println("Secuencia recibida por I2C: " + String(secuenciaI2C));
-            #endif
+            }
             if (numBytes == 2 )
             {
-                #ifdef DEBUGAUXILIAR
+                if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                     Serial.print("Parametro recibido por I2C: ");
                     Serial.println(ParametroI2C);
-                #endif
+                }
 
             }
             if (secuenciaI2C == EstadoCampanario || secuenciaI2C == EstadoHora || secuenciaI2C == EstadoFechaHora || secuenciaI2C == EstadoFechaHoraoTemporizacion) {
@@ -145,13 +145,13 @@ void TestCampanadas(void)
             hora = (uint8_t)localTime.tm_hour;
             minuto = (uint8_t)localTime.tm_min;
             segundos = (uint8_t)localTime.tm_sec; // Obtiene la hora, minuto y segundos del RTC
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 printf("enviarHoraI2C -> Hora enviada por I2C: %02d:%02d\n", hora, minuto);
-            #endif
+            }
         } else {
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 Serial.println("Error obteniendo hora para enviar por I2C");
-            #endif    
+            }    
         }
         Wire.write(nEstadoCampanario); // Envía el estado del campanario
         Wire.write(hora);
@@ -194,14 +194,14 @@ void TestCampanadas(void)
             hora = (uint8_t)localTime.tm_hour;       // Hora (0-23)
             minuto = (uint8_t)localTime.tm_min;      // Minutos (0-59)
             segundos = (uint8_t)localTime.tm_sec;    // Segundos (0-59)
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 Serial.printf("enviarFechaHoraI2C -> Fecha y hora enviada por I2C: %02d/%02d/%02d %02d:%02d:%02d\n", 
                              dia, mes, ano, hora, minuto, segundos);
-            #endif
+            }
         } else {
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 Serial.println("Error obteniendo fecha y hora para enviar por I2C");
-            #endif
+            }
         }
         Wire.write(nEstadoCampanario); // Envía el estado del campanario
         Wire.write(dia);               // Envía el día
@@ -235,14 +235,14 @@ void TestCampanadas(void)
             hora = (uint8_t)localTime.tm_hour;       // Hora (0-23)
             minuto = (uint8_t)localTime.tm_min;      // Minutos (0-59)
             segundos = (uint8_t)localTime.tm_sec;    // Segundos (0-59)
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 Serial.printf("enviarEstadoTemporizacionI2C ->Temporizacion enviada por I2C: %02d/%02d/%02d %02d:%02d:%02d\n", 
                              dia, mes, ano, hora, minuto, segundos);
-            #endif
+            }
         } else {
-            #ifdef DEBUGAUXILIAR
+            if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                 Serial.println("Error obteniendo fecha y hora para enviar por I2C");
-            #endif
+            }
         }
 */            
         Wire.write(nEstadoCampanario); // Envía el estado del campanario
@@ -256,9 +256,9 @@ void TestCampanadas(void)
     void enviarFechaoTemporizacionI2C (void)
     {
         int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
-        #ifdef DEBUGAUXILIAR
+        if constexpr (Config::Debug::AUXILIAR_DEBUG) {
             Serial.printf("enviarFechaoTemporizacionI2C -> Estado del campanario: %d\n", nEstadoCampanario);
-        #endif
+        }
         //Si el bit 4 de nEstadoCampanario está activo, es decir, si la calefaccion esta encendida
         if (nEstadoCampanario & (1 << 4)) {
             enviarEstadoTemporizacionI2C();
@@ -277,10 +277,10 @@ void TestCampanadas(void)
  */
     void enviarRequest() 
     {
-        #ifdef DEBUGAUXILIAR
+        if constexpr (Config::Debug::AUXILIAR_DEBUG) {
             Serial.print("enviarRequest -> Solicitud recibida por I2C: ");
             Serial.println(requestI2C);
-        #endif
+        }
         switch (requestI2C) {
             case EstadoCampanario: // Si se solicita el estado del campanario
                 enviarEstadoI2C(); // Envía el estado del campanario
@@ -310,9 +310,9 @@ void TestCampanadas(void)
     void enviarEstadoI2C() {
         int nEstadoCampanario = Campanario.GetEstadoCampanario(); // Obtiene el estado del campanario
         Wire.write(nEstadoCampanario); // estadoCampanario es la variable que quieres enviar
-        #ifdef DEBUGAUXILIAR
+        if constexpr (Config::Debug::AUXILIAR_DEBUG) {
             Serial.println("enviarEstadoI2C -> Estado enviado por I2C: " + String(nEstadoCampanario));
-        #endif
+        }
     }
 
 /**
@@ -334,10 +334,10 @@ void TestCampanadas(void)
  */
     void EjecutaSecuencia (int nSecuencia) 
     {
-        #ifdef DEBUGSERVIDOR
+        if constexpr (Config::Debug::SERVER_DEBUG) {
             Serial.println("Ejecutando secuencia: ");
             Serial.println(nSecuencia);
-        #endif
+        }
         switch (nSecuencia) {
             case EstadoDifuntos:
                 Campanario.TocaDifuntos();                  // Toca la secuencia de difuntos
@@ -362,22 +362,22 @@ void TestCampanadas(void)
             case EstadoProteccionCampanadas:
                 // Notifica el estado de la protección de campanadas a todos los clientes conectados
                 ws.textAll(lProteccionCampanadas ? "PROTECCION:ON" : "PROTECCION:OFF");
-                #ifdef DEBUGAUXILIAR
+                if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                     Serial.printf("EjecutaSecuencia -> Protección campanadas notificada: %s\n", lProteccionCampanadas ? "ACTIVA" : "INACTIVA");
-                #endif
+                }
                 break;
             case EstadoSetTemporizador:                     //Fija el temporizador de la calefacción
                 nTemporizacionCalefaccion = (int)ParametroI2C; // Asigna el valor del parámetro recibido al temporizador de calefacción
                 Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion); // Llama a la función para fijar el temporizador de calefacción
                 ws.textAll("CALEFACCION:ON:" + String(nTemporizacionCalefaccion));
-                #ifdef DEBUGAUXILIAR
+                if constexpr (Config::Debug::AUXILIAR_DEBUG) {
                     Serial.printf("EjecutaSecuencia -> Temporizador de calefacción fijado a %d minutos.\n", nTemporizacionCalefaccion);
-                #endif
+                }
                 break;
             default:
-                #ifdef DEBUGSERVIDOR
+                if constexpr (Config::Debug::SERVER_DEBUG) {
                     Serial.println("Secuencia no reconocida.");
-                #endif
+                }
                 break;
         }
     }
@@ -386,17 +386,17 @@ void TestCampanadas(void)
         if (!hayInternet()) { // hayInternet() debe comprobar acceso real a internet
           lConexionInternet = ConectarWifi(configWiFi); // Intenta reconectar
           if (lConexionInternet) {
-              #ifdef DEBUG
+              if constexpr (Config::Debug::GENERAL_DEBUG) {
                 Serial.println("TestInternet -> Reconectado a internet correctamente.");
-              #endif
+              }
               ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
               if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
                   Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
               }
           } else {
-              #ifdef DEBUG
+              if constexpr (Config::Debug::GENERAL_DEBUG) {
                 Serial.println("TestInternet -> Sin conexión a internet. Funcionando en modo local.");
-              #endif
+              }
               if (estadoAnteriorInternet) { // Si el estado cambió de conectado a desconectado
                   Campanario.ClearInternetConectado(); // Notifica al campanario que no hay internet
               }
@@ -406,9 +406,9 @@ void TestCampanadas(void)
             if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
                 Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
             }
-            #ifdef DEBUG
+            if constexpr (Config::Debug::GENERAL_DEBUG) {
                 Serial.println("TestInternet -> Conexión a internet activa.");
-            #endif
+            }
         }
     }
 
@@ -423,9 +423,9 @@ void TestCampanadas(void)
      */
     bool EsHorarioNocturno (void) {
         if (!RTC::isNtpSync()) {
-            #ifdef DEBUG
+            if constexpr (Config::Debug::GENERAL_DEBUG) {
                 Serial.println("EsHorarioNocturno -> RTC no sincronizado con NTP.");
-            #endif
+            }
             return false; // Si el RTC no está sincronizado, no se puede determinar el horario nocturno
         }
         struct tm localTime;
@@ -455,18 +455,18 @@ void TestCampanadas(void)
     bool EsPeriodoToqueCampanas (void) {
         
         if (!RTC::isNtpSync()) {    
-            #ifdef DEBUGPROTECCION
+            if constexpr (Config::Debug::PROTECTION_DEBUG) {
                 Serial.println  ("EsPeriodoToqueCampanas -> RTC no sincronizado con NTP.");
-            #endif
+            }
             // Detecta cambio de estado y notifica si es necesario
             if (lProteccionCampanadas != false) {                                           //Si esta la proteccion de campanadas la deshabilitamos
                 lProteccionCampanadasAnterior = lProteccionCampanadas;
                 lProteccionCampanadas = false;
                 EjecutaSecuencia(EstadoProteccionCampanadas);                               // Notifica el cambio de estado a cliente web
                 Campanario.ClearProteccionCampanadas();                                     // Desactiva la protección de campanadas
-                #ifdef DEBUGPROTECCION
+                if constexpr (Config::Debug::PROTECTION_DEBUG) {
                     Serial.println("EsPeriodoToqueCampanas -> Protección desactivada (RTC no sincronizado)");
-                #endif
+                }
             }
             return false; // Si el RTC no está sincronizado, no se puede determinar el período
         }
@@ -482,38 +482,38 @@ void TestCampanadas(void)
                 lProteccionCampanadas = nuevoEstadoProteccion;                              // Actualiza el estado de la protección de campanadas
                 if (lProteccionCampanadas) {                                                // Si estamos en un período de toque de campanas
                     Campanario.SetProteccionCampanadas();                                   // Activa la protección de campanadas
-                    #ifdef DEBUGPROTECCION
+                    if constexpr (Config::Debug::PROTECTION_DEBUG) {
                         Serial.printf("EsPeriodoToqueCampanas -> Activando protección de campanadas (minuto %d)\n", minuto);
-                    #endif
+                    }
                 } else {                                                                    // Si no estamos en un período de toque de campanas
                     Campanario.ClearProteccionCampanadas();                                 // Desactiva la protección de campanadas
-                    #ifdef DEBUGPROTECCION
+                    if constexpr (Config::Debug::PROTECTION_DEBUG) {
                         Serial.printf("EsPeriodoToqueCampanas -> Desactivando protección de campanadas (minuto %d)\n", minuto);
-                    #endif
+                    }
                 }
                 EjecutaSecuencia(EstadoProteccionCampanadas);                               // Notifica el cambio de estado Al cliete web
-                #ifdef DEBUGPROTECCION
+                if constexpr (Config::Debug::PROTECTION_DEBUG) {
                     Serial.printf("EsPeriodoToqueCampanas -> Cambio de protección: %s -> %s (minuto %d)\n", lProteccionCampanadasAnterior ? "ACTIVA" : "INACTIVA",lProteccionCampanadas ? "ACTIVA" : "INACTIVA",minuto);
-                #endif
+                }
             }
-            #ifdef DEBUGPROTECCION
+            if constexpr (Config::Debug::PROTECTION_DEBUG) {
                 if (nuevoEstadoProteccion) {
                     Serial.printf("EsPeriodoToqueCampanas -> Período activo (minuto %d): %s\n", minuto, periodoHoraEnPunto ? "Hora en punto" : "Media hora");
                 }
-            #endif
+            }
             
             return nuevoEstadoProteccion;
         }
-        #ifdef DEBUGPROTECCION
+        if constexpr (Config::Debug::PROTECTION_DEBUG) {
             Serial.println("EsPeriodoToqueCampanas -> Error obteniendo hora del RTC");
-        #endif
+        }
         if (lProteccionCampanadas != false) {                                                   // Si no se pudo obtener la hora, desactiva la protección de campanadas si estaba activa
             lProteccionCampanadasAnterior = lProteccionCampanadas;
             lProteccionCampanadas = false;
             EjecutaSecuencia(EstadoProteccionCampanadas); // Notifica el cambio de estado
-            #ifdef DEBUGPROTECCION
+            if constexpr (Config::Debug::PROTECTION_DEBUG) {
                 Serial.println("EsPeriodoToqueCampanas -> Protección desactivada (error obteniendo hora)");
-            #endif
+            }
         }
         return false; // Si no se pudo obtener la hora, devuelve false
     }
@@ -522,8 +522,8 @@ void TestCampanadas(void)
         if(hayInternet()){
             RTC::begin();                       // Sincroniza el RTC con NTP si es mediodía
         }else{
-            #ifdef DEBUGPROTECCION
+            if constexpr (Config::Debug::PROTECTION_DEBUG) {
                 Serial.println("Auxiliar->SincronizaNTP->[NTP] Sin conexión a Internet");
-            #endif
+            }
         }
     }

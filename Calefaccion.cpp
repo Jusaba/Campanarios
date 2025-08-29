@@ -1,4 +1,5 @@
 #include "Calefaccion.h"
+#include "Configuracion.h"
 
 /**
  * @brief Constructor de la clase CALEFACCION
@@ -77,9 +78,9 @@
                 }
             } else {
                 // Si no se puede obtener la hora del RTC, no hacer nada por seguridad
-                #ifdef DEBUGCALEFACCION
+                if constexpr (Config::Debug::HEATING_DEBUG) {
                     Serial.println("VerificarTemporizador: Error obteniendo hora del RTC");
-                #endif
+                }
             }
         }
         return ((this->_nMinutosOn * 60) - seconds); // Retorna los segundos restantes para apagar la calefacción
