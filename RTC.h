@@ -27,21 +27,26 @@
     #include <time.h>
 
     // Configuración por defecto para servidores NTP
-    #define NTP_SERVER "pool.ntp.org"
+    #define NTP_SERVER1 "pool.ntp.org"
+    #define NTP_SERVER2 "es.pool.ntp.org"
+    #define NTP_SERVER3 "time.google.com"
     #define GMT_OFFSET_SEC 3600                                 // Offset horario en segundos (por ejemplo, -5*3600 para GMT-5)
     #define DAYLIGHT_OFFSET_SEC 3600                            // Horario de verano, si aplica
 
     class RTC {
         public:
-            static void begin(const char* ntpServer = NTP_SERVER, 
+            static void begin(const char* ntpServer = NTP_SERVER1, 
                           long gmtOffsetSec = GMT_OFFSET_SEC, 
                           int daylightOffsetSec = DAYLIGHT_OFFSET_SEC, 
                           unsigned long timeout_ms = 10000);
+            static bool beginConMultiplesServidores(unsigned long timeout_ms = 15000);                          
             static bool isNtpSync();
             static String getTimeStr();
 
         private:
             static String timeToString(const struct tm& timeinfo);
+            static bool ValidaFecha(const struct tm& timeinfo);
+
             static bool ntpSyncOk;  // SOLO declaración
     };
 

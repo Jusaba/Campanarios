@@ -32,8 +32,21 @@
             constexpr int MINUTO_HORA_CAMPANADA     = 0;   // Minuto de toque de hora
             constexpr int MINUTO_MEDIA_CAMPANADA    = 30;  // Minuto de toque de media
 
+            // ============================================================================
+            // CONSTANTES CALCULADAS AUTOMÁTICAMENTE - Se recalculan si cambias las base
+            // ============================================================================
+                
+            // Ventana de protección para HORA EN PUNTO (con wrap-around automático)
+            constexpr int INICIO_VENTANA_HORA = (MINUTO_HORA_CAMPANADA + 60 - MARGEN_PROTECCION_VENTANA) % 60;  // 57
+            constexpr int FIN_VENTANA_HORA = (MINUTO_HORA_CAMPANADA + MARGEN_PROTECCION_VENTANA) % 60;           // 3
+                
+            // Ventana de protección para MEDIA HORA (sin wrap-around necesario)
+            constexpr int INICIO_VENTANA_MEDIA = MINUTO_MEDIA_CAMPANADA - MARGEN_PROTECCION_VENTANA;             // 27
+            constexpr int FIN_VENTANA_MEDIA = MINUTO_MEDIA_CAMPANADA + MARGEN_PROTECCION_VENTANA;                // 33
+
+            
             // Sincronización NTP
-            constexpr int NTP_SYNC_HORA = 12;  // Hora de sincronización automática
+            constexpr int NTP_SYNC_HORA = 12;              // Hora de sincronización automática
         }
 
         namespace Network {

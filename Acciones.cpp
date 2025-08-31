@@ -2,7 +2,6 @@
 #include "Acciones.h"
 #include "Auxiliar.h"     // Para EjecutaSecuencia
 #include "Campanario.h"   // Para Campanario
-#include "TimeManager.h"  // Para isNightTime si lo necesitas
 #include "Servidor.h"     // Para ws
 #include "DNSServicio.h"  // Para ActualizaDNS
 #include "ConexionWifi.h" // Para configWiFi
@@ -57,7 +56,7 @@ void accionTocaMedia(void) {
     if (!esNocturno) {
         Campanario.TocaMediaHora();
         
-        // Funcionalidad migrada de TimeManager::checkCuartos()
+        
         ws.textAll("REDIRECT:/Campanas.html");
         
         // Actualizar DNS si hay internet
@@ -67,9 +66,13 @@ void accionTocaMedia(void) {
     }
 }
 
-void NTPSync ( void ) {
-    SincronizaNTP();
-    #ifdef DebugAcciones
-        Serial.println("Acciones->NTPSync->[NTP] Sincronización NTP iniciada");
-    #endif
+
+void SincronizaNTP(void) {
+    if (hayInternet()) {
+        RTC::begin();  // ← Reutiliza tu lógica existente
+        
+        #ifdef DebugAcciones
+        Serial.println("SincronizaNTP -> Re-sincronización completada");
+        #endif
+    }
 }

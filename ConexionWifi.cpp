@@ -43,8 +43,8 @@ bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms 
         if (!WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS)) {
             DBG("Configuración de IP estática fallida");
         } else {
-            DBG("IP estática configurada: " + String(local_IP));
-            DBG("Gateway: " + String(gateway));
+            DBG("IP estática configurada: " + local_IP.toString());  // ✅ Usar .toString()
+            DBG("Gateway: " + gateway.toString());
         }
     } else {
           DBG("IP inválida en configuración ('" + String(ConfiguracionWiFi.ip) + "'). Usando DHCP.");
@@ -71,7 +71,8 @@ bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms 
         Serial.println(WiFi.localIP());
       #endif
       ActualizaDNS(ConfiguracionWiFi.dominio);
-      RTC::begin();
+      //RTC::begin();
+      RTC::beginConMultiplesServidores();
       return true;
     } else {
       #ifdef DEBUGWIFI

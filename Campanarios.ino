@@ -35,8 +35,10 @@
   #include "Auxiliar.h"
   #include "ModoAp.h"
   #include "Configuracion.h"
-  #include "TimeManager.h"
+  //#include "TimeManager.h"
   #include "Alarmas.h"
+  #include "I2CServicio.h"
+  #include "Debug.h"
   //#include "Acciones.h"
   
   
@@ -51,9 +53,7 @@ AlarmScheduler Alarmas;
   
       pinMode(PinConfiguracion, INPUT_PULLUP);                      // Comprueba el estado del pin PinConfiguracion para iniciar el modo AP si está en LOW para configurar el dispositivo
       if (digitalRead(PinConfiguracion) == LOW) {
-        #ifdef DEBUG
-          Serial.println("Pin PinConfiguracion a 0: Iniciando modo AP..."); 
-        #endif  
+        DBG_INO("Pin PinConfiguracion a 0: Iniciando modo AP..."); 
         iniciarModoAP();
         while(1)                                                    // Bucle infinito para esperar a que se configure el Wifi                              
         {
@@ -61,15 +61,9 @@ AlarmScheduler Alarmas;
         }
       } else {
         cargarConfigWiFi();                                         // Carga la configuración guardada
-        #ifdef DEBUG
-          Serial.println("Iniciando Campanario...");
-        #endif
-      
-        Wire.begin(I2C_SLAVE_ADDR);                                 // Iniciar el bus I2C como esclavo con la dirección definida
-        Wire.setClock(100000);
-        Wire.onReceive(recibirSecuencia);
-        Wire.onRequest(enviarRequest);
-      
+        DBG_INO("Iniciando Campanario...");
+        initI2C();
+
         CAMPANA* campana1 = new CAMPANA(PinCampana1);               // Crea una nueva instancia de la clase CAMPANA para la campana 1
         CAMPANA* campana2 = new CAMPANA(PinCampana2);               // Crea una nueva instancia de la clase CAMPANA para la campana 2
       
@@ -85,14 +79,10 @@ AlarmScheduler Alarmas;
         {                                                           // Si la conexión es exitosa
             ServidorOn(configWiFi.usuario, configWiFi.clave);       // Llama a la función para iniciar el servidor
             Campanario.SetInternetConectado();                      // Notifica al campanario que hay conexión a Internet
-            #ifdef DEBUG
-              Serial.println("Conexión Wi-Fi exitosa.");
-            #endif
+            DBG_INO("Conexión Wi-Fi exitosa.");
         } else {
           Campanario.ClearInternetConectado();                      // Notifica al campanario que no hay conexión a Internet
-          #ifdef DEBUG
-            Serial.println("Error al conectar a la red Wi-Fi.");
-          #endif
+          DBG_INO("Error al conectar a la red Wi-Fi.");
         }
 Alarmas.begin(); // carga alarmas por defecto
         // Alarmas.add(DOW_TODOS, 8, 30, 300); // añadir más
@@ -105,43 +95,39 @@ Alarmas.begin(); // carga alarmas por defecto
 
     if (!Campanario.GetEstadoSecuencia()) {
       if (RTC::isNtpSync()) {
-        //ChekearCuartos();                                             // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
-//TimeManager::checkCuartos();                                  // Llama a la función para chequear los cuartos y las horas y tocar las campanas correspondientes
-Alarmas.check();                                              // Llama a la función para comprobar las alarmas programadas
+        Alarmas.check();                                              // Llama a la función para comprobar las alarmas programadas
       }
-      //EsPeriodoToqueCampanas();                                       // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
-      TimeManager::ActualizaEstadoProteccionCampanadas();                        // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
+      //EsPeriodoToqueCampanas();                                     // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
+      ActualizaEstadoProteccionCampanadas();                          // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
       if (millis() - ultimoCheckInternet > intervaloCheckInternet) {  // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
           ultimoCheckInternet = millis();
-          TestInternet();                                            // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
+          TestInternet();                                             // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
       }
     }  
   
-    if (secuenciaI2C > 0) {                                         // Si se ha recibido orden por I2C
-      EjecutaSecuencia(secuenciaI2C);                               // Llama a la función para ejecutar la orden recibida 
-      secuenciaI2C = 0;                                             // Resetea para esperar la siguiente orden
-      nToque = 0;                                                   // Resetea el numero de la secuencia a tocar
-    }
-    
-    if (nToque > 0) {                                               // Si la orden se ha recibido por websocket
-      EjecutaSecuencia(nToque);                                     // Llama a la función para ejecutar la orden recibida de inernet
-      nToque = 0;                                                   // Resetea el numero de la secuencia a tocar  
+    if (secuenciaI2C > 0) {                                           // Si se ha recibido orden por I2C
+      EjecutaSecuencia(secuenciaI2C);                                 // Llama a la función para ejecutar la orden recibida 
+      secuenciaI2C = 0;                                               // Resetea para esperar la siguiente orden
+      nToque = 0;                                                     // Resetea el numero de la secuencia a tocar
+    } 
+
+    if (nToque > 0) {                                                 // Si la orden se ha recibido por websocket
+      EjecutaSecuencia(nToque);                                       // Llama a la función para ejecutar la orden recibida de inernet
+      nToque = 0;                                                     // Resetea el numero de la secuencia a tocar  
     }
   
-    TestCampanadas();                                               // Llama a la función para probar las campanadas y enviar el número de campana tocada a los clientes conectados
+    TestCampanadas();                                                 // Llama a la función para probar las campanadas y enviar el número de campana tocada a los clientes conectados
   
     if ( Campanario.GetEstadoCalefaccion())
     {  
       nSegundosTemporizacion = Campanario.TestTemporizacionCalefaccion(); // Verifica el estado de la calefacción y obtiene el tiempo restante
       
-      if (nSegundosTemporizacion == 0) {                                        // Verifica si la calefacción debe apagarse automáticamente
-        nToque = EstadoCalefaccionOff;                            // Establece el estado de la calefacción a apagada
+      if (nSegundosTemporizacion == 0) {                                  // Verifica si la calefacción debe apagarse automáticamente
+        nToque = EstadoCalefaccionOff;                                    // Establece el estado de la calefacción a apagada
         } else {
-        #ifdef DEBUGSERVIDOR
-//          Serial.print("Calefacción aún activa, quedan.");
-//          Serial.print(segundos);
-//          Serial.println(" segundos para apagarse.");
-        #endif
+          DBG_INO_PRINT("Calefacción aún activa, quedan.");
+          DBG_INO_PRINT(nSegundosTemporizacion);
+          DBG_INO_PRINT(" segundos para apagarse.");
       }
 
     }

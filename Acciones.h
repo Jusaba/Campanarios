@@ -10,8 +10,9 @@
     void accionTocaHora(void);
     void accionTocaMedia(void);
 
+
     void SincronizaNTP( void );
-    void NTPSync ( void ); 
+    
 
 
 #endif
