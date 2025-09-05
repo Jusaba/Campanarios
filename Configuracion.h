@@ -77,14 +77,21 @@
             };
 
             // Bits de estado
-            constexpr uint8_t BIT_SIN_INTERNET           = 0x20;
-            constexpr uint8_t BIT_PROTECCION_CAMPANADAS  = 0x40;
+            constexpr uint8_t BIT_DIFUNTOS                    = 0x01;       // bit 0
+            constexpr uint8_t BIT_MISA                        = 0x02;       // bit 1
+            constexpr uint8_t BIT_HORA                        = 0x04;       // bit 2
+            constexpr uint8_t BIT_CUARTOS                     = 0x08;       // bit 3
+            constexpr uint8_t BIT_CALEFACCION                 = 0x10;       // bit 4
+            constexpr uint8_t BIT_SIN_INTERNET                = 0x20;       // bit 5
+            constexpr uint8_t BIT_PROTECCION_CAMPANADAS       = 0x40;       // bit 6
+
             constexpr uint8_t BIT_CALEFACCION_ACTIVA     = (1 << 4);  // Para bit 4
         }
 
         // ==================== CALEFACCIÓN ====================
         namespace Heating {
             constexpr int DEFAULT_TIMER_MINUTES = 45;  // Era nTemporizacionCalefaccion por defecto
+            constexpr int MAX_MINUTES           = 120; // Máximo minutos de calefacción (2 horas)
         }
 
         // ==================== DEBUG ====================
@@ -99,6 +106,7 @@
 
     // ==================== COMPATIBILITY (transición) ====================
     // Mantén estos #defines para compatibilidad mientras migras el código
+/*
     #define PinCampana1         Config::Pins::CAMPANA1
     #define PinCampana2         Config::Pins::CAMPANA2
     #define CalefaccionPin      Config::Pins::CALEFACCION
@@ -111,7 +119,8 @@
 
     #define InicioHorarioNocturno Config::Time::NOCHE_INICIO_HORA
     #define FinHorarioNocturno    Config::Time::NOCHE_FIN_HORA
-
+*/    
+/*
     #define EstadoDifuntos              Config::States::DIFUNTOS
     #define EstadoMisa                  Config::States::MISA
     #define EstadoStop                  Config::States::STOP
@@ -129,5 +138,5 @@
     
     #define BitEstadoSinInternet        Config::States::BIT_SIN_INTERNET
     #define BitEstadoProteccionCampanadas Config::States::BIT_PROTECCION_CAMPANADAS
-
+*/
 #endif

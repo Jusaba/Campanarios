@@ -43,9 +43,9 @@ void recibirSecuencia(int numBytes) {
         
        
         // Si es una solicitud de información, guardar la petición
-        if (secuenciaI2C == EstadoCampanario || secuenciaI2C == EstadoHora || 
-            secuenciaI2C == EstadoFechaHora || secuenciaI2C == EstadoFechaHoraoTemporizacion) {
-            requestI2C = secuenciaI2C;              
+if (secuenciaI2C == Config::States::CAMPANARIO || secuenciaI2C == Config::States::HORA || 
+    secuenciaI2C == Config::States::FECHA_HORA || secuenciaI2C == Config::States::FECHA_HORA_O_TEMPORIZACION) {
+            requestI2C = secuenciaI2C;
             secuenciaI2C = 0;                       // Resetea para evitar ejecución como comando
             DBG_I2C_REQ("I2CServicio -> Solicitud request: " + String(requestI2C));
         }else{
@@ -69,16 +69,16 @@ void recibirSecuencia(int numBytes) {
 void enviarRequest() {
     DBG_I2C_REQ("I2CServicio -> enviarRequest -> Respuesta a " + String(requestI2C) + " por I2C");
     switch (requestI2C) {
-        case EstadoCampanario:
+        case Config::States::CAMPANARIO:
             enviarEstadoI2C();
             break;
-        case EstadoHora:
+        case Config::States::HORA:
             enviarHoraI2C();
             break;
-        case EstadoFechaHora:
+        case Config::States::FECHA_HORA:
             enviarFechaHoraI2C();
             break;
-        case EstadoFechaHoraoTemporizacion: 
+        case Config::States::FECHA_HORA_O_TEMPORIZACION:
             enviarFechaoTemporizacionI2C();
             break;
     }
@@ -194,7 +194,7 @@ void enviarFechaoTemporizacionI2C(void) {
 
      
     // Si el bit 4 está activo (calefacción encendida)
-    if (nEstadoCampanario & (1 << 4)) {
+    if (nEstadoCampanario & Config::States::BIT_CALEFACCION) {
         enviarEstadoTemporizacionI2C();
         DBG_I2C_REQ("I2CServicio -> enviarFechaoTemporizacionI2C ->Enviando estado de temporización por I2C");
     } else {

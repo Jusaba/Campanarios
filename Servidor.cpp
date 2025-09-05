@@ -22,9 +22,7 @@
     {
       
         if(!SPIFFS.begin(true)){
-            #ifdef DEBUGSERVIDOR
-                Serial.println("ha ocurrido un error montando SPIFFS");
-            #endif    
+            DBG_SRV("ha ocurrido un error montando SPIFFS");
         }
 //SPIFFS.format();        
 //listSPIFFS();
@@ -52,10 +50,8 @@
           server.serveStatic("/", SPIFFS, "/");
           // Iniciar el servidor
           server.begin();
-          #ifdef DEBUGSERVIDOR
-              Serial.println("Servidor HTTP iniciado en el puerto 80.");
-              Serial.println("Servidor HTTP iniciado. Esperando conexiones...");
-          #endif
+          DBG_SRV("Servidor HTTP iniciado en el puerto 80.");
+          DBG_SRV("Servidor HTTP iniciado. Esperando conexiones...");
           servidorIniciado = true;                                       // Marca el servidor como iniciado
         }
     }
@@ -79,28 +75,22 @@
     
         switch (type) {
           case WS_EVT_CONNECT:
-              #ifdef DEBUGSERVIDOR
-                Serial.println(" ");
-                Serial.print("OnEvent->WS_EVT_CONNECT: ");
-                Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-                Serial.println(" ");
-              #endif
+              DBG_SRV(" ");
+              DBG_SRV("OnEvent->WS_EVT_CONNECT: ");
+              DBG_SRV_PRINTF("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+              DBG_SRV(" ");
             break;
           case WS_EVT_DISCONNECT:
-            #ifdef DEBUGSERVIDOR
-              Serial.println(" ");
-              Serial.print("OnEvent->WS_EVT_DISCONNECT: ");
-              Serial.printf("WebSocket client #%u disconnected\n", client->id());
-              Serial.println(" ");
-            #endif      
+              DBG_SRV(" ");
+              DBG_SRV("OnEvent->WS_EVT_DISCONNECT: ");
+              DBG_SRV_PRINTF("WebSocket client #%u disconnected\n", client->id());
+              DBG_SRV(" ");
             break;
           case WS_EVT_DATA:
-            #ifdef DEBUGSERVIDOR
-              Serial.println(" ");
-              Serial.print("OnEvent->WS_EVT_DATA: ");
-              Serial.printf("Message received: %s\n", (char*)data);
-              Serial.println(" ");
-            #endif
+              DBG_SRV(" ");
+              DBG_SRV("OnEvent->WS_EVT_DATA: ");
+              DBG_SRV_PRINTF("Message received: %s\n", (char*)data);
+              DBG_SRV(" ");
             procesaMensajeWebSocket(arg, data, len);
             break;
           case WS_EVT_PONG:
@@ -136,58 +126,42 @@
     void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len)
     {
         String mensaje = String((const char*)data).substring(0, len);
-        #ifdef DEBUGSERVIDOR
-          Serial.println(" ");
-          Serial.printf("procesaMensajeWebSocket -> Mensaje recibido: %s\n", mensaje);
-          Serial.println(" ");
-        #endif
+          DBG_SRV(" ");
+          DBG_SRV_PRINTF("procesaMensajeWebSocket -> Mensaje recibido: %s\n", mensaje);
+          DBG_SRV(" ");
         //switch para procesar el mensaje recibido
         if (mensaje == "Difuntos") {                               // Si el mensaje es "Difuntos"
-            nToque = EstadoDifuntos;                               // Establece la secuencia a EstadoDifuntos para tocar difuntos
+            nToque = Config::States::DIFUNTOS;                      // Establece la secuencia a EstadoDifuntos para tocar difuntos
             ws.textAll("REDIRECT:/Campanas.html");                 // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
-            #ifdef DEBUGSERVIDOR
-              Serial.println("Procesando mensaje: TocaDifuntos");
-            #endif
+            DBG_SRV("Procesando mensaje: TocaDifuntos");
         } else if (mensaje == "Misa") {                            // Si el mensaje es "Misa"
-            nToque = EstadoMisa;                                   // Establece la secuencia a Misa para tocar misa
+            nToque = Config::States::MISA;                                   // Establece la secuencia a Misa para tocar misa
             ws.textAll("REDIRECT:/Campanas.html");                 // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
-             #ifdef DEBUGSERVIDOR
-              Serial.println("Procesando mensaje: TocaMisa");
-            #endif
+            DBG_SRV("Procesando mensaje: TocaMisa");
         } else if (mensaje == "PARAR") {                          // Si el mensaje es "PARAR"  
             nToque = 0;                                           // Parada la secuencia de toques
             Campanario.ParaSecuencia();                           // Detiene la secuencia de campanadas
-            ws.textAll("REDIRECT:/index.html");                   // Indica a los clientes que deben redirigir            
-            #ifdef DEBUGSERVIDOR
-              Serial.println("Procesando mensaje: Parar");
-            #endif   
+            ws.textAll("REDIRECT:/index.html");                   // Indica a los clientes que deben redirigir
+            DBG_SRV("Procesando mensaje: Parar");
         } else if (mensaje.startsWith("CALEFACCION_ON:")) {       // Si el mensaje comienza con "CALEFACCION_ON:"
             String minutosStr = mensaje.substring(15);            // Extrae los minutos después de "CALEFACCION_ON:"
             int minutos = minutosStr.toInt();                     // Convierte la cadena de minutos a entero
-            if (minutos < 0 || minutos > 120) {                   // Validación del rango de minutos
-                minutos = 0;                                      // Si está fuera del rango, establece a 0
-                #ifdef DEBUGSERVIDOR
-                  Serial.printf("Minutos fuera de rango, establecido a 0. Valor recibido: %s\n", minutosStr.c_str());
-                #endif
+            if (minutos < 0 || minutos >  Config::Heating::MAX_MINUTES) {         // Validación del rango de minutos
+                minutos = 0;                                       // Si está fuera del rango, establece a 0
+                DBG_SRV_PRINTF("Minutos fuera de rango, establecido a 0. Valor recibido: %s\n", minutosStr.c_str());
             }
             Campanario.EnciendeCalefaccion(minutos);                     // Enciende la calefacción
             // TODO: Aquí se puede agregar lógica para usar los minutos (temporizador, etc.)
             ws.textAll("CALEFACCION:ON:" + String(minutos));      // Envía el estado con los minutos programados
-            #ifdef DEBUGSERVIDOR
-              Serial.printf("Procesando mensaje: Calefacción ON por %d minutos\n", minutos);
-            #endif
+            DBG_SRV_PRINTF("Procesando mensaje: Calefacción ON por %d minutos\n", minutos);
         } else if (mensaje == "CALEFACCION_OFF") {                // Si el mensaje es "CALEFACCION_OFF"
             Campanario.ApagaCalefaccion();                        // Apaga la calefacción
             ws.textAll("CALEFACCION:OFF");                        // Envía el estado de la calefacción a todos los clientes conectados
-            #ifdef DEBUGSERVIDOR
-              Serial.println("Procesando mensaje: Calefacción OFF");
-            #endif
+            DBG_SRV("Procesando mensaje: Calefacción OFF");
         } else if (mensaje == "GET_CALEFACCION") {                // Si el mensaje es "GET_CALEFACCION"
             String estadoCalefaccion = Campanario.GetEstadoCalefaccion() ? "ON" : "OFF"; // Enviar el estado de la calefacción a todos los clientes conectados
             ws.textAll("ESTADO_CALEFACCION:" + estadoCalefaccion);// Envía el estado de la calefacción a todos los clientes conectados
-            #ifdef DEBUGSERVIDOR
-              Serial.printf("Estado de la calefacción enviado: %s\n", estadoCalefaccion.c_str());
-            #endif
+            DBG_SRV_PRINTF("Estado de la calefacción enviado: %s\n", estadoCalefaccion.c_str());
         } else if (mensaje == "GET_TIEMPOCALEFACCION") {                 // Si el mensaje es "GET_TIEMPOCALEFACCION"
             String tiempoCalefaccion = String(Campanario.TestTemporizacionCalefaccion());
             ws.textAll("TIEMPO_CALEFACCION:" + tiempoCalefaccion);  // Envía el tiempo de calefacción al cliente que lo pidió
@@ -196,9 +170,7 @@
             ws.textAll("ESTADO_CAMPANARIO:" + EstadoCampanario);  // Envía el estado al cliente que lo pidió
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
-            #ifdef DEBUGSERVIDOR
-              Serial.println("Mensaje no reconocido, reseteando secuencia.");
-            #endif
+            DBG_SRV("Mensaje no reconocido, reseteando secuencia.");
         }
     }    
 
@@ -217,15 +189,12 @@
       http.begin("http://clients3.google.com/generate_204"); // URL ligera y rápida de Google
       int httpCode = http.GET();
       http.end();
-      #ifdef DEBUGSERVIDOR
-        Serial.print("hayInternet -> Código HTTP recibido: ");
-        Serial.println(httpCode);
-        if (httpCode == 204) {
-            Serial.println("hayInternet -> Conexión a Internet disponible.");
-        } else {
-            Serial.println("hayInternet -> No hay conexión a Internet.");
-        }
-      #endif
+      DBG_SRV_PRINTF("hayInternet -> Código HTTP recibido: %d\n", httpCode);
+      if (httpCode == 204) {
+          DBG_SRV("hayInternet -> Conexión a Internet disponible.");
+      } else {
+          DBG_SRV("hayInternet -> No hay conexión a Internet.");
+      }
       return (httpCode == 204); // Google responde 204 si hay Internet
   }
 

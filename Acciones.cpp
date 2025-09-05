@@ -28,8 +28,8 @@ void accionTocaHora(void) {
     
     // Verificar horario nocturno
     int hora = timeinfo.tm_hour;
-    bool esNocturno = (hora >= InicioHorarioNocturno || 
-                       hora < FinHorarioNocturno);
+    bool esNocturno = (hora >= Config::Time::NOCHE_INICIO_HORA || 
+                       hora < Config::Time::NOCHE_FIN_HORA);
     
     if (!esNocturno) {
         Campanario.TocaHoraSinCuartos(hora);
@@ -50,15 +50,14 @@ void accionTocaMedia(void) {
     
     // Verificar horario nocturno
     int hora = timeinfo.tm_hour;
-    bool esNocturno = (hora >= InicioHorarioNocturno || 
-                       hora < FinHorarioNocturno);
+    bool esNocturno = (hora >= Config::Time::NOCHE_INICIO_HORA || 
+                       hora < Config::Time::NOCHE_FIN_HORA);
     
     if (!esNocturno) {
         Campanario.TocaMediaHora();
-        
-        
+                
         ws.textAll("REDIRECT:/Campanas.html");
-        
+       
         // Actualizar DNS si hay internet
         if (hayInternet()) {
             ActualizaDNS(configWiFi.dominio);

@@ -1,3 +1,24 @@
+// ============================================================================
+// CONSTANTES DE ESTADO - Sincronizadas con Config::States en ESP32
+// ============================================================================
+const CampanarioStates = {
+    // Estados I2C (para comandos)
+    DIFUNTOS: "Difuntos",
+    MISA: "Misa", 
+    STOP: "PARAR",
+    GET_CAMPANARIO: "GET_CAMPANARIO",
+    GET_TIEMPO_CALEFACCION: "GET_TIEMPOCALEFACCION",
+    
+    // Bits de estado (para ESTADO_CAMPANARIO response)
+    BIT_DIFUNTOS: 0x01,                      // Config::States::BIT_DIFUNTOS
+    BIT_MISA: 0x02,                          // Config::States::BIT_MISA  
+    BIT_HORA: 0x04,                          // Config::States::BIT_HORA
+    BIT_CUARTOS: 0x08,                       // Config::States::BIT_CUARTOS
+    BIT_CALEFACCION: 0x10,                   // Config::States::BIT_CALEFACCION
+    BIT_SIN_INTERNET: 0x20,                  // Config::States::BIT_SIN_INTERNET
+    BIT_PROTECCION_CAMPANADAS: 0x40          // Config::States::BIT_PROTECCION_CAMPANADAS
+};
+
 var gateway = `ws://${window.location.hostname}:8080/ws`;
 var websocket;
 
@@ -192,9 +213,9 @@ if (event.data.startsWith("PROTECCION:OFF")) {
 if (event.data.startsWith("ESTADO_CAMPANARIO:")) {
     console.log ("Comprobando estado de campanario: " + event.data);
     let EstadoCampanario = parseInt(event.data.split(":")[1]);
-    if ((EstadoCampanario & 0x01) || (EstadoCampanario & 0x02)) {
+    if ((EstadoCampanario & CampanarioStates.BIT_DIFUNTOS) || (EstadoCampanario & CampanarioStates.BIT_MISA)) {
         lCampanas = true;
-        if (EstadoCampanario & 0x01) {
+        if (EstadoCampanario & CampanarioStates.BIT_DIFUNTOS) {
            console.log("Difuntos")
         } else {
             console.log("Misa");
@@ -203,7 +224,7 @@ if (event.data.startsWith("ESTADO_CAMPANARIO:")) {
     }else{
         lCampanas = false;
     }    
-    if (EstadoCampanario & 0x10) {
+    if (EstadoCampanario & CampanarioStates.BIT_CALEFACCION) {
         lCalefaccion =   true;
         document.getElementById("iconoCalefaccion").setAttribute("stroke", "red" );
         websocket.send("GET_TIEMPOCALEFACCION");
@@ -212,7 +233,7 @@ if (event.data.startsWith("ESTADO_CAMPANARIO:")) {
         document.getElementById("iconoCalefaccion").setAttribute("stroke", "orange" );
     }
     // Verificar el bit de protección de campanadas (BitEstadoProteccionCampanadas = 0x40)
-    if (EstadoCampanario & 0x40) {
+    if (EstadoCampanario & CampanarioStates.BIT_PROTECCION_CAMPANADAS) {
         habilitarBotonesCampanadas(false); // Deshabilita los botones si la protección está activa
         console.log("Protección de campanadas activa (desde estado campanario)");
     } else {

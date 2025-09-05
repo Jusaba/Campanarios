@@ -49,39 +49,39 @@ AlarmScheduler Alarmas;
   
   void setup() {
     
-      Serial.begin(9600);                                           // Iniciar la comunicación serie a 9600 baudios
-  
-      pinMode(PinConfiguracion, INPUT_PULLUP);                      // Comprueba el estado del pin PinConfiguracion para iniciar el modo AP si está en LOW para configurar el dispositivo
-      if (digitalRead(PinConfiguracion) == LOW) {
-        DBG_INO("Pin PinConfiguracion a 0: Iniciando modo AP..."); 
+      Serial.begin(9600);                                                 // Iniciar la comunicación serie a 9600 baudios
+
+      pinMode(Config::Pins::CONFIGURACION, INPUT_PULLUP);                            // Comprueba el estado del pin PinConfiguracion para iniciar el modo AP si está en LOW para configurar el dispositivo
+      if (digitalRead(Config::Pins::CONFIGURACION) == LOW) {
+        DBG_INO("Pin PinConfiguracion a 0: Iniciando modo AP...");
         iniciarModoAP();
-        while(1)                                                    // Bucle infinito para esperar a que se configure el Wifi                              
+        while(1)                                                          // Bucle infinito para esperar a que se configure el Wifi                              
         {
           delay(100);
         }
       } else {
-        cargarConfigWiFi();                                         // Carga la configuración guardada
+        cargarConfigWiFi();                                               // Carga la configuración guardada
         DBG_INO("Iniciando Campanario...");
         initI2C();
 
-        CAMPANA* campana1 = new CAMPANA(PinCampana1);               // Crea una nueva instancia de la clase CAMPANA para la campana 1
-        CAMPANA* campana2 = new CAMPANA(PinCampana2);               // Crea una nueva instancia de la clase CAMPANA para la campana 2
-      
-        CALEFACCION* calefaccion = new CALEFACCION(CalefaccionPin); // Crea una nueva instancia de la clase CALEFACCION   
-      
-        Campanario.AddCampana(campana1);                            // Añade la campana 1 al campanario
-        Campanario.AddCampana(campana2);                            // Añade la campana 2 al campanario
-        Campanario.AddCalefaccion(calefaccion);                     // Añade la calefacción al campanario  
+        CAMPANA* campana1 = new CAMPANA(Config::Pins::CAMPANA1);      // Crea una nueva instancia de la clase CAMPANA para la campana 1
+        CAMPANA* campana2 = new CAMPANA(Config::Pins::CAMPANA2);      // Crea una nueva instancia de la clase CAMPANA para la campana 2
+
+        CALEFACCION* calefaccion = new CALEFACCION(Config::Pins::CALEFACCION);       // Crea una nueva instancia de la clase CALEFACCION
+
+        Campanario.AddCampana(campana1);                                  // Añade la campana 1 al campanario
+        Campanario.AddCampana(campana2);                                  // Añade la campana 2 al campanario
+        Campanario.AddCalefaccion(calefaccion);                           // Añade la calefacción al campanario  
 
 
-        lConexionInternet = ConectarWifi(configWiFi);               // Llama a la función para conectar a la red Wi-Fi con la configuración cargada
-        if (lConexionInternet)                                      // Llama a la función para conectar a la red Wi-Fi
-        {                                                           // Si la conexión es exitosa
-            ServidorOn(configWiFi.usuario, configWiFi.clave);       // Llama a la función para iniciar el servidor
-            Campanario.SetInternetConectado();                      // Notifica al campanario que hay conexión a Internet
+        lConexionInternet = ConectarWifi(configWiFi);                     // Llama a la función para conectar a la red Wi-Fi con la configuración cargada
+        if (lConexionInternet)                                            // Llama a la función para conectar a la red Wi-Fi
+        {                                                                 // Si la conexión es exitosa
+            ServidorOn(configWiFi.usuario, configWiFi.clave);             // Llama a la función para iniciar el servidor
+            Campanario.SetInternetConectado();                            // Notifica al campanario que hay conexión a Internet
             DBG_INO("Conexión Wi-Fi exitosa.");
         } else {
-          Campanario.ClearInternetConectado();                      // Notifica al campanario que no hay conexión a Internet
+          Campanario.ClearInternetConectado();                            // Notifica al campanario que no hay conexión a Internet
           DBG_INO("Error al conectar a la red Wi-Fi.");
         }
 Alarmas.begin(); // carga alarmas por defecto
@@ -95,35 +95,44 @@ Alarmas.begin(); // carga alarmas por defecto
 
     if (!Campanario.GetEstadoSecuencia()) {
       if (RTC::isNtpSync()) {
-        Alarmas.check();                                              // Llama a la función para comprobar las alarmas programadas
+        Alarmas.check();                                                  // Llama a la función para comprobar las alarmas programadas
       }
-      //EsPeriodoToqueCampanas();                                     // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
-      ActualizaEstadoProteccionCampanadas();                          // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
-      if (millis() - ultimoCheckInternet > intervaloCheckInternet) {  // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
+      //EsPeriodoToqueCampanas();                                         // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
+      ActualizaEstadoProteccionCampanadas();                              // Llama a la función para comprobar si estamos en el período de proteccion de toque de campanas
+      if (millis() - ultimoCheckInternet > intervaloCheckInternet) {      // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
           ultimoCheckInternet = millis();
-          TestInternet();                                             // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
+          TestInternet();                                                 // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
       }
     }  
   
-    if (secuenciaI2C > 0) {                                           // Si se ha recibido orden por I2C
-      EjecutaSecuencia(secuenciaI2C);                                 // Llama a la función para ejecutar la orden recibida 
-      secuenciaI2C = 0;                                               // Resetea para esperar la siguiente orden
-      nToque = 0;                                                     // Resetea el numero de la secuencia a tocar
-    } 
-
-    if (nToque > 0) {                                                 // Si la orden se ha recibido por websocket
-      EjecutaSecuencia(nToque);                                       // Llama a la función para ejecutar la orden recibida de inernet
-      nToque = 0;                                                     // Resetea el numero de la secuencia a tocar  
+if (secuenciaI2C > 0) {                                                   // Si se ha recibido orden por I2C
+    // ✅ VERIFICAR si la secuencia necesita parámetro:
+    if (secuenciaI2C == Config::States::SET_TEMPORIZADOR) {
+        // Secuencias que SÍ necesitan parámetro:
+        EjecutaSecuencia(secuenciaI2C, ParametroI2C);                     // Con parámetro I2C
+        DBG_INO_PRINTF("I2C -> EjecutaSecuencia(%d, %d)", secuenciaI2C, ParametroI2C);
+    } else {
+        // Secuencias que NO necesitan parámetro:
+        EjecutaSecuencia(secuenciaI2C);                                   // Sin parámetro
+        DBG_INO_PRINTF("I2C -> EjecutaSecuencia(%d)", secuenciaI2C);
+    }
+    
+    secuenciaI2C = 0;                                                     // Resetea para esperar la siguiente orden
+    nToque = 0;                                                           // Resetea el numero de la secuencia a tocar
+}
+    if (nToque > 0) {                                                     // Si la orden se ha recibido por websocket
+      EjecutaSecuencia(nToque);                                           // Llama a la función para ejecutar la orden recibida de inernet
+      nToque = 0;                                                         // Resetea el numero de la secuencia a tocar  
     }
   
-    TestCampanadas();                                                 // Llama a la función para probar las campanadas y enviar el número de campana tocada a los clientes conectados
+    TestCampanadas();                                                     // Llama a la función para probar las campanadas y enviar el número de campana tocada a los clientes conectados
   
     if ( Campanario.GetEstadoCalefaccion())
     {  
       nSegundosTemporizacion = Campanario.TestTemporizacionCalefaccion(); // Verifica el estado de la calefacción y obtiene el tiempo restante
       
       if (nSegundosTemporizacion == 0) {                                  // Verifica si la calefacción debe apagarse automáticamente
-        nToque = EstadoCalefaccionOff;                                    // Establece el estado de la calefacción a apagada
+        nToque = Config::States::CALEFACCION_OFF;                         // Establece el estado de la calefacción a apagada
         } else {
           DBG_INO_PRINT("Calefacción aún activa, quedan.");
           DBG_INO_PRINT(nSegundosTemporizacion);

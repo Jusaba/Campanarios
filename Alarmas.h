@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include "Acciones.h"
 #include "Configuracion.h"
+#include "Debug.h"
 
 //#define DebugAlarma
 
@@ -145,7 +146,7 @@ public:
         #ifdef DebugAlarma
         static uint32_t lastDbg = 0;
         if (millis() - lastDbg > 5000) {
-            Serial.printf("[ALRMCHK] %02u:%02u DOW=%d YDay=%d\n",
+            DBG_ALM_PRINTF("[ALRMCHK] %02u:%02u DOW=%d YDay=%d\n",
                           curHour, curMinute, t.tm_wday, curYDay);
             lastDbg = millis();
         }
@@ -192,10 +193,8 @@ public:
             a.lastMinute    = curMinute;
             a.lastExecEpoch = nowEpoch;
 
-            #ifdef DebugAlarma
-            Serial.printf("[ALARM] idx=%u ok param=%u\n", i, a.param);
-            #endif
-        }
+            DBG_ALM_PRINTF("[ALARM] idx=%u ok param=%u\n", i, a.param);
+       }
     }
 
 
@@ -208,8 +207,8 @@ private:
         return (wday >= 0 && wday <= 6) ? (1 << wday) : 0;
     }
     bool esHorarioNocturno() const {
-        return (t.tm_hour >= InicioHorarioNocturno || 
-            t.tm_hour < FinHorarioNocturno);
+        return (t.tm_hour >= Config::Time::NOCHE_INICIO_HORA || 
+            t.tm_hour < Config::Time::NOCHE_FIN_HORA);
     }
 
     void initDefaults() {
@@ -229,8 +228,8 @@ private:
     */
 
     // ===== MISAS DOMINICALES =====
-    addExternal(DOW_DOMINGO, 11, 5,  0, accionSecuencia, EstadoMisa, true);
-    addExternal(DOW_DOMINGO, 11, 25, 0, accionSecuencia, EstadoMisa, true);
+    addExternal(DOW_DOMINGO, 11, 5,  0, accionSecuencia, Config::States::MISA, true);
+    addExternal(DOW_DOMINGO, 11, 25, 0, accionSecuencia, Config::States::MISA, true);
 
     // ===== CUARTOS Y MEDIAS (FUNCIONALIDAD MIGRADA DE TIMEMANAGER) =====
     // Tocar horas en punto (wildcards = todas las horas)

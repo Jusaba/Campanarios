@@ -5,10 +5,6 @@
     #include <Wire.h>
     #include <stdint.h>
 
-    #define DEBUGI2C
-    #define DEBUGAUXILIAR
-    #define DEBUGI2CREQUEST
-    #define DEBUGI2CSECUENCIA
 
 
     // Variables I2C globales (extern para usar desde otros módulos)

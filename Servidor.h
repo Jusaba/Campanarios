@@ -26,19 +26,22 @@
     #include <ESPAsyncWebServer.h>
     #include <SPIFFS.h>
     #include <HTTPClient.h>
+    #include "Configuracion.h"
+    #include "Debug.h"
     
     #include "Campanario.h"
     
     // Definiciones de estados del sistema
     // Estos estados se utilizan para controlar la secuencia de toques de las campanas
     // y el estado de la calefacción.
+    /*
     #define EstadoInicio            0
     #define EstadoDifuntos          1
     #define EstadoMisa              2
     #define EstadoStop              3
     #define EstadoCalefaccionOn     4
     #define EstadoCalefaccionOff    5
-
+    */
 
 
     #define DEBUGSERVIDOR                                               // Descomentar para activar el modo de depuración del servidor
@@ -50,9 +53,9 @@
     extern WiFiClient client;
 
     // Pines de los relés para controlar las campanas
-    const int Rele0 = 26;                           
-    const int Rele1 = 27;
-    const int Rele2 = 25;
+    //const int Rele0 = 26;                           
+    //const int Rele1 = 27;
+    //const int Rele2 = 25;
 
 
     // Usuario y contraseña

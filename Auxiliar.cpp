@@ -8,9 +8,9 @@
 // Definiciones únicas de variables globales
 CAMPANARIO Campanario;
 struct tm timeinfo;
-int ultimoMinuto = -1;
+//int ultimoMinuto = -1;
 int nCampanaTocada = 0;
-int ultimaHora = -1;
+//int ultimaHora = -1;
 bool lConexionInternet = false;
 bool lProteccionCampanadas = false;
 bool lProteccionCampanadasAnterior = false;
@@ -38,16 +38,11 @@ void TestCampanadas(void)
 {
     nCampanaTocada = Campanario.ActualizarSecuenciaCampanadas();
     if (nCampanaTocada > 0) {
-        #ifdef DEBUGAUXILIAR
-            Serial.print("Campana tocada: ");
-            Serial.println(nCampanaTocada);
-        #endif
+        DBG_AUX_PRINTF("Campana tocada: %d\n", nCampanaTocada);
         Campanario.ResetCampanaTocada();
         ws.textAll("CAMPANA:"+String(nCampanaTocada));
         if (!Campanario.GetEstadoSecuencia()) {
-            #ifdef DEBUGAUXILIAR
-                Serial.println("Secuencia de campanadas finalizada.");
-            #endif
+            DBG_AUX_PRINTF("Secuencia de campanadas finalizada.\n");
             Campanario.ParaSecuencia();
             ws.textAll("REDIRECT:/index.html");
         }
@@ -71,13 +66,75 @@ void TestCampanadas(void)
  *          Para el control de calefacción, notifica el estado actual.
  *          Si la secuencia no es reconocida, genera un mensaje de debug si DEBUGSERVIDOR está definido.
  */
-
-    void EjecutaSecuencia (int nSecuencia) 
+    void EjecutaSecuencia (int nSecuencia)
     {
-        #ifdef DEBUGSERVIDOR
-            Serial.println("Ejecutando secuencia: ");
-            Serial.println(nSecuencia);
-        #endif
+        EjecutaSecuencia(nSecuencia, 0);
+    }
+    void EjecutaSecuencia(int nSecuencia, int nParametro) {
+        
+        DBG_AUX_PRINTF("EjecutaSecuencia -> Secuencia: %d, Parámetro: %d", nSecuencia, parametro);
+
+        switch (nSecuencia) {
+            case Config::States::DIFUNTOS:
+                Campanario.TocaDifuntos();
+                ws.textAll("REDIRECT:/Campanas.html");      // ✅ COMO ESTABA ORIGINALMENTE
+                DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de difuntos");
+                break;
+
+            case Config::States::MISA:
+                Campanario.TocaMisa();
+                ws.textAll("REDIRECT:/Campanas.html");      // ✅ COMO ESTABA ORIGINALMENTE
+                DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de misa");
+                break;
+
+            case Config::States::STOP:
+                Campanario.ParaSecuencia();
+                ws.textAll("REDIRECT:/index.html");         // ✅ COMO ESTABA ORIGINALMENTE
+                DBG_AUX("EjecutaSecuencia -> Parando todas las secuencias");
+                break;
+
+            case Config::States::CALEFACCION_ON:
+                  // WebSocket con temporizador global
+                    Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion);
+                    ws.textAll("CALEFACCION:ON");            // ✅ COMO ESTABA ORIGINALMENTE
+                    DBG_AUX_PRINTF("EjecutaSecuencia -> Encendiendo calefacción (%d min desde WebSocket)", nTemporizacionCalefaccion);
+                    break;
+
+            case Config::States::CALEFACCION_OFF:
+                Campanario.ApagaCalefaccion();
+                ws.textAll("CALEFACCION:OFF");               // ✅ COMO ESTABA ORIGINALMENTE
+                DBG_AUX("EjecutaSecuencia -> Apagando calefacción");
+                break;
+
+            case Config::States::PROTECCION_CAMPANADAS:
+               if (lProteccionCampanadas) {
+                    Campanario.SetProteccionCampanadas();
+                    ws.textAll("PROTECCION:ON");
+                    DBG_AUX("EjecutaSecuencia -> Activando protección de campanadas");
+                } else {
+                    Campanario.ClearProteccionCampanadas();
+                    ws.textAll("PROTECCION:OFF");
+                    DBG_AUX("EjecutaSecuencia -> Desactivando protección de campanadas");
+                }
+                break;
+
+            case Config::States::SET_TEMPORIZADOR:
+                // ✅ MANTENER lógica I2C temporizador (esta SÍ estaba):
+                nTemporizacionCalefaccion = nParametro;
+                Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion);
+                ws.textAll("CALEFACCION:ON:" + String(nTemporizacionCalefaccion));
+                DBG_AUX_PRINTF("EjecutaSecuencia -> Temporizador de calefacción fijado a %d minutos", nTemporizacionCalefaccion);
+                break;
+
+            default:
+                DBG_AUX_PRINTF("EjecutaSecuencia -> Secuencia no reconocida: %d", nSecuencia);
+                break;
+        }
+    }
+/*
+    void EjecutaSecuencia (int nSecuencia, int nParametro) 
+    {
+        DBG_AUX_PRINTF("EjecutaSecuencia->Secuencia: %d\n", nSecuencia);
         switch (nSecuencia) {
             case EstadoDifuntos:
                 Campanario.TocaDifuntos();                  // Toca la secuencia de difuntos
@@ -111,36 +168,29 @@ void TestCampanadas(void)
                 ws.textAll(lProteccionCampanadas ? "PROTECCION:ON" : "PROTECCION:OFF");
                break;
             case EstadoSetTemporizador:                     //Fija el temporizador de la calefacción
-                nTemporizacionCalefaccion = (int)ParametroI2C; // Asigna el valor del parámetro recibido al temporizador de calefacción
+                nTemporizacionCalefaccion = nParametro; // Asigna el valor del parámetro recibido al temporizador de calefacción
                 Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion); // Llama a la función para fijar el temporizador de calefacción
                 ws.textAll("CALEFACCION:ON:" + String(nTemporizacionCalefaccion));
-                #ifdef DEBUGAUXILIAR
-                    Serial.printf("EjecutaSecuencia -> Temporizador de calefacción fijado a %d minutos.\n", nTemporizacionCalefaccion);
-                #endif
+                DBG_AUX_PRINTF("EjecutaSecuencia -> Temporizador de calefacción fijado a %d minutos.\n", nTemporizacionCalefaccion);
                 break;
             default:
-                #ifdef DEBUGSERVIDOR
-                    Serial.println("Secuencia no reconocida.");
-                #endif
+                DBG_AUX("EjecutaSecuencia -> Secuencia no reconocida.");
                 break;
         }
     }
+*/
     void TestInternet(void) {
         bool estadoAnteriorInternet = lConexionInternet; // Guarda el estado anterior de la conexión
         if (!hayInternet()) { // hayInternet() debe comprobar acceso real a internet
           lConexionInternet = ConectarWifi(configWiFi); // Intenta reconectar
           if (lConexionInternet) {
-              #ifdef DEBUG
-                Serial.println("TestInternet -> Reconectado a internet correctamente.");
-              #endif
+              DBG_AUX("TestInternet -> Reconectado a internet correctamente.");
               ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
               if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
                   Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
               }
           } else {
-              #ifdef DEBUG
-                Serial.println("TestInternet -> Sin conexión a internet. Funcionando en modo local.");
-              #endif
+              DBG_AUX("TestInternet -> Sin conexión a internet. Funcionando en modo local.");
               if (estadoAnteriorInternet) { // Si el estado cambió de conectado a desconectado
                   Campanario.ClearInternetConectado(); // Notifica al campanario que no hay internet
               }
@@ -150,35 +200,10 @@ void TestCampanadas(void)
             if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
                 Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
             }
-            #ifdef DEBUG
-                Serial.println("TestInternet -> Conexión a internet activa.");
-            #endif
+            DBG_AUX("TestInternet -> Conexión a internet activa.");
         }
     }
 
-    /**
-     * @brief Comprueba si la hora actual se encuentra dentro del horario nocturno.
-     *
-     * Esta función obtiene la hora local actual y verifica si está dentro del rango definido
-     * por las variables globales InicioHorarioNocturno y FinHorarioNocturno. El horario nocturno
-     * se considera desde InicioHorarioNocturno (inclusive) hasta FinHorarioNocturno (exclusive).
-     *
-     * @return true si la hora actual está en el horario nocturno, false en caso contrario o si no se pudo obtener la hora.
-     */
-    bool EsHorarioNocturno (void) {
-        if (!RTC::isNtpSync()) {
-            #ifdef DEBUG
-                Serial.println("EsHorarioNocturno -> RTC no sincronizado con NTP.");
-            #endif
-            return false; // Si el RTC no está sincronizado, no se puede determinar el horario nocturno
-        }
-        struct tm localTime;
-        if (getLocalTime(&localTime)) { // Obtiene la hora local
-            int hora = localTime.tm_hour; // Obtiene la hora actual
-            return (hora >= InicioHorarioNocturno || hora < FinHorarioNocturno); // Comprueba si está en horario nocturno
-        }
-        return false; // Si no se pudo obtener la hora, devuelve false
-    }    
 
 
 /**
@@ -238,7 +263,7 @@ void ActualizaEstadoProteccionCampanadas(void) {
         lProteccionCampanadasAnterior = lProteccionCampanadas;
         lProteccionCampanadas = nuevoEstadoProteccion;
         
-        EjecutaSecuencia(EstadoProteccionCampanadas);                                   // 4. Notificar cambio por WebSocket (UNA SOLA VEZ)
+        EjecutaSecuencia(Config::States::PROTECCION_CAMPANADAS);                                   // 4. Notificar cambio por WebSocket (UNA SOLA VEZ)
         
         DBG_PROT_PRINTF("ActualizaEstadoProteccionCampanadas -> Cambio: %s -> %s",      // 6. Log del cambio
                        lProteccionCampanadasAnterior ? "ACTIVA" : "INACTIVA",
@@ -247,104 +272,3 @@ void ActualizaEstadoProteccionCampanadas(void) {
     
 
 }
-    /**
-     * @brief Comprueba si el minuto actual está dentro de un período protegido para el toque de secuencia de campanadas.
-     * 
-     * Esta función verifica si el minuto actual está dentro de los períodos protegidos definidos
-     * por las constantes INICIO_VENTANA_HORA, FIN_VENTANA_HORA, INICIO_VENTANA_MEDIA y FIN_VENTANA_MEDIA.
-     * Si el RTC no está sincronizado con NTP, se desactiva la protección de campanadas.
-     * La función también gestiona el estado de la protección de campanadas y notifica a los clientes web
-     * sobre cualquier cambio en este estado.
-     * 
-     * @return true si la hora actual está dentro de un período protegido, false en caso contrario.
-     */
-    /*
-    bool EsPeriodoToqueCampanas (void) 
-    {
-        
-        if (!RTC::isNtpSync())                                                              //Si no hay sincronizacion NTP, quita las protecciones
-        {    
-            DBG_PROT  ("EsPeriodoToqueCampanas -> RTC no sincronizado con NTP.");
-            // Detecta cambio de estado y notifica si es necesario
-            if (lProteccionCampanadas != false) {                                           //Si esta la proteccion de campanadas la deshabilitamos
-                lProteccionCampanadasAnterior = lProteccionCampanadas;
-                lProteccionCampanadas = false;
-                EjecutaSecuencia(EstadoProteccionCampanadas);                               // Notifica el cambio de estado a cliente web
-                Campanario.ClearProteccionCampanadas();                                     // Desactiva la protección de campanadas
-                DBG_PROT("EsPeriodoToqueCampanas -> Protección desactivada (RTC no sincronizado)");
-                
-            }
-            return false; // Si el RTC no está sincronizado, no se puede determinar el período
-        }
-        
-        struct tm localTime;                                                                //Si hay sincronizacion
-        if (getLocalTime(&localTime)) {                                                     // Obtiene la hora local                            
-            int minuto = localTime.tm_min;                                                  //Obtenemos el minuto actual
-            bool periodoHoraEnPunto = (minuto >= Config::Time::INICIO_VENTANA_HORA) || (minuto < Config::Time::FIN_VENTANA_HORA);                       // Comprueba si estamos ±5 minutos de la hora en punto (minuto 0)
-            bool periodoMediaHora = (minuto >= Config::Time::INICIO_VENTANA_MEDIA) && (minuto < Config::Time::FIN_VENTANA_MEDIA);                         // Comprueba si estamos ±5 minutos de la media hora (minuto 30)
-            bool nuevoEstadoProteccion = (periodoHoraEnPunto || periodoMediaHora);          //Si esta en algun periodo de proteccion
-            if (lProteccionCampanadas != nuevoEstadoProteccion) {                           // Si el estado de protección ha cambiado     
-                lProteccionCampanadasAnterior = lProteccionCampanadas;                      // Guarda el estado anterior de la protección de campanadas 
-                lProteccionCampanadas = nuevoEstadoProteccion;                              // Actualiza el estado de la protección de campanadas
-                if (lProteccionCampanadas) {                                                // Si estamos en un período de toque de campanas
-                    Campanario.SetProteccionCampanadas();                                   // Activa la protección de campanadas
-                    DBG_PROT_PRINTF("EsPeriodoToqueCampanas -> Activando protección de campanadas (minuto %d)\n", minuto);
-                } else {                                                                    // Si no estamos en un período de toque de campanas
-                    Campanario.ClearProteccionCampanadas();                                 // Desactiva la protección de campanadas
-                    DBG_PROT_PRINTF("EsPeriodoToqueCampanas -> Desactivando protección de campanadas (minuto %d)\n", minuto);
-                }
-                EjecutaSecuencia(EstadoProteccionCampanadas);                               // Notifica el cambio de estado Al cliete web
-                DBG_PROT_PRINTF("EsPeriodoToqueCampanas -> Cambio de protección: %s -> %s (minuto %d)\n", lProteccionCampanadasAnterior ? "ACTIVA" : "INACTIVA",lProteccionCampanadas ? "ACTIVA" : "INACTIVA",minuto);
-            }
-            #ifdef DEBUGPROTECCION
-                if (nuevoEstadoProteccion) {
-                    DBG_PROT_PRINTF("EsPeriodoToqueCampanas -> Período activo (minuto %d): %s\n", minuto, periodoHoraEnPunto ? "Hora en punto" : "Media hora");
-                }
-            #endif
-            
-            return nuevoEstadoProteccion;
-        }
-        DBG_PROT("EsPeriodoToqueCampanas -> Error obteniendo hora del RTC");
-  
-        if (lProteccionCampanadas != false) {                                                   // Si no se pudo obtener la hora, desactiva la protección de campanadas si estaba activa
-            lProteccionCampanadasAnterior = lProteccionCampanadas;
-            lProteccionCampanadas = false;
-            EjecutaSecuencia(EstadoProteccionCampanadas); // Notifica el cambio de estado
-            DBG_PROT("EsPeriodoToqueCampanas -> Protección desactivada (error obteniendo hora)");
-        }
-        return false; // Si no se pudo obtener la hora, devuelve false
-    }    
-*/
-/**
- * @brief Actualiza el estado de protección de las campanadas y notifica cambios.
- *
- * Esta función compara el estado actual de protección de las campanadas con el anterior.
- * Si hay un cambio de estado, lo notifica a través de WebSocket y muestra mensajes de depuración.
- *
- * - Actualiza las variables de estado de protección.
- * - Muestra el estado actual mediante DBG_AUX.
- * - Si el estado ha cambiado, notifica el cambio y envía el estado actualizado por WebSocket.
- *
- * @note Utiliza la función EsPeriodoToqueCampanas() para determinar el estado de protección.
- */
-/*
- void ActualizaEstadoProteccionCampanadas(void) 
- {
-    lProteccionCampanadasAnterior = lProteccionCampanadas;
-    lProteccionCampanadas = EsPeriodoToqueCampanas();
-    
-    DBG_AUX("Estado protección: " + String(lProteccionCampanadas ? "ACTIVA" : "INACTIVA"));
-    
-    // Si hay cambio de estado, notificar
-    if (lProteccionCampanadas != lProteccionCampanadasAnterior) {
-        DBG_AUX("Cambio estado protección: " + String(lProteccionCampanadasAnterior) + " -> " + String(lProteccionCampanadas));
-
-        // Notificar a través de WebSocket si está disponible
-        if (lProteccionCampanadas) {
-            ws.textAll("PROTECTION:ON");
-        } else {
-            ws.textAll("PROTECTION:OFF");
-        }
-    }
-}
-*/
