@@ -1,5 +1,5 @@
 #ifndef DEBUG_H
-#define DEBUG_H
+    #define DEBUG_H
 
 #include <Arduino.h>
 
@@ -11,10 +11,12 @@
 #define DEBUG                       // Debug general del sistema
 
 // Debug específico por módulos
-#define DEBUGI2C                    // Debug comunicación I2C con ESP32
-#define DEBUGDISPLAY                // Debug funciones de pantalla y sprites
+//#define DEBUGI2C                    // Debug comunicación I2C con ESP32
+//#define DEBUGDISPLAY                // Debug funciones de pantalla y sprites
 #define DEBUGBUTTONS                // Debug eventos de botones y encoder
 #define DEBUGMENU                   // Debug navegación de menús
+//#define DEBUGAUXILIAR               // Debug funciones auxiliares
+#define DEBUGENCODER                 // Debug manejo del encoder
 //#define DEBUGTIMING               // Debug temporizaciones y delays
 //#define DEBUGSTARTUP              // Debug proceso de inicialización
 //#define DEBUGSPRITES              // Debug carga y gestión de sprites
@@ -113,5 +115,22 @@
     #define DBG_STATES_PRINT(msg)
     #define DBG_STATES_PRINTF(fmt, ...)
 #endif
-
+#ifdef DEBUGAUXILIAR
+    #define DBG_AUXILIAR(msg) Serial.println(String("[AUXILIAR] ") + msg)
+    #define DBG_AUXILIAR_PRINT(msg) Serial.print(String("[AUXILIAR] ") + msg)
+    #define DBG_AUXILIAR_PRINTF(fmt, ...) Serial.printf("[AUXILIAR] " fmt "\n", ##__VA_ARGS__)
+#else
+    #define DBG_AUXILIAR(msg)
+    #define DBG_AUXILIAR_PRINT(msg)
+    #define DBG_AUXILIAR_PRINTF(fmt, ...)
+#endif
+#ifdef DEBUGENCODER
+    #define DBG_ENCODER(msg) Serial.println(String("[ENCODER] ") + msg)
+    #define DBG_ENCODER_PRINT(msg) Serial.print(String("[ENCODER] ") + msg)
+    #define DBG_ENCODER_PRINTF(fmt, ...) Serial.printf("[ENCODER] " fmt "\n", ##__VA_ARGS__)
+#else
+    #define DBG_ENCODER(msg)
+    #define DBG_ENCODER_PRINT(msg)
+    #define DBG_ENCODER_PRINTF(fmt, ...)
+#endif    
 #endif

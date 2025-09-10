@@ -1,90 +1,164 @@
     #include "Display.h"
 
-    // ============================================================================
-    // VARIABLES GLOBALES - DEFINICIONES (crear las variables aquí)
-    // ============================================================================
-    boolean lBrillo = 1;                            
-    M5Canvas* aSprites[9];                          
+        // ============================================================================
+        // VARIABLES GLOBALES - DEFINICIONES (crear las variables aquí)
+        // ============================================================================
+        boolean lBrillo = 1;                            
 
 
-    const SpriteData SPRITES[9] = {
-        // imagen,           nombre,             texto,        color,                        offsetY
-        {Stop,               "Stop",             "Stop",       Config::Display::COLOR_INFO, 50},
-        {Difuntos,           "Difuntos",         "Difuntos",   Config::Display::COLOR_INFO, 70},
-        {Misa,               "Misa",             "Misa",       Config::Display::COLOR_INFO, 50},
-        {CalefaccionOn,      "CalefaccionOn",    "Encender",   Config::Display::COLOR_INFO, 50},
-        {CalefaccionOff,     "CalefaccionOff",   "Apagar",     Config::Display::COLOR_INFO, 50},
-        {Campanario,         "Campanario",       "Campanario", TFT_YELLOW,                  65},
-        {NoInternet,         "NoInternet",       "Sin Red",    Config::Display::COLOR_INFO, 50},
-        {CalefaccionTemp,    "CalefaccionTemp",  "Temporizada",Config::Display::COLOR_INFO, 45},
-        {nullptr,            "NuevaOpcion",      "Nueva Op.",  Config::Display::COLOR_INFO, 50}  // Placeholder
-    };    
-        //---------------------------------------------------------
-        // Funciones de inicialización y configuración del display
-        //--------------------------------------------------------
-        /**
-         * @brief Limpia completamente la pantalla del dispositivo M5Dial.
-         * 
-         * @details Esta función borra todo el contenido de la pantalla rellenándola
-         *          con el color de fondo definido en COLOR_FONDO.
-         * 
-         * @note Utiliza la biblioteca M5Dial para acceder a las funciones de display.
-         */
-        void ClearPantalla (void)
-        {
-            M5Dial.Display.fillScreen(Config::Display::COLOR_FONDO);
-        }
+        SpriteData SPRITES[Config::Display::MAX_SPRITES] = {
+            // imagen,           nombre,             texto,        color,                        offsetY
+            {Stop,               "Stop",             "Stop",       Config::Display::COLOR_INFO, 50},
+            {Difuntos,           "Difuntos",         "Difuntos",   Config::Display::COLOR_INFO, 70},
+            {Misa,               "Misa",             "Misa",       Config::Display::COLOR_INFO, 50},
+            {CalefaccionOn,      "CalefaccionOn",    "Encender",   Config::Display::COLOR_INFO, 50},
+            {CalefaccionOff,     "CalefaccionOff",   "Apagar",     Config::Display::COLOR_INFO, 50},
+            {Campanario,         "Campanario",       "Campanario", TFT_YELLOW,                  65},
+            {NoInternet,         "NoInternet",       "Sin Red",    Config::Display::COLOR_INFO, 50},
+            {CalefaccionTemp,    "CalefaccionTemp",  "Temporizada",Config::Display::COLOR_INFO, 45}
+        };    
+
+    // ---------------------------------------------------------------------------
+    // Funciones de gestión del display
+    // ---------------------------------------------------------------------------
 
         /**
-         * @brief Reduce gradualmente el brillo de la pantalla hasta apagarlo
+         * @brief Inicializa la pantalla del dispositivo M5Dial
          * 
-         * @details Este método disminuye progresivamente el brillo de la pantalla M5Stack
-         *          desde el nivel actual hasta 0, creando un efecto de desvanecimiento suave.
-         *          El proceso se realiza con un retraso de 20ms entre cada decremento de brillo.
+         * @details Configura e inicializa la pantalla del dispositivo M5Dial utilizando
+         *          la configuración predeterminada del M5. Establece los parámetros
+         *          iniciales necesarios para el funcionamiento de la pantalla.
          * 
-         * @note Al finalizar, establece la variable lBrillo a 0
+         * @note Requiere que el objeto M5Dial esté correctamente definido
+         * @note Debe llamarse en setup() antes de usar funciones de display
          * 
-         * @return void
+         * @see  M5Dial.begin()
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
          */
-        void BajaBrillo (void)
-        {
-            int nBrilloActual = M5.Display.getBrightness();
-            for (int nBrillo = nBrilloActual; nBrillo > Config::Display::BRILLO_MINIMO; nBrillo -- )
+            void InicioDisplay (void)
             {
-                M5.Display.setBrightness(nBrillo);
-                delay(20);
+                DBG_DISPLAY("InicioDisplay->Iniciando display M5Dial");
+                auto cfg = M5.config();
+                M5Dial.begin(cfg, true, false);
             }
-            M5.Display.setBrightness(Config::Display::BRILLO_MINIMO); // Asegura que el brillo esté en el nivel mínimo definido
-            lBrillo = 0;
-        }
 
         /**
-         * @brief Incrementa gradualmente el brillo de la pantalla hasta alcanzar el valor especificado
+         * @brief Limpia completamente la pantalla estableciendo fondo negro
          * 
-         * Esta función aumenta el brillo de la pantalla de forma progresiva desde 0 hasta el valor
-         * indicado, creando un efecto de fade-in suave. Cada incremento tiene una pausa de 20ms.
-         * Al finalizar, establece el indicador de brillo (lBrillo) a 1.
+         * @details Borra todo el contenido visible de la pantalla M5Dial estableciendo
+         *          todos los píxeles al color de fondo definido (negro). Es una operación
+         *          rápida y optimizada que se puede usar frecuentemente.
          * 
-         * @param nBrilloFinal Valor final de brillo al que se desea llegar (0-255)
-         */
-        void SubeBrillo (int nBrilloFinal)
-        {
-            for (int nBrillo = 0; nBrillo < nBrilloFinal; nBrillo ++ )
+         * @note Utiliza el color definido en Config::Display::COLOR_FONDO
+         * @note Operación hardware optimizada, no causa problemas de rendimiento
+         * @note Útil antes de mostrar nuevo contenido para evitar solapamientos
+         * 
+         * @see Config::Display::COLOR_FONDO
+         * @see MensajeIconoTexto() - Usa ClearPantalla() automáticamente
+         * @see MostrarSprite() - Usa ClearPantalla() automáticamente
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
+            void ClearPantalla (void)
             {
-                M5.Display.setBrightness(nBrillo);
-                delay(20);
+                M5Dial.Display.fillScreen(Config::Display::COLOR_FONDO);
             }
-            lBrillo = 1;
-        }
 
         /**
-         * @brief Establece el brillo de la pantalla M5Stack al máximo.
+         * @brief Baja el brillo gradualmente hasta cero (apaga pantalla)
          * 
-         * Esta función ajusta el brillo de la pantalla al valor máximo (127) y
-         * actualiza la variable de estado 'lBrillo' a 1 para indicar que el brillo
-         * está al máximo.
+         * @details Reduce progresivamente el brillo desde el nivel actual hasta cero,
+         *          creando una transición suave de apagado. Actualiza automáticamente
+         *          la variable lBrillo a false.
          * 
-         * @note Requiere que el objeto M5 esté inicializado previamente.
+         * @note **TRANSICIÓN SUAVE:** Decrementa gradualmente para evitar apagado brusco
+         * @note **ACTUALIZA ESTADO:** Establece lBrillo = false al finalizar
+         * @note **FUNCIÓN BLOQUEANTE:** No retorna hasta completar la transición
+         * @note **APAGADO COMPLETO:** Brillo final = 0 (pantalla totalmente apagada)
+         * 
+         * @see lBrillo - Variable global de estado actualizada
+         * @see SubeBrillo() - Función opuesta para encender
+         * @see BrilloFull() - Encendido a máximo brillo
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */
+            void BajaBrillo (void)
+            {
+                int nBrilloActual = M5.Display.getBrightness();
+                for (int nBrillo = nBrilloActual; nBrillo > Config::Display::BRILLO_MINIMO; nBrillo -- )
+                {
+                    M5.Display.setBrightness(nBrillo);
+                    delay(20);
+                }
+                M5.Display.setBrightness(Config::Display::BRILLO_MINIMO); // Asegura que el brillo esté en el nivel mínimo definido
+                lBrillo = 0;
+            }
+
+        /**
+         * @brief Sube el brillo de forma gradual hasta el nivel especificado
+         * 
+         * @details Aumenta progresivamente el brillo desde el nivel actual hasta el valor
+         *          objetivo, creando una transición suave y agradable. Actualiza la variable
+         *          global lBrillo según el resultado final.
+         * 
+         * @param nBrilloFinal Nivel de brillo objetivo (0-255)
+         *                     - 0: Apaga completamente la pantalla
+         *                     - 1-254: Niveles intermedios de brillo
+         *                     - 255: Brillo máximo
+         * 
+         * @note **TRANSICIÓN SUAVE:** Incrementa gradualmente para evitar cambios bruscos
+         * @note **ACTUALIZA ESTADO:** lBrillo = true si nBrilloFinal > 0, false si = 0
+         * @note **FUNCIÓN BLOQUEANTE:** No retorna hasta completar la transición
+         * 
+         * @warning Valores fuera del rango 0-255 pueden causar comportamiento indefinido
+         * @warning La función bloquea durante la transición (varios milisegundos)
+         * 
+         * @see lBrillo - Variable global de estado
+         * @see BajaBrillo() - Función opuesta
+         * @see BrilloFull() - Wrapper para brillo máximo
+         * @see Config::Display::BRILLO_MAXIMO
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
+            void SubeBrillo (int nBrilloFinal)
+            {
+                for (int nBrillo = 0; nBrillo < nBrilloFinal; nBrillo ++ )
+                {
+                    M5.Display.setBrightness(nBrillo);
+                    delay(20);
+                }
+                lBrillo = 1;
+            }
+
+        /**
+         * @brief Establece brillo máximo con transición suave
+         * 
+         * @details Función de conveniencia que sube el brillo al nivel máximo (255)
+         *          de forma gradual y actualiza el estado a encendido. Equivale a
+         *          llamar SubeBrillo(255).
+         * 
+         * @note **CONVENIENCIA:** Wrapper de SubeBrillo(Config::Display::BRILLO_MAXIMO)
+         * @note **BRILLO MÁXIMO:** Establece el brillo al valor máximo definido (255)
+         * @note **ACTUALIZA ESTADO:** Establece lBrillo = true automáticamente
+         * @note **TRANSICIÓN SUAVE:** Incrementa gradualmente hasta el máximo
+         * 
+         * @see SubeBrillo() - Función base que implementa la lógica
+         * @see BajaBrillo() - Función opuesta para apagar
+         * @see Config::Display::BRILLO_MAXIMO - Constante de brillo máximo
+         * @see lBrillo - Variable de estado actualizada
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
          */
         void BrilloFull (void)
         {
@@ -92,105 +166,374 @@
             lBrillo = 1;
         }
 
+    // ---------------------------------------------------------------------------
+    // Funciones de mensajes de menu en pantalla
+    // ---------------------------------------------------------------------------
+
         /**
-         * @brief Muestra un icono (sprite) y un texto centrado en la pantalla.
-         *
-         * Esta función limpia la pantalla, dibuja un sprite centrado con un pequeño zoom,
-         * y luego muestra un texto centrado debajo del sprite, con el color y desplazamiento vertical especificados.
-         *
-         * @param spriteIndex Índice del sprite a mostrar en el arreglo aSprites.
-         * @param texto Texto a mostrar debajo del icono.
-         * @param colorTexto (Opcional) Color del texto. Por defecto es COLOR_INFO.
-         * @param offsetY (Opcional) Desplazamiento vertical del texto respecto al centro de la pantalla. Por defecto es 50.
+         * @brief Muestra un mensaje personalizado con icono y texto configurables
+         * 
+         * @details Función genérica que permite mostrar cualquier sprite con texto
+         *          personalizable, color y posición configurables. Es la función base
+         *          utilizada por muchas otras funciones de mensajes del sistema.
+         *          
+         *          **PROCESO EJECUTADO:**
+         *          1. Limpia completamente la pantalla
+         *          2. Inicializa automáticamente el sprite si es necesario (lazy loading)
+         *          3. Renderiza el sprite centrado con zoom 1.2x
+         *          4. Configura fuente, color y alineación del texto
+         *          5. Dibuja el texto en la posición calculada
+         * 
+         * @param spriteIndex Índice del sprite a mostrar (usar Config::SpriteIndex::*)
+         * @param texto Texto a mostrar junto al sprite (string terminado en null)
+         * @param colorTexto Color del texto en formato RGB565 (por defecto: CONFIG_INFO)
+         * @param offsetY Desplazamiento vertical del texto desde el centro (por defecto: 50px)
+         * 
+         * @note **LIMPIEZA AUTOMÁTICA:** Siempre limpia la pantalla antes de mostrar contenido
+         * @note **LAZY LOADING:** Inicializa automáticamente el sprite si es necesario
+         * @note **CENTRADO:** Sprite centrado en pantalla, posición Y-20 píxeles
+         * @note **ZOOM:** Sprite renderizado con escala 1.2x para mejor visibilidad
+         * @note **FUENTE:** FreeSans9pt7b con tamaño 2, centrado horizontalmente
+         * 
+         * @warning spriteIndex debe ser válido (0 a MAX_SPRITES-1)
+         * @warning texto no debe ser nullptr
+         * @warning Si falla la inicialización del sprite, la función retorna sin mostrar nada
+         * 
+         * @see SPRITES[] - Array de configuración de sprites
+         * @see Config::SpriteIndex - Índices válidos para sprites
+         * @see SpriteData::inicializar() - Inicialización automática
+         * @see ClearPantalla() - Limpieza de pantalla
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
          */
         void MensajeIconoTexto(int spriteIndex, const char* texto, uint16_t colorTexto = Config::Display::COLOR_INFO, int offsetY = 50) 
         {
             ClearPantalla();
             int x = M5Dial.Display.width() / 2;
             int y = M5Dial.Display.height() / 2;
-            M5Canvas*& sprite = aSprites[spriteIndex];
-            sprite->pushRotateZoom(x, y-20, 0, 1.2, 1.2, Config::Display::COLOR_TRANSPARENTE);
+
+            if (!SPRITES[spriteIndex].inicializar()) {
+                DBG_DISPLAY_PRINTF("MensajeIconoTexto() - Error inicializando sprite %d", spriteIndex);
+                return;
+            }
+            SPRITES[spriteIndex].canvas->pushRotateZoom(x, y-20, 0, 1.2, 1.2, Config::Display::COLOR_TRANSPARENTE);
             M5Dial.Display.setTextDatum(middle_center);
             M5Dial.Display.setTextColor(colorTexto, Config::Display::COLOR_FONDO);
             M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
             M5Dial.Display.setTextSize(2);
             M5Dial.Display.drawString(texto, x, y + offsetY);
         }
+        /**
+         * @brief Muestra el mensaje de inicio del campanario
+         * 
+         * @details Presenta la pantalla de bienvenida con el icono del campanario
+         *          y texto "Campanario" en color amarillo. Es la primera pantalla
+         *          que ve el usuario al inicializar el sistema.
+         * 
+         * @note Utiliza MensajeIconoTexto() con configuración específica:
+         *       - Sprite: CAMPANARIO
+         *       - Texto: "Campanario"
+         *       - Color: TFT_YELLOW
+         *       - Offset Y: 65 píxeles
+         * 
+         * @see MensajeIconoTexto() - Función base utilizada
+         * @see Config::SpriteIndex::CAMPANARIO - Sprite mostrado
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */
         void MensajeInicio (void)
         {
-            MensajeIconoTexto(iCampanario, "Campanario", TFT_YELLOW, 65);
+            MensajeIconoTexto(Config::SpriteIndex::CAMPANARIO, "Campanario", TFT_YELLOW, 65);
             DBG_DISPLAY("Display: Mensaje de inicio mostrado");
         }
+        /**
+         * @brief Muestra el estado de misas de difuntos
+         * 
+         * @details Presenta en pantalla el icono y texto correspondiente al estado
+         *          de misas de difuntos. Utiliza la configuración predefinida del
+         *          sprite DIFUNTOS para mostrar la información visual.
+         * 
+         * @note Utiliza MostrarSprite() que incluye configuración automática:
+         *       - Imagen, texto, color y offset desde array SPRITES[]
+         *       - Limpieza automática de pantalla
+         *       - Centrado automático del sprite y texto
+         * 
+         * @see MostrarSprite() - Función utilizada para renderizado
+         * @see Config::SpriteIndex::DIFUNTOS - Índice del sprite mostrado
+         * @see SPRITES[DIFUNTOS] - Configuración específica utilizada
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void MensajeDifuntos (void)
         {
-            MensajeIconoTexto(iDifuntos, GET_SPRITE_TEXT(iDifuntos), GET_SPRITE_COLOR(iDifuntos), GET_SPRITE_OFFSET(iDifuntos)); 
+            MostrarSprite(Config::SpriteIndex::DIFUNTOS);
             DBG_DISPLAY("Display: Mensaje de Difuntos mostrado");
         }
+        /**
+         * @brief Muestra el estado de misas regulares
+         * 
+         * @details Presenta en pantalla el icono y texto correspondiente al estado
+         *          de misas regulares. Utiliza la configuración predefinida del
+         *          sprite MISA para mostrar la información visual.
+         * 
+         * @note Utiliza MostrarSprite() que incluye configuración automática:
+         *       - Imagen, texto, color y offset desde array SPRITES[]
+         *       - Limpieza automática de pantalla
+         *       - Centrado automático del sprite y texto
+         * 
+         * @see MostrarSprite() - Función utilizada para renderizado
+         * @see Config::SpriteIndex::MISA - Índice del sprite mostrado
+         * @see SPRITES[MISA] - Configuración específica utilizada
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void MensajeMisa (void)
         {
-            MensajeIconoTexto(iMisa, GET_SPRITE_TEXT(iMisa), GET_SPRITE_COLOR(iMisa), GET_SPRITE_OFFSET(iMisa));
+            MostrarSprite(Config::SpriteIndex::MISA);
             DBG_DISPLAY("Display: Mensaje de Misa mostrado");
         }
+        /**
+         * @brief Muestra el estado de parada del campanario
+         * 
+         * @details Presenta en pantalla el icono y texto correspondiente al estado
+         *          de parada completa del sistema de campanario. Indica que no
+         *          hay actividad programada en el sistema.
+         * 
+         * @note Utiliza MostrarSprite() que incluye configuración automática:
+         *       - Imagen, texto, color y offset desde array SPRITES[]
+         *       - Limpieza automática de pantalla
+         *       - Centrado automático del sprite y texto
+         * 
+         * @see MostrarSprite() - Función utilizada para renderizado
+         * @see Config::SpriteIndex::STOP - Índice del sprite mostrado
+         * @see SPRITES[STOP] - Configuración específica utilizada
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void MensajeStop (void)
         {
-            MensajeIconoTexto(iStop, GET_SPRITE_TEXT(iStop), GET_SPRITE_COLOR(iStop), GET_SPRITE_OFFSET(iStop));
+            MostrarSprite(Config::SpriteIndex::STOP);
             DBG_DISPLAY("Display: Mensaje de Stop mostrado");
         }
+        /**
+         * @brief Muestra el estado de calefacción encendida
+         * 
+         * @details Presenta en pantalla el icono y texto correspondiente al estado
+         *          de calefacción activada manualmente. Indica que el sistema
+         *          de calefacción está funcionando activamente.
+         * 
+         * @note Utiliza MostrarSprite() que incluye configuración automática:
+         *       - Imagen, texto, color y offset desde array SPRITES[]
+         *       - Limpieza automática de pantalla
+         *       - Centrado automático del sprite y texto
+         * 
+         * @see MostrarSprite() - Función utilizada para renderizado
+         * @see Config::SpriteIndex::CALEFACCION_ON - Índice del sprite mostrado
+         * @see SPRITES[CALEFACCION_ON] - Configuración específica utilizada
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void MensajeCalefaccionOn (void)
         {
-            MensajeIconoTexto(iCalefaccionOn, GET_SPRITE_TEXT(iCalefaccionOn), GET_SPRITE_COLOR(iCalefaccionOn), GET_SPRITE_OFFSET(iCalefaccionOn));
+            MostrarSprite(Config::SpriteIndex::CALEFACCION_ON);
             DBG_DISPLAY("Display: Mensaje de Calefacción On mostrado");
         }
+        /**
+         * @brief Muestra el estado de calefacción apagada
+         * 
+         * @details Presenta en pantalla el icono y texto correspondiente al estado
+         *          de calefacción desactivada manualmente. Indica que el sistema
+         *          de calefacción está parado o en standby.
+         * 
+         * @note Utiliza MostrarSprite() que incluye configuración automática:
+         *       - Imagen, texto, color y offset desde array SPRITES[]
+         *       - Limpieza automática de pantalla
+         *       - Centrado automático del sprite y texto
+         * 
+         * @see MostrarSprite() - Función utilizada para renderizado
+         * @see Config::SpriteIndex::CALEFACCION_OFF - Índice del sprite mostrado
+         * @see SPRITES[CALEFACCION_OFF] - Configuración específica utilizada
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void MensajeCalefaccionOff (void)
         {
-            MensajeIconoTexto(iCalefaccionOff, GET_SPRITE_TEXT(iCalefaccionOff), GET_SPRITE_COLOR(iCalefaccionOff), GET_SPRITE_OFFSET(iCalefaccionOff));
+            MostrarSprite(Config::SpriteIndex::CALEFACCION_OFF);
             DBG_DISPLAY("Display: Mensaje de Calefacción Off mostrado");
         }
+    // ---------------------------------------------------------------------------
+    // Funciones de mensajes auxiliares en pantalla
+    // ---------------------------------------------------------------------------        
+        /**
+         * @brief Muestra hora limpiando completamente la pantalla
+         * 
+         * @details Wrapper de MostrarHora() que siempre limpia la pantalla antes
+         *          de mostrar la hora. Útil para cambios completos de pantalla
+         *          o primera visualización de hora.
+         * 
+         * @param nHora Hora (0-23)
+         * @param nMinutos Minutos (0-59)
+         * @param nSegundos Segundos (0-59)
+         * 
+         * @note Equivale a MostrarHora(nHora, nMinutos, nSegundos, true)
+         * @note Incluye sprite del campanario como fondo
+         * @note Limpia completamente la pantalla antes de mostrar
+         * 
+         * @see MostrarHora() - Función base implementada
+         * @see EscribeHora() - Versión optimizada sin limpiar
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */
         void MensajeHora (int nHora, int nMinutos, int nSegundos)
         {
             MostrarHora(nHora, nMinutos, nSegundos, true); 
             DBG_DISPLAY_PRINTF("Hora mostrada: %02d:%02d:%02d", nHora, nMinutos, nSegundos);
         }
+        /**
+         * @brief Actualiza solo la hora sin limpiar pantalla
+         * 
+         * @details Wrapper de MostrarHora() optimizado para actualizaciones
+         *          frecuentes (cada segundo). Solo borra y actualiza la zona
+         *          de hora, manteniendo el resto del contenido en pantalla.
+         * 
+         * @param nHora Hora (0-23)
+         * @param nMinutos Minutos (0-59)
+         * @param nSegundos Segundos (0-59)
+         * 
+         * @note Equivale a MostrarHora(nHora, nMinutos, nSegundos, false)
+         * @note Optimizado para updates periódicos (cada segundo)
+         * @note Solo borra la región de texto de hora antes de actualizar
+         * @note Preserva sprites y contenido de fondo existente
+         * 
+         * @see MostrarHora() - Función base implementada
+         * @see MensajeHora() - Versión que limpia completamente
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void EscribeHora (int nHora, int nMinutos, int nSegundos)
         {
             MostrarHora(nHora, nMinutos, nSegundos, false);
             DBG_DISPLAY_PRINTF("Hora escrita: %02d:%02d:%02d", nHora, nMinutos, nSegundos);
         }
+        /**
+         * @brief Actualiza fecha y hora sin limpiar pantalla
+         * 
+         * @details Wrapper de MostrarFechaHora() optimizado para actualizaciones
+         *          periódicas. Solo actualiza las zonas de fecha y hora,
+         *          manteniendo sprites y contenido existente en pantalla.
+         * 
+         * @param nHora Hora (0-23)
+         * @param nMinutos Minutos (0-59)
+         * @param nSegundos Segundos (0-59)
+         * @param nDia Día del mes (1-31)
+         * @param nMes Mes (1-12)
+         * @param nAno Año (formato 2 dígitos, ej: 24 para 2024)
+         * 
+         * @note Equivale a MostrarFechaHora(..., false)
+         * @note Optimizado para actualizaciones periódicas
+         * @note Solo borra las regiones específicas de fecha y hora
+         * @note Preserva sprites y contenido de fondo existente
+         * 
+         * @see MostrarFechaHora() - Función base implementada
+         * @see MensajeFechaHora() - Versión que limpia completamente
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void EscribeFechaHora (int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno)
         {
             MostrarFechaHora(nHora, nMinutos, nSegundos, nDia, nMes, nAno, false);
             DBG_DISPLAY_PRINTF("Fecha y Hora escrita: %02d/%02d/%02d %02d:%02d:%02d", nDia, nMes, nAno, nHora, nMinutos, nSegundos);
         }
+        /**
+         * @brief Muestra fecha y hora limpiando completamente la pantalla
+         * 
+         * @details Wrapper de MostrarFechaHora() que siempre limpia la pantalla
+         *          antes de mostrar fecha y hora. Útil para cambios completos
+         *          de pantalla o primera visualización.
+         * 
+         * @param nHora Hora (0-23)
+         * @param nMinutos Minutos (0-59)
+         * @param nSegundos Segundos (0-59)
+         * @param nDia Día del mes (1-31)
+         * @param nMes Mes (1-12)
+         * @param nAno Año (formato 2 dígitos, ej: 24 para 2024)
+         * 
+         * @note Equivale a MostrarFechaHora(..., true)
+         * @note Útil para inicialización o cambios de pantalla completos
+         * @note Limpia completamente la pantalla antes de mostrar
+         * 
+         * @see MostrarFechaHora() - Función base implementada
+         * @see EscribeFechaHora() - Versión optimizada sin limpiar
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void MensajeFechaHora (int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno)
         {
             MostrarFechaHora(nHora, nMinutos, nSegundos, nDia, nMes, nAno, true); 
             DBG_DISPLAY_PRINTF("Fecha y Hora mostrada: %02d/%02d/%02d %02d:%02d:%02d", nDia, nMes, nAno, nHora, nMinutos, nSegundos);
         }   
         /**
-         * @brief Muestra la hora en el display.
+         * @brief Muestra fecha y hora limpiando completamente la pantalla
          * 
-         * Esta función muestra la hora especificada por los parámetros nHora, nMinutos y nSegundos
-         * en el display principal. Si el parámetro limpiar es verdadero, limpia la pantalla antes
-         * de mostrar la hora y actualiza el sprite correspondiente.
+         * @details Wrapper de MostrarFechaHora() que siempre limpia la pantalla
+         *          antes de mostrar fecha y hora. Útil para cambios completos
+         *          de pantalla o primera visualización.
          * 
-         * @param nHora        Hora a mostrar (0-23).
-         * @param nMinutos     Minutos a mostrar (0-59).
-         * @param nSegundos    Segundos a mostrar (0-59).
-         * @param limpiar      Si es true, limpia la pantalla antes de mostrar la hora (por defecto es false).
-         */
+         * @param nHora Hora (0-23)
+         * @param nMinutos Minutos (0-59)
+         * @param nSegundos Segundos (0-59)
+         * @param nDia Día del mes (1-31)
+         * @param nMes Mes (1-12)
+         * @param nAno Año (formato 2 dígitos, ej: 24 para 2024)
+         * 
+         * @note Equivale a MostrarFechaHora(..., true)
+         * @note Útil para inicialización o cambios de pantalla completos
+         * @note Limpia completamente la pantalla antes de mostrar
+         * 
+         * @see MostrarFechaHora() - Función base implementada
+         * @see EscribeFechaHora() - Versión optimizada sin limpiar
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
         void MostrarHora(int nHora, int nMinutos, int nSegundos, bool limpiar) 
         {
             if (limpiar) ClearPantalla();
             int x = M5Dial.Display.width() / 2;
             int y = ( M5Dial.Display.height()  / 2 );
             if (limpiar) {
-                M5Canvas*& sprite = aSprites[iCampanario];
+
+            if (!SPRITES[Config::SpriteIndex::CAMPANARIO].inicializar()) return;
+            M5Canvas*& sprite = SPRITES[Config::SpriteIndex::CAMPANARIO].canvas;                
                 sprite->pushRotateZoom(x, y-20, 0, 1.0, 1.0, Config::Display::COLOR_TRANSPARENTE);
             }
 
             if (nHora == 255 && nMinutos == 255 && nSegundos == 255) {
-                //snprintf(buffer, sizeof(buffer), "--:--:--");
-                M5Canvas*& sprite = aSprites[iNoInternet];
+                if (!SPRITES[Config::SpriteIndex::NO_INTERNET].inicializar()) return;
+                M5Canvas*& sprite = SPRITES[Config::SpriteIndex::NO_INTERNET].canvas;
                 sprite->pushRotateZoom(x, y+60, 0, 0.7, 0.7, Config::Display::COLOR_TRANSPARENTE);
             }else{
                 if (!limpiar) {
@@ -206,7 +549,31 @@
             }
             
         }
-
+        /**
+         * @brief Muestra fecha y hora limpiando completamente la pantalla
+         * 
+         * @details Wrapper de MostrarFechaHora() que siempre limpia la pantalla
+         *          antes de mostrar fecha y hora. Útil para cambios completos
+         *          de pantalla o primera visualización.
+         * 
+         * @param nHora Hora (0-23)
+         * @param nMinutos Minutos (0-59)
+         * @param nSegundos Segundos (0-59)
+         * @param nDia Día del mes (1-31)
+         * @param nMes Mes (1-12)
+         * @param nAno Año (formato 2 dígitos, ej: 24 para 2024)
+         * 
+         * @note Equivale a MostrarFechaHora(..., true)
+         * @note Útil para inicialización o cambios de pantalla completos
+         * @note Limpia completamente la pantalla antes de mostrar
+         * 
+         * @see MostrarFechaHora() - Función base implementada
+         * @see EscribeFechaHora() - Versión optimizada sin limpiar
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */
         void MostrarFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno, bool limpiar) 
         {
             if (limpiar) ClearPantalla();
@@ -214,8 +581,8 @@
             int y = ( M5Dial.Display.height()  / 2 );
     
             if (nHora == 255 && nMinutos == 255 && nSegundos == 255) {
-                //snprintf(buffer, sizeof(buffer), "--:--:--");
-                M5Canvas*& sprite = aSprites[iNoInternet];
+                if (!SPRITES[Config::SpriteIndex::NO_INTERNET].inicializar()) return;
+                M5Canvas*& sprite = SPRITES[Config::SpriteIndex::NO_INTERNET].canvas;
                 sprite->pushRotateZoom(x, y+60, 0, 0.7, 0.7, Config::Display::COLOR_TRANSPARENTE);
             }else{
                 if (!limpiar) {
@@ -235,6 +602,40 @@
             }
             
         }
+        /**
+         * @brief Muestra mensaje de temporización activa con minutos restantes
+         * 
+         * @details Presenta en pantalla un mensaje indicando que hay una temporización
+         *          activa en el sistema, mostrando los minutos restantes en formato legible.
+         *          Usado principalmente para notificaciones del sistema de calefacción temporizada.
+         *          
+         *          **PROCESO EJECUTADO:**
+         *          1. Limpia pantalla completa (siempre)
+         *          2. Opcionalmente limpia otra vez (si lLimpiar=true, redundante)
+         *          3. Borra selectivamente zona de texto (si lLimpiar=false)
+         *          4. Renderiza "Temporizacion" en línea superior (Y-30)
+         *          5. Renderiza "X min" en línea inferior (Y+40)
+         * 
+         * @param nMinutos Número de minutos a mostrar en el mensaje (rango típico: 1-120)
+         * @param lLimpiar true: limpia pantalla completa (redundante), false: solo actualiza zona texto
+         * 
+         * @note **LIMPIEZA REDUNDANTE:** Siempre limpia al inicio, parámetro lLimpiar parece innecesario
+         * @note **FORMATO MENSAJE:** "Temporizacion" (línea superior) + "X min" (línea inferior)
+         * @note **POSICIONES:** Título en Y-30 (arriba), Minutos en Y+40 (abajo)
+         * @note **ZONA BORRADO:** Si lLimpiar=false, borra rectángulo 120x20 en posición de minutos
+         * @note **FUENTE:** FreeSans9pt7b con tamaño 2, centrado horizontalmente
+         * 
+         * @todo Revisar lógica de lLimpiar que parece redundante con ClearPantalla() inicial
+         * @todo Considerar añadir validación de rango para nMinutos
+         * 
+         * @see MostrarCalefaccionTemporizada() - Función relacionada para countdown detallado
+         * @see Config::Display::COLOR_INFO - Color del texto utilizado
+         * @see Config::Display::COLOR_FONDO - Color de fondo para borrado
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-09-10
+         */        
         void MensajeTemporizacion (int nMinutos, bool lLimpiar)
         {
  
@@ -256,7 +657,43 @@
             snprintf(buffer, sizeof(buffer), " %d min", nMinutos);
             M5Dial.Display.drawString(buffer, x, y + 40);
         }
-
+        /**
+         * @brief Muestra countdown de calefacción temporizada con tiempo restante
+         * 
+         * @details Presenta el sprite de calefacción temporal junto con el tiempo restante
+         *          en formato HH:MM:SS. Utilizado para mostrar el countdown visual cuando
+         *          la calefacción está en modo temporal automático con tiempo límite.
+         *          
+         *          **PROCESO EJECUTADO:**
+         *          1. Limpia pantalla y muestra sprite CALEFACCION_TEMP (si limpiar=true)
+         *          2. Sprite centrado con escala 1.2x en posición Y-15
+         *          3. Borra zona de texto de tiempo (siempre)
+         *          4. Renderiza tiempo restante en formato HH:MM:SS en posición Y+65
+         * 
+         * @param nHora Horas restantes del countdown (0-23)
+         * @param nMinutos Minutos restantes del countdown (0-59)
+         * @param nSegundos Segundos restantes del countdown (0-59)
+         * @param limpiar true: limpia pantalla y muestra sprite CALEFACCION_TEMP, false: solo actualiza tiempo
+         * 
+         * @note **SPRITE CALEFACCIÓN:** Si limpiar=true, muestra CALEFACCION_TEMP centrado con escala 1.2x
+         * @note **POSICIÓN SPRITE:** Centro X, Centro Y-15 píxeles (ligeramente arriba)
+         * @note **BORRADO SELECTIVO:** Siempre borra rectángulo 120x20 en zona de tiempo antes de actualizar
+         * @note **FORMATO TIEMPO:** HH:MM:SS con separadores ":" y padding con ceros
+         * @note **POSICIÓN TIEMPO:** Centro X, Centro Y + 65 píxeles (debajo del sprite)
+         * @note **OPTIMIZACIÓN:** Si limpiar=false, solo actualiza zona de texto (para updates frecuentes)
+         * 
+         * @warning Si falla inicialización del sprite CALEFACCION_TEMP, la función retorna sin mostrar nada
+         * @warning Los valores de tiempo deben estar en rangos válidos (HH: 0-23, MM/SS: 0-59)
+         * 
+         * @see Config::SpriteIndex::CALEFACCION_TEMP - Sprite de calefacción temporal mostrado
+         * @see MensajeTemporizacion() - Función relacionada para mensaje simple de minutos
+         * @see Config::Display::COLOR_INFO - Color del texto del countdown
+         * @see Config::Display::COLOR_FONDO - Color para borrado selectivo
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-09-10
+         */
         void MostrarCalefaccionTemporizada (int nHora, int nMinutos, int nSegundos, bool limpiar)
         {
             int x = M5Dial.Display.width() / 2;
@@ -265,7 +702,8 @@
             if (limpiar) 
             {
                 ClearPantalla();
-                M5Canvas*& sprite = aSprites[iCalefaccionTemp];
+                if (!SPRITES[Config::SpriteIndex::CALEFACCION_TEMP].inicializar()) return;
+                M5Canvas*& sprite = SPRITES[Config::SpriteIndex::CALEFACCION_TEMP].canvas;
                 sprite->pushRotateZoom(x, y-15, 0, 1.2, 1.2, Config::Display::COLOR_TRANSPARENTE);
             }
 
@@ -280,72 +718,79 @@
             
         }
 
+    // ---------------------------------------------------------------------------
+    // Funciones Sprites    
+    // ---------------------------------------------------------------------------
         /**
-         * @brief Crea los sprites del menú principal.
-         *
-         * Esta función inicializa los diferentes sprites utilizados en el menú principal,
-         * asignando a cada uno su icono correspondiente. Los sprites incluyen las opciones
-         * de detener, misa, difuntos, calefacción encendida/apagada y campanario.
-         *
-         * No recibe parámetros ni devuelve ningún valor.
-         */
-        void CreaSpritesMenu (void)
-        {
-            CreaSpriteMenu(aSprites[iStop], IconoStop);
-            CreaSpriteMenu(aSprites[iMisa], IconoMisa);
-            CreaSpriteMenu(aSprites[iDifuntos], IconoDifuntos);
-            CreaSpriteMenu(aSprites[iCalefaccionOn], IconoCalefaccionOn);
-            CreaSpriteMenu(aSprites[iCalefaccionOff], IconoCalefaccionOff);
-            CreaSpriteMenu(aSprites[iCampanario], IconoCampanario);
-            CreaSpriteMenu(aSprites[iNoInternet], IconoNoInternet);
-            CreaSpriteMenu(aSprites[iCalefaccionTemp], IconoCalefaccionTemp);
-        }
-
-        /**
-         * @brief Crea un sprite de menú y, opcionalmente, dibuja una imagen JPG en él.
+         * @brief Muestra un sprite centrado con su texto asociado configurado automáticamente
          * 
-         * @param[out] sprite Referencia al puntero donde se almacenará el nuevo objeto M5Canvas creado.
-         * @param[in] image   Puntero a los datos de la imagen JPG a dibujar en el sprite (opcional, por defecto nullptr).
+         * @details Función principal para renderizar sprites del sistema campanario. Realiza
+         *          inicialización automática (lazy loading) del sprite si es necesario, limpia
+         *          la pantalla, renderiza el sprite centrado y muestra el texto asociado con
+         *          la configuración específica definida en el array SPRITES[].
+         *          
+         *          **PROCESO EJECUTADO:**
+         *          1. Limpia pantalla completa (siempre)
+         *          2. Valida índice del sprite (rango 0 a MAX_SPRITES-1)
+         *          3. Inicializa sprite automáticamente si no está creado (lazy loading)
+         *          4. Renderiza sprite centrado con escala 1.0x
+         *          5. Configura fuente, color y alineación desde array SPRITES[]
+         *          6. Dibuja texto asociado con offset Y específico del sprite
          * 
-         * @details
-         * - El sprite se crea con un tamaño fijo de 120x120 píxeles.
-         * - Si se proporciona una imagen, se dibuja centrada en el sprite usando drawJpg.
-         * - El sprite se asocia al display principal de M5Dial.
-         */
-        void CreaSpriteMenu (M5Canvas*& sprite, const unsigned char* image = nullptr)
-        {
-            int nAncho = 120;                                                       //Ancho del Sprite
-            int nAlto  = 120;                                                       //Alto del Sprite        
-
-            int x = M5Dial.Display.width() / 2;                                     //X centro de pantalla    
-            int y = M5Dial.Display.height()  / 2;                                   //Y Centro de pantalla            
-
-            sprite = new M5Canvas(&M5.Lcd);
-
-            sprite->createSprite(nAncho, nAlto);                                    //Creamos el Sprite
-            if (image != nullptr) {
-                sprite->drawJpg( image  // data_pointer
-                     , ~0u  // data_length (~0u = auto)
-                     , 0    // X position
-                     , 0    // Y position
-                     , 120 // Width
-                     , 120 // Height
-                     , 0    // X offset
-                     , 0    // Y offset
-                     , 1.0  // X magnification(default = 1.0 , 0 = fitsize , -1 = follow the Y magni)
-                     , 1.0  // Y magnification(default = 1.0 , 0 = fitsize , -1 = follow the X magni)
-                     , datum_t::middle_center
-                );    
-            }   
-        }
+         * @param indice Índice del sprite en el array SPRITES[] (usar Config::SpriteIndex::*)
+         * 
+         * @retval void No retorna valor, pero registra errores en debug si ocurren
+         * 
+         * @note **VALIDACIÓN AUTOMÁTICA:** Verifica que el índice esté en rango válido (0 a MAX_SPRITES-1)
+         * @note **LAZY LOADING:** El canvas se crea automáticamente en primera llamada si no existe
+         * @note **CONFIGURACIÓN AUTOMÁTICA:** Usa configuración del array SPRITES[indice]:
+         *       - Imagen: SPRITES[indice].imagen (datos JPG)
+         *       - Texto: SPRITES[indice].texto
+         *       - Color: SPRITES[indice].color
+         *       - Offset Y: SPRITES[indice].offsetY
+         * @note **POSICIÓN SPRITE:** Centro de pantalla con escala 1.0x (tamaño original)
+         * @note **POSICIÓN TEXTO:** Centro X, Centro Y + offsetY específico del sprite
+         * @note **FUENTE:** FreeSans9pt7b con tamaño 2, alineación centrada
+         * 
+         * @warning **FUNCIÓN COSTOSA:** Primera llamada crea canvas en memoria (operación lenta)
+         * @warning **ÍNDICES INVÁLIDOS:** Se registran en debug pero no causan crash del sistema
+         * @warning **FALLO INICIALIZACIÓN:** Si no se puede crear sprite, función retorna sin mostrar nada
+         * 
+         * @see SPRITES[] - Array de configuración completa de sprites
+         * @see SpriteData::inicializar() - Método de inicialización automática
+         * @see Config::SpriteIndex - Constantes de índices válidos para sprites
+         * @see Config::Display::MAX_SPRITES - Límite máximo de sprites soportados
+         * @see MensajeIconoTexto() - Función alternativa con texto personalizable
+         * 
+         * @since v1.0 - Versión inicial con arrays separados y creación manual
+         * @since v2.0 - Refactorizado para usar SpriteData unificado con lazy loading automático
+         * 
+         * @author Julian Salas Bartolomé
+         * @date 2025-09-10
+         */ 
         void MostrarSprite(int indice) {
-            if (indice >= 0 && indice < 9 && GET_SPRITE_IMAGE(indice) != nullptr) {
-                MensajeIconoTexto(indice, 
-                                 GET_SPRITE_TEXT(indice), 
-                                 GET_SPRITE_COLOR(indice), 
-                                 GET_SPRITE_OFFSET(indice));
-                DBG_DISPLAY_PRINTF("Sprite mostrado: %s", GET_SPRITE_NAME(indice));
-            } else {
-                DBG_DISPLAY_PRINTF("ERROR: Índice sprite inválido: %d", indice);
+             ClearPantalla();
+
+            if (indice < 0 || indice >= Config::Display::MAX_SPRITES) {
+                DBG_DISPLAY_PRINTF("MostrarSprite() - Índice inválido: %d", indice);
+                return;
             }
-        }
+        
+            // ✅ USAR la nueva estructura:
+            if (!SPRITES[indice].inicializar()) {
+                DBG_DISPLAY_PRINTF("MostrarSprite() - Error inicializando sprite %d", indice);
+                return;
+            }
+
+            // Mostrar en el centro de la pantalla
+            int x = M5Dial.Display.width() / 2;
+            int y = M5Dial.Display.height() / 2;
+            SPRITES[indice].canvas->pushRotateZoom(x, y, 0, 1.0, 1.0, TFT_BLACK);
+            M5Dial.Display.setTextDatum(middle_center);
+            M5Dial.Display.setTextColor(SPRITES[indice].color, Config::Display::COLOR_FONDO);
+            M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
+            M5Dial.Display.setTextSize(2);
+            M5Dial.Display.drawString(SPRITES[indice].texto, x, y + SPRITES[indice].offsetY);
+
+            DBG_DISPLAY_PRINTF("MostrarSprite() - Sprite %d (%s) mostrado con texto", indice, SPRITES[indice].nombre);
+        }        

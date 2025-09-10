@@ -9,65 +9,64 @@
         auto cfg = M5.config();
         M5Dial.begin(cfg, true, false);
         
-        InicioDisplay();
-        ClearPantalla();
-        
-        Wire.begin();
-        Wire.setClock(100000);
-        //Wire.setTimeout(1000);
+        InicioDisplay();                                                                        // Inicializa el display y crea los sprites de los menús
+        ClearPantalla();                                                                        // Limpia la pantalla
+        InicializarVariablesGlobales();                                                         // Inicializa las variables globales del sistema
+        I2C_Inicializar();                                                                      // Inicializa la comunicación I2C
 
-        lCambioEstado = true;
-        MensajeInicio();
-        delay(5000);
-        menuActual = menu0;
-        
-        #ifdef DEBUG
-            Serial.println("Setup completado exitosamente");
-        #endif
+        menu.hayQueMostrarCambio = true;                                                        // Fuerza la asignación del menú inicial
+        MensajeInicio();                                                                        // Muestra el mensaje de inicio
+        delay(Config::Timing::DELAY_INICIO_MS);                                                 // Espera para que se inicie el modulo del campanario
+        //MenuState.indiceMenuActivo = menu0;                                                   // Establece el menú inicial 
+        DBG("Setup completado exitosamente");
     }
 
     void loop() {
-        // Alimentar el watchdog para evitar reinicios
-        yield();
         
-        M5Dial.update();                                // Actualizar el estado del M5Dial
-        
-        if (lCambioEstado) {                            // Cambia el menú según el modo
-            AsignaMenu();                               // Asigna el menú correspondiente
-            lCambioEstado = false;
-            nContadorCiclosDisplaySleep = 0;            // Reiniciar el contador de ciclos de sleep del display
-        }
-        
-        // Leer el boton 
-        if (M5Dial.BtnA.wasPressed()) { 
-            ManejarBotonA(); // Manejar el botón A
+        yield();                                                                                // Alimenta el watchdog
+        M5Dial.update();                                                                        // Actualizar el estado del M5Dial
+
+        if (menu.hayQueMostrarCambio) {                                                         // Cambia el menú según el modo
+            AsignaMenu();                                                                       // Asigna el menú correspondiente
+            menu.hayQueMostrarCambio = false;
+            display.contadorCiclosSleep = 0;                                                    // Reiniciar el contador de ciclos de sleep del display
         }
 
-        if   (!lSleep)
-        { 
-            // Leer el encoder
-            ManejarEncoder(); // Manejar el encoder
-/*
-Serial.print("Estado actualizado a");
-Serial.print(nEstado);
-Serial.print("  ");
-Serial.print(nEstadoAnterior);
-Serial.print("  "); 
-Serial.print(nEstadoActual);
-Serial.println("  ");
-*/
+        if (M5Dial.BtnA.wasPressed()) { 
+            ManejarBotonA();                                                                    // Manejar el botón A
         }
-        if (nEstado != EstadoSetTemporizador) {
-            if (millis() - nMilisegundoTemporal > nmsGetEstadoCampanario) { // Cada 500 ms
+
+        if   (!display.estaEnModoSleep)
+        {
+            ManejarEncoder();                                                                   // Manejar el encoder
+        }
+
+        if (campanarioEstado.estadoActual != Config::States::I2CState::SET_TEMPORIZADOR) {
+            if (millis() - nMilisegundoTemporal > Config::Timing::I2C_REQUEST_INTERVAL_MS) { // Cada 500 ms
                 nMilisegundoTemporal = millis();
-                //SolicitarEstadoFechaHora(); // Solicitar la hora al esclavo I2C
-                SolicitarEstadoFechaHoraoTemporizacion(); // Solicitar el estado del campanario al esclavo I2C
-                ActualizarDisplaySleep(); // Actualizar el estado del display
+                SolicitarEstadoFechaHora(true);                                                 // Solicitar la hora al esclavo I2C
+                ActualizarDisplaySleep();                                                       // Actualizar el estado del display
             }
         }
-    
-        // Pequeño delay para evitar saturar el procesador
-        delay(10);
+
+        if (campanarioEstado.estadoActual != Config::States::I2CState::SET_TEMPORIZADOR) {      // Si no estamos en modo configuración de temporizador
+            if (!lComandoRecienEnviado) {                                                       //Si no se ha enviado un comando recientemente
+                // Comportamiento normal: peticiones cada 500ms
+                if (millis() - nMilisegundoTemporal > Config::Timing::I2C_REQUEST_INTERVAL_MS) {    // Cada 500 ms
+                    nMilisegundoTemporal = millis();
+                    SolicitarEstadoFechaHora(true);                                             // Solicitar la hora al esclavo I2C
+                    ActualizarDisplaySleep();                                                   // Actualizar el estado del display
+                }
+            } else {                                                                            //Si se ha enviado un comando recientemente
+                // Comando recién enviado: esperar tiempo de procesamiento
+                if (millis() - nMilisegundoTemporal > Config::Timing::I2C_COMMAND_PROCESSING_DELAY_MS) {    // Esperar 200 ms
+                    DBG("loop->Tiempo de procesamiento completado, reanudando peticiones normales");
+                    lComandoRecienEnviado = false;                                              // Permitir peticiones normales
+                    nMilisegundoTemporal = millis();                                            // Resetear timer para próxima petición
+                }
+            }
+        }        
+        delay(10);                                                                              // Pequeña pausa para evitar sobrecarga
 }
 
 

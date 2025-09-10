@@ -1,10 +1,70 @@
-//
-// Stop
-// Data size = 2059 bytes
-//
-// JFIF, Compression=JPEG, Size: 120 x 120, 24-Bpp
-//
-// for non-Arduino builds...
+/**
+ * @file Imagen.h
+ * @brief Biblioteca de imágenes JPG embebidas para sprites del sistema DialCampanario
+ * 
+ * @details Este archivo contiene todas las imágenes JPG embebidas en memoria flash
+ *          que utiliza el sistema de display del M5Dial DialCampanario:
+ *          
+ *          **IMÁGENES INCLUIDAS:**
+ *          - Stop: Icono de parada del campanario (120x120, 2059 bytes)
+ *          - Difuntos: Icono para misas de difuntos (120x120, JPEG 24-bit)
+ *          - Misa: Icono para misas regulares (120x120, JPEG 24-bit)
+ *          - CalefaccionOn: Icono de calefacción encendida (120x120, JPEG 24-bit)
+ *          - CalefaccionOff: Icono de calefacción apagada (120x120, JPEG 24-bit)
+ *          - Campanario: Icono principal del campanario (120x120, JPEG 24-bit)
+ *          - NoInternet: Icono de sin conexión a Internet (120x120, JPEG 24-bit)
+ *          - CalefaccionTemp: Icono de calefacción temporizada (120x120, JPEG 24-bit)
+ *          
+ *          **CARACTERÍSTICAS TÉCNICAS:**
+ *          - Formato: JFIF/JPEG con compresión optimizada
+ *          - Resolución: 120x120 píxeles (tamaño estándar del sistema)
+ *          - Profundidad: 24-bit color (16M colores)
+ *          - Almacenamiento: PROGMEM (memoria flash) para optimizar RAM
+ *          - Compatibilidad: Arduino IDE y plataformas no-Arduino
+ * 
+ * @note **USO EN EL SISTEMA:**
+ *       Estas imágenes se referencian en Display.cpp a través del array SPRITES[]
+ *       y se renderizan usando M5Canvas con la función drawJpg()
+ * 
+ * @note **OPTIMIZACIÓN DE MEMORIA:**
+ *       - Todas las imágenes están marcadas con PROGMEM
+ *       - Se almacenan en memoria flash, no en RAM
+ *       - Tamaño optimizado manteniendo calidad visual
+ * 
+ * @warning **DEPENDENCIAS:**
+ *          - Requiere soporte PROGMEM (definido automáticamente si no existe)
+ *          - Compatible con M5Dial.Display.drawJpg() para renderizado
+ *          - Tamaño fijo 120x120 coordina con Config::Display::SPRITE_WIDTH/HEIGHT
+ * 
+ * @warning **LIMITACIONES:**
+ *          - Imágenes en formato JPG únicamente (no PNG/BMP)
+ *          - Tamaño fijo 120x120 píxeles
+ *          - No soporta transparencia (usar color de fondo sólido)
+ * 
+ * @author Julian Salas Bartolomé
+ * @date 2025-09-10
+ * @version 2.0
+ * 
+ * @since v1.0 - Biblioteca inicial de imágenes embebidas
+ * @since v2.0 - Optimización de tamaños y añadidas nuevas imágenes (CalefaccionTemp, NoInternet)
+ * 
+ * @see Display.h - Sistema de sprites que utiliza estas imágenes
+ * @see Display.cpp - Implementación del renderizado con drawJpg()
+ * @see Configuracion.h - Constantes de tamaño SPRITE_WIDTH/HEIGHT
+ * 
+ * @example
+ * @code
+ * // Ejemplo de uso en Display.cpp:
+ * canvas->drawJpg(Stop, ~0u, 0, 0, 
+ *                  Config::Display::SPRITE_WIDTH, 
+ *                  Config::Display::SPRITE_HEIGHT,
+ *                  0, 0, 1.0, 1.0, datum_t::middle_center);
+ * @endcode
+ * 
+ * @todo Considerar compresión adicional para reducir uso de memoria flash
+ * @todo Evaluar migración a formato WebP para mejor compresión
+ * @todo Implementar sistema de múltiples resoluciones (120x120, 64x64, 32x32)
+ */
 #ifndef PROGMEM
 #define PROGMEM
 #endif

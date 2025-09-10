@@ -19,6 +19,23 @@
  * 5. Arranca el servidor web para control remoto.
  * 6. En el loop principal, atiende órdenes recibidas por I2C o WebSocket y ejecuta las secuencias correspondientes.
  *
+ *   ┌─────────────────────┐    I2C     ┌─────────────────────┐
+ *   │   DialCampanario    │◄──────────►│   Campanarios.ino   │
+ *   │   (M5Dial Master)   │            │   (ESP32 Slave)     │
+ *   │                     │            │                     │
+ *   │ • Control físico    │            │ • Control relés     │
+ *   │ • Menús M5Dial      │            │ • WebSocket server  │
+ *   │ • Envía comandos    │            │ • Recibe comandos   │
+ *   │ • Recibe estados    │            │ • Ejecuta acciones  │
+ *   └─────────────────────┘            └─────────────────────┘
+ *                                                 │
+ *                                       WebSocket │
+ *                                                 ▼
+ *                                       ┌─────────────────────┐
+ *                                       │     Frontend Web    │
+ *                                       │   /data/Campanas.js │
+ *                                       │   /data/index.html  │
+ *                                       └─────────────────────┘
  * @author  Julian Salas Baertolome
  * @date    22/06/2025
  * @version 1.0
