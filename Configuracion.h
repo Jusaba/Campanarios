@@ -102,6 +102,10 @@
             constexpr bool SERVER_DEBUG      = true;   // Era #ifdef DEBUGSERVIDOR
             constexpr bool GENERAL_DEBUG     = true;   // Era #ifdef DEBUG
         }
+        // ==================== CAMPANARIO ====================
+        namespace Campanario {
+            constexpr int MAX_CAMPANAS = 2;  // Número máximo de campanas en el campanario
+        }
     }
 
     // ==================== COMPATIBILITY (transición) ====================

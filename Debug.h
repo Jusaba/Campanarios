@@ -18,15 +18,19 @@
 
 #define DEBUGINO                    // Debug del módulo INO
 
-//#define DEBUGAUXILIAR               // Debug del módulo Auxiliar
+//#define DEBUGAUXILIAR             // Debug del módulo Auxiliar
 #define DEBUGPROTECCION             // Debug de protección de campanadas
-//#define DEBUGACCIONES               // Debug de las acciones de alarmas
- #define DEBUGSERVIDOR            // Debug del servidor web
+//#define DEBUGACCIONES             // Debug de las acciones de alarmas
+ #define DEBUGSERVIDOR              // Debug del servidor web
 // #define DEBUGDNS                 // Debug del servicio DNS
 // #define DEBUGWIFI                // Debug de conexión WiFi
- #define DEBUGALARMAS             // Debug del sistema de alarmas
+ #define DEBUGALARMAS               // Debug del sistema de alarmas
 // #define DEBUGCAMPANARIO          // Debug del campanario
 // #define DEBUGRTC                 // Debug del RTC
+// #define DEBUGAP                  // Debug del modo AP
+// #define DEBUGCALEFACCION         // Debug del sistema de calefacción
+// #define DEBUGCAMPANA             // Debug del sistema de campanas
+
 
 // ============================================================================
 // MACROS DE DEBUG - Simplifica el uso de debug condicional
@@ -88,11 +92,13 @@
 
 // Macros para debug de acciones
 #ifdef DEBUGACCIONES
-    #define DBG_ACC(msg) Serial.println(String("[ACC] ") + msg)
-    #define DBG_ACC_PRINTF(fmt, ...) Serial.printf("[ACC] " fmt "\n", ##__VA_ARGS__)
+    #define DBG_ACCIONES(msg) Serial.println(String("[ACCIONES] ") + msg)
+    #define DBG_ACCIONES_PRINT(msg) Serial.print(String("[ACCIONES] ") + msg)
+    #define DBG_ACCIONES_PRINTF(fmt, ...) Serial.printf("[ACCIONES] " fmt "\n", ##__VA_ARGS__)
 #else
-    #define DBG_ACC(msg)
-    #define DBG_ACC_PRINTF(fmt, ...)
+    #define DBG_ACCIONES(msg)
+    #define DBG_ACCIONES_PRINT(msg)
+    #define DBG_ACCIONES_PRINTF(fmt, ...)
 #endif
 
 // Macros para debug de servidor
@@ -116,9 +122,11 @@
 // Macros para debug de WiFi
 #ifdef DEBUGWIFI
     #define DBG_WIFI(msg) Serial.println(String("[WIFI] ") + msg)
+    #define DBG_WIFI_PRINT(msg) Serial.print(String("[WIFI] ") + msg)
     #define DBG_WIFI_PRINTF(fmt, ...) Serial.printf("[WIFI] " fmt "\n", ##__VA_ARGS__)
 #else
     #define DBG_WIFI(msg)
+    #define DBG_WIFI_PRINT(msg)
     #define DBG_WIFI_PRINTF(fmt, ...)
 #endif
 
@@ -133,19 +141,23 @@
 
 // Macros para debug de campanario
 #ifdef DEBUGCAMPANARIO
-    #define DBG_CAM(msg) Serial.println(String("[CAM] ") + msg)
-    #define DBG_CAM_PRINTF(fmt, ...) Serial.printf("[CAM] " fmt "\n", ##__VA_ARGS__)
+    #define DBG_CAM(msg) Serial.println(String("[CAMPANARIO] ") + msg)
+    #define DBG_CAM_PRINT(msg) Serial.print(String("[CAMPANARIO] ") + msg)
+    #define DBG_CAM_PRINTF(fmt, ...) Serial.printf("[CAMPANARIO] " fmt "\n", ##__VA_ARGS__)
 #else
     #define DBG_CAM(msg)
+    #define DBG_CAM_PRINT(msg)
     #define DBG_CAM_PRINTF(fmt, ...)
 #endif
 
 // Macros para debug de RTC
 #ifdef DEBUGRTC
     #define DBG_RTC(msg) Serial.println(String("[RTC] ") + msg)
+    #define DBG_RTC_PRINT(msg) Serial.print(String("[RTC] ") + msg)
     #define DBG_RTC_PRINTF(fmt, ...) Serial.printf("[RTC] " fmt "\n", ##__VA_ARGS__)
 #else
     #define DBG_RTC(msg)
+    #define DBG_RTC_PRINT(msg)
     #define DBG_RTC_PRINTF(fmt, ...)
 #endif
 
@@ -159,6 +171,41 @@
     #define DBG_INO_PRINT(msg)
     #define DBG_INO_PRINTF(fmt, ...)
 #endif
+
+//Macros para debug de AP
+#ifdef DEBUGAP
+    #define DBG_AP(msg) Serial.println(String("[AP] ") + msg)
+    #define DBG_AP_PRINT(msg) Serial.print(String("[AP] ") + msg)
+    #define DBG_AP_PRINTF(fmt, ...) Serial.printf("[AP] " fmt "\n", ##__VA_ARGS__)
+#else
+    #define DBG_AP(msg)
+    #define DBG_AP_PRINT(msg)
+    #define DBG_AP_PRINTF(fmt, ...)
+#endif
+
+//Macros para debug de calefacción
+#ifdef DEBUGCALEFACCION
+    #define DBG_CALEFACCION(msg) Serial.println(String("[CALEFACCION] ") + msg)
+    #define DBG_CALEFACCION_PRINT(msg) Serial.print(String("[CALEFACCION] ") + msg)
+    #define DBG_CALEFACCION_PRINTF(fmt, ...) Serial.printf("[CALEFACCION] " fmt "\n", ##__VA_ARGS__)
+#else
+    #define DBG_CALEFACCION(msg)
+    #define DBG_CALEFACCION_PRINT(msg)
+    #define DBG_CALEFACCION_PRINTF(fmt, ...)
+#endif
+
+//Macros para debug de campanas
+#ifdef DEBUGCAMPANA
+    #define DBG_CAMPANA(msg) Serial.println(String("[CAMPANA] ") + msg)
+    #define DBG_CAMPANA_PRINT(msg) Serial.print(String("[CAMPANA] ") + msg)
+    #define DBG_CAMPANA_PRINTF(fmt, ...) Serial.printf("[CAMPANA] " fmt "\n", ##__VA_ARGS__)
+#else
+    #define DBG_CAMPANA(msg)
+    #define DBG_CAMPANA_PRINT(msg)
+    #define DBG_CAMPANA_PRINTF(fmt, ...)
+#endif
+
+
 
 // ============================================================================
 // FUNCIONES DE DEBUG AVANZADAS (Opcional)
