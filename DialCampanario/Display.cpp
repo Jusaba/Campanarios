@@ -9,13 +9,14 @@
         SpriteData SPRITES[Config::Display::MAX_SPRITES] = {
             // imagen,           nombre,             texto,        color,                        offsetY
             {Stop,               "Stop",             "Stop",       Config::Display::COLOR_INFO, 50},
-            {Difuntos,           "Difuntos",         "Difuntos",   Config::Display::COLOR_INFO, 70},
-            {Misa,               "Misa",             "Misa",       Config::Display::COLOR_INFO, 50},
-            {CalefaccionOn,      "CalefaccionOn",    "Encender",   Config::Display::COLOR_INFO, 50},
+            {Difuntos,           "Difuntos",         "Difunts",    Config::Display::COLOR_INFO, 70},
+            {Misa,               "Misa",             "Missa",      Config::Display::COLOR_INFO, 50},
+            {Fiesta,             "Fiesta",           "Festa",      Config::Display::COLOR_INFO, 50},
+            {CalefaccionOn,      "CalefaccionOn",    "Encendre",   Config::Display::COLOR_INFO, 50},
             {CalefaccionOff,     "CalefaccionOff",   "Apagar",     Config::Display::COLOR_INFO, 50},
-            {Campanario,         "Campanario",       "Campanario", TFT_YELLOW,                  65},
-            {NoInternet,         "NoInternet",       "Sin Red",    Config::Display::COLOR_INFO, 50},
-            {CalefaccionTemp,    "CalefaccionTemp",  "Temporizada",Config::Display::COLOR_INFO, 45}
+            {Campanario,         "Campanario",       "Campanar",   TFT_YELLOW,                  65},
+            {NoInternet,         "NoInternet",       "No Xarxa",   Config::Display::COLOR_INFO, 50},
+            {CalefaccionTemp,    "CalefaccionTemp",  "Temporitzada",Config::Display::COLOR_INFO, 45}
         };    
 
     // ---------------------------------------------------------------------------
@@ -300,6 +301,32 @@
             MostrarSprite(Config::SpriteIndex::MISA);
             DBG_DISPLAY("Display: Mensaje de Misa mostrado");
         }
+        /**
+         * @brief Muestra el estado de fiesta del campanario
+         * 
+         * @details Presenta en pantalla el icono y texto correspondiente al estado
+         *          de fiesta. Utiliza la configuración predefinida del sprite FIESTA
+         *          para mostrar la información visual.
+         * 
+         * @note Utiliza MostrarSprite() que incluye configuración automática:
+         *       - Imagen, texto, color y offset desde array SPRITES[]
+         *       - Limpieza automática de pantalla
+         *       - Centrado automático del sprite y texto
+         * 
+         * @see MostrarSprite() - Función utilizada para renderizado
+         * @see Config::SpriteIndex::FIESTA - Índice del sprite mostrado
+         * @see SPRITES[FIESTA] - Configuración específica utilizada
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         * @date 2025-06-15
+         */        
+        void MensajeFiesta (void)
+        {
+            MostrarSprite(Config::SpriteIndex::FIESTA);
+            DBG_DISPLAY("Display: Mensaje de Fiesta mostrado");
+        }
+
         /**
          * @brief Muestra el estado de parada del campanario
          * 
@@ -652,7 +679,7 @@
             M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
             M5Dial.Display.setTextSize(2);
             char buffer[20];
-            snprintf(buffer, sizeof(buffer), "Temporizacion");
+            snprintf(buffer, sizeof(buffer), "Temporitzacio");
             M5Dial.Display.drawString(buffer, x, y - 30);
             snprintf(buffer, sizeof(buffer), " %d min", nMinutos);
             M5Dial.Display.drawString(buffer, x, y + 40);

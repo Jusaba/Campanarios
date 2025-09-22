@@ -45,10 +45,10 @@
     // MENÚS - Definición de los menús disponibles
     // ============================================================================
     const int* menuActual = nullptr; 
-    const int menu0[] = {Config::States::I2CState::DIFUNTOS, Config::States::I2CState::MISA, Config::States::I2CState::CALEFACCION_ON};
-    #define ItemsMenu0  3
-    const int menu1[] = {Config::States::I2CState::DIFUNTOS, Config::States::I2CState::MISA,  Config::States::I2CState::CALEFACCION_OFF};
-    #define ItemsMenu1  3
+    const int menu0[] = {Config::States::I2CState::DIFUNTOS, Config::States::I2CState::MISA, Config::States::I2CState::FIESTA, Config::States::I2CState::CALEFACCION_ON};
+    #define ItemsMenu0  4
+    const int menu1[] = {Config::States::I2CState::DIFUNTOS, Config::States::I2CState::MISA, Config::States::I2CState::FIESTA, Config::States::I2CState::CALEFACCION_OFF};
+    #define ItemsMenu1  4
     const int menu2[] = { Config::States::I2CState::STOP, Config::States::I2CState::CALEFACCION_ON};
     #define ItemsMenu2  2
     const int menu3[] = { Config::States::I2CState::STOP, Config::States::I2CState::CALEFACCION_OFF};
@@ -125,7 +125,8 @@
     {
         {Config::States::I2CState::INICIO,              MensajeInicio,          false},
         {Config::States::I2CState::DIFUNTOS,            MensajeDifuntos,        true},     
-        {Config::States::I2CState::MISA,                MensajeMisa,            true},     
+        {Config::States::I2CState::MISA,                MensajeMisa,            true},    
+        {Config::States::I2CState::FIESTA,              MensajeFiesta,          true},     // Acción especial (temporizador) 
         {Config::States::I2CState::STOP,                MensajeStop,            true},     
         {Config::States::I2CState::CALEFACCION_ON,      MensajeCalefaccionOn,   false},    // Acción especial (temporizador)
         {Config::States::I2CState::CALEFACCION_OFF,     MensajeCalefaccionOff,  true},     
@@ -375,7 +376,7 @@
         if (ProteccionToqueHoras) {                                                                                         // Si la protección de campanadas está activa                   
             menu.indiceMenuActivo = calefOn ? 5 : 4;                                                                        // Menú 5 si calefacción ON, menú 4 si OFF             
         } else {                                                                                                            // Si la protección de campanadas NO está activa  
-            bool difuntosMisa = campanarioEstado.estadoActual & (Config::States::BIT_DIFUNTOS | Config::States::BIT_MISA);  // Difuntos o misa activa
+            bool difuntosMisa = campanarioEstado.estadoActual & (Config::States::BIT_DIFUNTOS | Config::States::BIT_MISA | Config::States::BIT_FIESTA);  // Difuntos, misa o fiesta activa
             menu.indiceMenuActivo = difuntosMisa ? (calefOn ? 3 : 2) : (calefOn ? 1 : 0);                                   // Menú 3 o 2 si difuntos/misa, menú 1 o 0 si normal  
         }
     }

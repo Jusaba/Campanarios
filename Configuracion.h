@@ -3,6 +3,7 @@
 #define CONFIGURACION_H
 
 #include <stdint.h>
+#include <Arduino.h>  
 
     namespace Config {
 
@@ -62,30 +63,30 @@
             enum I2CState : uint8_t {
                 DIFUNTOS                    = 1,
                 MISA                        = 2,
-                STOP                        = 3,
-                CALEFACCION_ON              = 4,
-                CALEFACCION_OFF             = 5,
-                CAMPANARIO                  = 6,
-                HORA                        = 7,
-                SIN_INTERNET                = 8,
-                PROTECCION_CAMPANADAS       = 9,
-                FECHA_HORA                  = 10,
-                SET_TEMPORIZADOR            = 11,
-                FIN                         = 12,
-                FECHA_HORA_O_TEMPORIZACION  = 13,
-                TEMPORIZACION               = 14
+                FIESTA                      = 3,
+                STOP                        = 4,
+                CALEFACCION_ON              = 5,
+                CALEFACCION_OFF             = 6,
+                CAMPANARIO                  = 7,
+                HORA                        = 8,
+                SIN_INTERNET                = 9,
+                PROTECCION_CAMPANADAS       = 10,
+                FECHA_HORA                  = 11,
+                SET_TEMPORIZADOR            = 12,
+                FIN                         = 13,
+                FECHA_HORA_O_TEMPORIZACION  = 14,
+                TEMPORIZACION               = 15
             };
 
             // Bits de estado
             constexpr uint8_t BIT_DIFUNTOS                    = 0x01;       // bit 0
             constexpr uint8_t BIT_MISA                        = 0x02;       // bit 1
-            constexpr uint8_t BIT_HORA                        = 0x04;       // bit 2
-            constexpr uint8_t BIT_CUARTOS                     = 0x08;       // bit 3
-            constexpr uint8_t BIT_CALEFACCION                 = 0x10;       // bit 4
-            constexpr uint8_t BIT_SIN_INTERNET                = 0x20;       // bit 5
-            constexpr uint8_t BIT_PROTECCION_CAMPANADAS       = 0x40;       // bit 6
-
-            constexpr uint8_t BIT_CALEFACCION_ACTIVA     = (1 << 4);  // Para bit 4
+            constexpr uint8_t BIT_FIESTA                      = 0x04;       // bit 2
+            constexpr uint8_t BIT_HORA                        = 0x08;       // bit 3
+            constexpr uint8_t BIT_CUARTOS                     = 0x10;       // bit 4
+            constexpr uint8_t BIT_CALEFACCION                 = 0x20;       // bit 5
+            constexpr uint8_t BIT_SIN_INTERNET                = 0x40;       // bit 6
+            constexpr uint8_t BIT_PROTECCION_CAMPANADAS       = 0x80;       // bit 7
         }
 
         // ==================== CALEFACCIÓN ====================

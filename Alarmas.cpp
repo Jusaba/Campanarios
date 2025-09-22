@@ -601,8 +601,8 @@ void AlarmScheduler::initDefaults() {
     DBG_ALM_PRINTF("[ALARM] Cargando configuración por defecto...\n");
     
     // ===== MISAS DOMINICALES =====
-    addExternal(DOW_DOMINGO, 11, 5,  0, accionSecuencia, Config::States::MISA, true);
-    addExternal(DOW_DOMINGO, 11, 25, 0, accionSecuencia, Config::States::MISA, true);
+    //addExternal(DOW_DOMINGO, 11, 5,  0, accionSecuencia, Config::States::MISA, true);
+    //addExternal(DOW_DOMINGO, 11, 25, 0, accionSecuencia, Config::States::MISA, true);
 
     // ===== CUARTOS Y MEDIAS (FUNCIONALIDAD MIGRADA DE TIMEMANAGER) =====
     // Tocar horas en punto (wildcards = todas las horas)

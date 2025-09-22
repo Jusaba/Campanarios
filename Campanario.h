@@ -167,6 +167,67 @@
     };    
     const int numPasosMisa = sizeof(secuenciaMisa) / sizeof(PasoSecuencia);
 
+    const PasoSecuencia secuenciaFiesta[] = {
+        {0, 1, 1200},  
+        {1, 1, 1000},
+        {0, 1, 900},
+        {1, 1, 800},
+        {0, 1, 700},
+        {1, 1, 600},
+        {0, 1, 500},
+        {1, 1, 400},
+        {0, 2, 350},   
+        {1, 1, 300},
+        {0, 1, 350},
+        {1, 2, 300},
+        {0, 3, 280},
+        {1, 1, 250},
+        {0, 1, 280},
+        {1, 1, 250},
+        {0, 2, 300},
+        {1, 2, 250},
+        {0, 1, 280},
+        {1, 3, 220},
+        {0, 4, 250},
+        {1, 1, 200},
+        {0, 1, 250},
+        {1, 1, 200},
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 2, 160},   
+        {1, 2, 160},   
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 3, 140},   
+        {1, 1, 160},   
+        {0, 1, 180},   
+        {1, 2, 160},   
+        {0, 2, 160},   
+        {1, 1, 180},   
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 1, 180},   
+        {1, 3, 140},       
+        {0, 2, 200},   
+        {1, 1, 180},   
+        {0, 3, 160},   
+        {1, 2, 150},   
+        {0, 4, 140},   
+        {1, 3, 130},   
+        {0, 5, 120},   
+        {1, 1, 400},   
+        {0, 3, 300},   
+        {1, 2, 250},   
+        {0, 2, 500},   
+        {1, 1, 800}   
+    };
+    static constexpr int numPasosFiesta = sizeof(secuenciaFiesta) / sizeof(PasoSecuencia);
+
+
     class CAMPANARIO 
     {
         public:
@@ -176,6 +237,7 @@
             void AddCampana (CAMPANA* pCampana);                        //!< Añade una campana al campanario
             void TocaDifuntos (void);                                   //!< Toca la secuencia de campanadas para difuntos   
             void TocaMisa (void);                                       //!< Toca la secuencia de campanadas para misa   
+            void TocaFiesta (void);                                     //!< Toca la secuencia de campanadas para fiestas
             void IniciarSecuenciaCampanadas(void);                      //!< Inicia la secuencia de campanadas
             int ActualizarSecuenciaCampanadas(void);                    //!< Actualiza la secuencia de campanadas, tocando las campanas según el intervalo definido
             void ResetCampanaTocada(void);                              //!< Resetea el número de campana tocada

@@ -23,28 +23,30 @@ namespace Config {
             INICIO                      = 0,
             DIFUNTOS                    = 1,
             MISA                        = 2,
-            STOP                        = 3,
-            CALEFACCION_ON              = 4,
-            CALEFACCION_OFF             = 5,
-            CAMPANARIO                  = 6,
-            HORA                        = 7,
-            SIN_INTERNET                = 8,
-            PROTECCION_CAMPANADAS       = 9,
-            FECHA_HORA                  = 10,
-            SET_TEMPORIZADOR            = 11,
-            FIN                         = 12,
-            FECHA_HORA_O_TEMPORIZACION  = 13,
-            TEMPORIZACION               = 14
+            FIESTA                      = 3,
+            STOP                        = 4,
+            CALEFACCION_ON              = 5,
+            CALEFACCION_OFF             = 6,
+            CAMPANARIO                  = 7,
+            HORA                        = 8,
+            SIN_INTERNET                = 9,
+            PROTECCION_CAMPANADAS       = 10,
+            FECHA_HORA                  = 11,
+            SET_TEMPORIZADOR            = 12,
+            FIN                         = 13,
+            FECHA_HORA_O_TEMPORIZACION  = 14,
+            TEMPORIZACION               = 15
         };
 
         // Bits de estado
         constexpr uint8_t BIT_DIFUNTOS                    = 0x01;       // bit 0
         constexpr uint8_t BIT_MISA                        = 0x02;       // bit 1
-        constexpr uint8_t BIT_HORA                        = 0x04;       // bit 2
-        constexpr uint8_t BIT_CUARTOS                     = 0x08;       // bit 3
-        constexpr uint8_t BIT_CALEFACCION                 = 0x10;       // bit 4
-        constexpr uint8_t BIT_SIN_INTERNET                = 0x20;       // bit 5
-        constexpr uint8_t BIT_PROTECCION_CAMPANADAS       = 0x40;       // bit 6
+        constexpr uint8_t BIT_FIESTA                      = 0x04;       // bit 2
+        constexpr uint8_t BIT_HORA                        = 0x08;       // bit 3
+        constexpr uint8_t BIT_CUARTOS                     = 0x10;       // bit 4
+        constexpr uint8_t BIT_CALEFACCION                 = 0x20;       // bit 5
+        constexpr uint8_t BIT_SIN_INTERNET                = 0x40;       // bit 6
+        constexpr uint8_t BIT_PROTECCION_CAMPANADAS       = 0x80;       // bit 7
         
     }
     // ============================================================================
@@ -66,7 +68,7 @@ namespace Config {
         // Dimensiones sprites
         constexpr int SPRITE_WIDTH = 120;               // Ancho sprites menú
         constexpr int SPRITE_HEIGHT = 120;              // Alto sprites menú
-        constexpr int MAX_SPRITES = 8;                 // Máximo número de sprites
+        constexpr int MAX_SPRITES = 9;                 // Máximo número de sprites
 
         constexpr int CICLOS_PARA_SLEEP = 30;           // Ciclos para poner el display en modo sleep 
     }
@@ -78,13 +80,14 @@ namespace Config {
         constexpr int STOP = 0;                         // Posición sprite Stop
         constexpr int DIFUNTOS = 1;                     // Posición sprite Difuntos
         constexpr int MISA = 2;                         // Posición sprite Misa
-        constexpr int CALEFACCION_ON = 3;               // Posición sprite Calefacción On
-        constexpr int CALEFACCION_OFF = 4;              // Posición sprite Calefacción Off
-        constexpr int CAMPANARIO = 5;                   // Posición sprite Campanario
-        constexpr int NO_INTERNET = 6;                  // Posición sprite No Internet
-        constexpr int CALEFACCION_TEMP = 7;             // Posición sprite Calefacción Temporizada
+        constexpr int FIESTA = 3;                       // Posición sprite Fiesta
+        constexpr int CALEFACCION_ON = 4;               // Posición sprite Calefacción On
+        constexpr int CALEFACCION_OFF = 5;              // Posición sprite Calefacción Off
+        constexpr int CAMPANARIO = 6;                   // Posición sprite Campanario
+        constexpr int NO_INTERNET = 7;                  // Posición sprite No Internet
+        constexpr int CALEFACCION_TEMP = 8;             // Posición sprite Calefacción Temporizada
         // Espacio para nuevas opciones:
-        constexpr int NUEVA_OPCION = 8;                 // Próxima opción a añadir
+        constexpr int NUEVA_OPCION = 9;                 // Próxima opción a añadir
     }
     
     // ============================================================================

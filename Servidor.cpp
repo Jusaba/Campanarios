@@ -221,6 +221,10 @@
             nToque = Config::States::MISA;                                  // Establece la secuencia a Misa para tocar misa
             ws.textAll("REDIRECT:/Campanas.html");                          // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             DBG_SRV("Procesando mensaje: TocaMisa");
+        } else if (mensaje == "Fiesta") {                                   // Si el mensaje es "Fiesta"
+            nToque = Config::States::FIESTA;                                // Establece la secuencia a Fiesta para tocar fiesta
+            ws.textAll("REDIRECT:/Campanas.html");                          // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
+            DBG_SRV("Procesando mensaje: TocaFiesta");
         } else if (mensaje == "PARAR") {                                    // Si el mensaje es "PARAR"  
             nToque = 0;                                                     // Parada la secuencia de toques
             Campanario.ParaSecuencia();                                     // Detiene la secuencia de campanadas

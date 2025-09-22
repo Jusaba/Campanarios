@@ -222,6 +222,7 @@
         void MensajeInicio();                                                                                              // Muestra el mensaje de inicio en la pantalla principal
         void MensajeDifuntos();                                                                                            // Muestra el mensaje de difuntos en la pantalla principal
         void MensajeMisa();                                                                                                // Muestra el mensaje de misa en la pantalla principal
+        void MensajeFiesta();                                                                                              // Muestra el mensaje de fiesta en la pantalla principal
         void MensajeStop();                                                                                                // Muestra el mensaje de stop en la pantalla principal
         void MensajeCalefaccionOn();                                                                                       // Muestra el mensaje de calefacción encendida en la pantalla principal
         void MensajeCalefaccionOff();                                                                                      // Muestra el mensaje de calefacción apagada en la pantalla principal

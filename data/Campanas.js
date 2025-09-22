@@ -5,6 +5,7 @@ const CampanarioStates = {
     // Estados I2C (para comandos)
     DIFUNTOS: "Difuntos",
     MISA: "Misa", 
+    FIESTA: "Fiesta",
     STOP: "PARAR",
     GET_CAMPANARIO: "GET_CAMPANARIO",
     GET_TIEMPO_CALEFACCION: "GET_TIEMPOCALEFACCION",
@@ -12,11 +13,12 @@ const CampanarioStates = {
     // Bits de estado (para ESTADO_CAMPANARIO response)
     BIT_DIFUNTOS: 0x01,                      // Config::States::BIT_DIFUNTOS
     BIT_MISA: 0x02,                          // Config::States::BIT_MISA  
-    BIT_HORA: 0x04,                          // Config::States::BIT_HORA
-    BIT_CUARTOS: 0x08,                       // Config::States::BIT_CUARTOS
-    BIT_CALEFACCION: 0x10,                   // Config::States::BIT_CALEFACCION
-    BIT_SIN_INTERNET: 0x20,                  // Config::States::BIT_SIN_INTERNET
-    BIT_PROTECCION_CAMPANADAS: 0x40          // Config::States::BIT_PROTECCION_CAMPANADAS
+    BIT_FIESTA: 0x04,                        // Config::States::BIT_FIESTA
+    BIT_HORA: 0x08,                          // Config::States::BIT_HORA
+    BIT_CUARTOS: 0x10,                       // Config::States::BIT_CUARTOS
+    BIT_CALEFACCION: 0x20,                   // Config::States::BIT_CALEFACCION
+    BIT_SIN_INTERNET: 0x40,                  // Config::States::BIT_SIN_INTERNET
+    BIT_PROTECCION_CAMPANADAS: 0x80          // Config::States::BIT_PROTECCION_CAMPANADAS
 };
 
 var gateway = `ws://${window.location.hostname}:8080/ws`;
@@ -279,6 +281,7 @@ function activarCampana(num) {
         // Buscar botones por su clase CSS
         const botonMisa = document.querySelector(".button.Misa");
         const botonDifuntos = document.querySelector(".button.Difuntos");
+        const botonFiesta = document.querySelector(".button.Fiesta");
         
         if (botonMisa) {
             if (habilitar) {
@@ -320,7 +323,7 @@ function activarCampana(num) {
                 botonDifuntos.style.opacity = "1";
                 botonDifuntos.style.cursor = "pointer";
                 botonDifuntos.style.pointerEvents = "auto";
-                botonDifuntos.style.backgroundColor = "#e74c3c"; // Color original
+                botonDifuntos.style.backgroundColor = "#bc4fac"; // Color original
                 botonDifuntos.style.webkitTouchCallout = "default";
                 botonDifuntos.style.webkitUserSelect = "auto";
                 botonDifuntos.title = "";
@@ -340,6 +343,37 @@ function activarCampana(num) {
                     e.preventDefault(); 
                     e.stopPropagation(); 
                     return false; 
+                }; // Bloquear función
+            }
+        }
+       if (botonFiesta) {
+            if (habilitar) {
+                // Habilitar botón
+                botonFiesta.disabled = false;
+                botonFiesta.classList.remove("disabled-mobile");
+                botonFiesta.style.opacity = "1";
+                botonFiesta.style.cursor = "pointer";
+                botonFiesta.style.pointerEvents = "auto";
+                botonFiesta.style.backgroundColor = "#e74c3c"; // Color original
+                botonFiesta.style.webkitTouchCallout = "default";
+                botonFiesta.style.webkitUserSelect = "auto";
+                botonFiesta.title = "";
+                botonFiesta.onclick = function() { SelFiesta(); }; // Restaurar función
+            } else {
+                // Deshabilitar botón
+                botonFiesta.disabled = true;
+                botonFiesta.classList.add("disabled-mobile");
+                botonFiesta.style.opacity = "0.5";
+                botonFiesta.style.cursor = "not-allowed";
+                botonFiesta.style.pointerEvents = "none"; // Previene cualquier interacción
+                botonFiesta.style.backgroundColor = "#888"; // Color gris
+                botonFiesta.style.webkitTouchCallout = "none";
+                botonFiesta.style.webkitUserSelect = "none";
+                botonFiesta.title = "Campanadas protegidas - No disponible durante período de toque";
+                botonFiesta.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
                 }; // Bloquear función
             }
         }

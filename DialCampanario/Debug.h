@@ -11,7 +11,7 @@
 #define DEBUG                       // Debug general del sistema
 
 // Debug específico por módulos
-//#define DEBUGI2C                    // Debug comunicación I2C con ESP32
+#define DEBUGI2C                    // Debug comunicación I2C con ESP32
 //#define DEBUGDISPLAY                // Debug funciones de pantalla y sprites
 #define DEBUGBUTTONS                // Debug eventos de botones y encoder
 #define DEBUGMENU                   // Debug navegación de menús

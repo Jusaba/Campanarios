@@ -78,6 +78,7 @@ double nSegundosTemporizacion = 0;                                      // Tempo
      *          **MAPEO DE SECUENCIAS:**
      *          - ID Config::States::DIFUNTOS: Secuencia de Difuntos (tradicional, solemne)
      *          - ID Config::States::MISA: Secuencia de Misa (litúrgica compleja)
+     *          - ID Config::States::FIESTA: Secuencia de Fiesta (alegre, rápida)
      *          - ID Config::States::STOP: Detener todas las secuencias activas
      *          - ID Config::States::CALEFACCION_ON: Encender calefacción (sin temporizador)
      *          - ID Config::States::CALEFACCION_OFF: Apagar calefacción
@@ -121,37 +122,43 @@ double nSegundosTemporizacion = 0;                                      // Tempo
      */    
     void EjecutaSecuencia(int nSecuencia, int nParametro) {
         
-        DBG_AUX_PRINTF("EjecutaSecuencia -> Secuencia: %d, Parámetro: %d", nSecuencia, parametro);
+        DBG_AUX_PRINTF("EjecutaSecuencia -> Secuencia: %d, Parámetro: %d", nSecuencia, nParametro);
 
         switch (nSecuencia) {
             case Config::States::DIFUNTOS:
                 Campanario.TocaDifuntos();
-                ws.textAll("REDIRECT:/Campanas.html");      // ✅ COMO ESTABA ORIGINALMENTE
+                ws.textAll("REDIRECT:/Campanas.html");      
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de difuntos");
                 break;
 
             case Config::States::MISA:
                 Campanario.TocaMisa();
-                ws.textAll("REDIRECT:/Campanas.html");      // ✅ COMO ESTABA ORIGINALMENTE
+                ws.textAll("REDIRECT:/Campanas.html");
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de misa");
+                break;
+
+            case Config::States::FIESTA:
+                Campanario.TocaFiesta();
+                ws.textAll("REDIRECT:/Campanas.html");
+                DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de fiesta");
                 break;
 
             case Config::States::STOP:
                 Campanario.ParaSecuencia();
-                ws.textAll("REDIRECT:/index.html");         // ✅ COMO ESTABA ORIGINALMENTE
+                ws.textAll("REDIRECT:/index.html");
                 DBG_AUX("EjecutaSecuencia -> Parando todas las secuencias");
                 break;
 
             case Config::States::CALEFACCION_ON:
                   // WebSocket con temporizador global
                     Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion);
-                    ws.textAll("CALEFACCION:ON");            // ✅ COMO ESTABA ORIGINALMENTE
+                    ws.textAll("CALEFACCION:ON");
                     DBG_AUX_PRINTF("EjecutaSecuencia -> Encendiendo calefacción (%d min desde WebSocket)", nTemporizacionCalefaccion);
                     break;
 
             case Config::States::CALEFACCION_OFF:
                 Campanario.ApagaCalefaccion();
-                ws.textAll("CALEFACCION:OFF");               // ✅ COMO ESTABA ORIGINALMENTE
+                ws.textAll("CALEFACCION:OFF");
                 DBG_AUX("EjecutaSecuencia -> Apagando calefacción");
                 break;
 

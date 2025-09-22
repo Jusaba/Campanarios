@@ -175,7 +175,52 @@
         this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
         this->_nEstadoCampanario |= Config::States::BIT_MISA;
     }
+    /**
+     * @brief Inicia la secuencia festiva de campanadas para celebraciones
+     * 
+     * @details Activa la secuencia de campanadas específica para eventos
+     *          festivos y celebraciones. Utiliza patrones alegres y dinámicos
+     *          que crean ambiente de fiesta y celebración.
+     *          
+     *          **CARACTERÍSTICAS DE LA SECUENCIA:**
+     *          - Ritmo alegre y festivo con crescendo inicial
+     *          - Alternancia dinámica entre campanas
+     *          - Repique central tradicional español
+     *          - Finale triunfal con campanadas de celebración
+     *          - Duración: aproximadamente 3-4 minutos
+     * 
+     * @note **SECUENCIA FESTIVA:** Diseñada para crear ambiente celebrativo
+     * @note **ENERGÉTICA:** Más dinámica y rápida que secuencias solemnes
+     * @note **ESTADO:** Establece BIT_FIESTA durante la ejecución
+     * 
+     * @warning **SOLAPAMIENTO:** No inicia si hay otra secuencia activa
+     * @warning **CAMPANAS:** Requiere al menos 2 campanas para efectos dinámicos
+     * 
+     * @see secuenciaFiesta - Array con la secuencia festiva completa
+     * @see ParaSecuencia() - Para detener la secuencia manualmente
+     * 
+     * @example
+     * @code
+     * // Celebración de boda
+     * campanario.TocaFiesta();
+     * 
+     * // Fiesta patronal programada
+     * alarmas.addAlarm(12, 0, ALARM_MATCH_HOUR_MIN, 
+     *                 []() { campanario.TocaFiesta(); });
+     * @endcode
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */
+    void CAMPANARIO::TocaFiesta(void) {
 
+        DBG_CAM ("Tocando campanas para fiesta...");
+        DBG_CAM_PRINT ("numPasosFiesta: ");
+        DBG_CAM(numPasosFiesta);
+        this->_GeneraraCampanadas(secuenciaFiesta, numPasosFiesta);
+        this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
+        this->_nEstadoCampanario |= Config::States::BIT_FIESTA;
+    }
     /**
      * @brief Genera secuencia de campanadas planas desde pasos definidos
      * 

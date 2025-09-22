@@ -1,4 +1,5 @@
 // I2CServicio.cpp - Implementación del servicio I2C
+#include "Arduino.h"
 #include "I2CServicio.h"
 #include "Configuracion.h"
 #include "Auxiliar.h"        // Para acceder a Campanario y variables globales
@@ -88,11 +89,10 @@ void recibirSecuencia(int numBytes) {
         if (numBytes == 2) {
             ParametroI2C = Wire.read(); // Lee el segundo byte como parámetro
         }
-        
-       
+
         // Si es una solicitud de información, guardar la petición
-if (secuenciaI2C == Config::States::CAMPANARIO || secuenciaI2C == Config::States::HORA || 
-    secuenciaI2C == Config::States::FECHA_HORA || secuenciaI2C == Config::States::FECHA_HORA_O_TEMPORIZACION) {
+        if (secuenciaI2C == Config::States::CAMPANARIO || secuenciaI2C == Config::States::HORA || 
+        secuenciaI2C == Config::States::FECHA_HORA || secuenciaI2C == Config::States::FECHA_HORA_O_TEMPORIZACION) {
             requestI2C = secuenciaI2C;
             secuenciaI2C = 0;                       // Resetea para evitar ejecución como comando
             DBG_I2C_REQ("I2CServicio -> Solicitud request: " + String(requestI2C));
