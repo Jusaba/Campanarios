@@ -1,43 +1,68 @@
 /**
- * @class CAMPANARIO
- * @brief Clase principal para la gestión y control del campanario.
- *
- * Esta clase permite gestionar múltiples campanas y la calefacción del campanario,
- * coordinando las secuencias de toques, el estado general y la interacción con otros sistemas.
- * Proporciona métodos para añadir campanas, activar secuencias predefinidas (difuntos, misa, fiesta, horas, cuartos),
- * controlar la calefacción y consultar el estado global del campanario.
- *
- * Ejemplo de uso:
- * @code
- * CAMPANARIO campanario;
- * campanario.AddCampana(&campana1);
- * campanario.AddCalefaccion(&calefaccion);
- * campanario.TocaDifuntos();
- * int estado = campanario.GetEstadoCampanario();
- * @endcode
- *
- * @author  Julian Salas Baertolome
+ * @file Campanario.h
+ * @brief Implementación del sistema central de control del campanario automatizado
+ * 
+ * @details Este archivo implementa la clase CAMPANARIO, que es el núcleo central
+ *          del sistema de campanario automatizado. Coordina y gestiona todas las
+ *          funcionalidades del campanario incluyendo:
+ *          
+ *          **FUNCIONALIDADES PRINCIPALES:**
+ *          - Gestión de múltiples campanas con control individual
+ *          - Ejecución de secuencias complejas (Difuntos, Misa, Horas)
+ *          - Sistema de estados con flags de bits para monitorización
+ *          - Integración y control del sistema de calefacción
+ *          - Protección anti-solapamiento de secuencias
+ *          - Control temporal preciso con intervalos configurables
+ *          
+ *          **SECUENCIAS IMPLEMENTADAS:**
+ *          - Difuntos: Secuencia tradicional con patrones específicos
+ *          - Misa: Secuencia litúrgica compleja con múltiples fases
+ *          - Horas: Toques de hora con cuartos opcionales
+ *          - Cuartos: Toques de cuarto de hora independientes
+ *          
+ *          **SISTEMA DE ESTADOS:**
+ *          - BitDifuntos: Secuencia de difuntos activa
+ *          - BitMisa: Secuencia de misa activa  
+ *          - BitHora: Secuencia de horas activa
+ *          - BitCuartos: Secuencia de cuartos activa
+ *          - BitCalefaccion: Sistema de calefacción activo
+ *          - BitEstadoSinInternet: Sin conexión a internet
+ *          - BitEstadoProteccionCampanadas: Protección activa
+ *          
+ *          **ARQUITECTURA MODULAR:**
+ *          - Separación clara entre lógica de secuencias y ejecución
+ *          - Sistema de generación de campanadas planas para optimización
+ *          - Control independiente de cada subsistema
+ *          - Debug modular activable por compilación
+ * 
+ * @note **MEMORIA:** Secuencias almacenadas en PROGMEM para optimización
+ * @note **TIMING:** Utiliza millis() para control temporal no-bloqueante
+ * @note **ESCALABILIDAD:** Diseñado para hasta MAX_CAMPANAS campanas
+ * 
+ * @warning **MEMORIA RAM:** Array de campanadas consume ~1.6KB (200 elementos)
+ * @warning **CONCURRENCIA:** No thread-safe - usar desde un solo hilo
+ * @warning **PUNTEROS:** Verificar validez de punteros antes de asignar
+ * 
+ * @author Julian Salas Bartolomé
+ * @date 2025-09-16
  * @version 1.0
- * @date    19/06/2025
+ * 
+ * @see Campanario.h - Definiciones de la clase y constantes
+ * @see Campana.h - Control de campanas individuales utilizadas
+ * @see Calefaccion.h - Sistema de calefacción integrado
+ * @see Alarmas.h - Sistema que programa las secuencias automáticas
+ * 
  */
 #ifndef CAMPANARIO_H
 	#define CAMPANARIO_H
 
     #include  "CAMPANA.h"
     #include "Calefaccion.h"
+    #include "Debug.h"
+    #include "Configuracion.h"
 
-    #define DEBUGCAMPANARIO
 
-    // Definición de los bits que representan el estado del campanario
-    #define BitDifuntos     0x01                    // 0000 0001                  // Bit para indicar si la secuencia de difuntos está activa
-    #define BitMisa         0x02                    // 0000 0010                  // Bit para indicar si la secuencia de misa está activa
-    #define BitHora         0x04                    // 0000 0100                  // Bit para indicar si la secuencia de horas está activa
-    #define BitCuartos      0x08                    // 0000 1000                  // Bit para indicar si la secuencia de cuartos está activa
-    #define BitCalefaccion  0x10                    // 0001 0000                  // Bit para indicar si la calefacción está activa
-    #define BitEstadoSinInternet  0x20              // 0010 0000                  // Bit para indicar que no hay conexión a Internet
-    #define BitEstadoProteccionCampanadas 0x40      // 0100 0000                  // Bit para indicar que la protección de campanadas está activa
-
-    #define MAX_CAMPANAS 2                                      //!< Número máximo de campanas en el campanario
+    
 
     struct PasoSecuencia {                                      // Estructura que representa un paso en una secuencia de campanadas
         int indiceCampana;                                      //!< Índice de la campana a tocar (0 para la primera, 1 para la segunda, etc.)    
@@ -142,6 +167,67 @@
     };    
     const int numPasosMisa = sizeof(secuenciaMisa) / sizeof(PasoSecuencia);
 
+    const PasoSecuencia secuenciaFiesta[] = {
+        {0, 1, 1200},  
+        {1, 1, 1000},
+        {0, 1, 900},
+        {1, 1, 800},
+        {0, 1, 700},
+        {1, 1, 600},
+        {0, 1, 500},
+        {1, 1, 400},
+        {0, 2, 350},   
+        {1, 1, 300},
+        {0, 1, 350},
+        {1, 2, 300},
+        {0, 3, 280},
+        {1, 1, 250},
+        {0, 1, 280},
+        {1, 1, 250},
+        {0, 2, 300},
+        {1, 2, 250},
+        {0, 1, 280},
+        {1, 3, 220},
+        {0, 4, 250},
+        {1, 1, 200},
+        {0, 1, 250},
+        {1, 1, 200},
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 2, 160},   
+        {1, 2, 160},   
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 3, 140},   
+        {1, 1, 160},   
+        {0, 1, 180},   
+        {1, 2, 160},   
+        {0, 2, 160},   
+        {1, 1, 180},   
+        {0, 1, 180},   
+        {1, 1, 180},   
+        {0, 1, 180},   
+        {1, 3, 140},       
+        {0, 2, 200},   
+        {1, 1, 180},   
+        {0, 3, 160},   
+        {1, 2, 150},   
+        {0, 4, 140},   
+        {1, 3, 130},   
+        {0, 5, 120},   
+        {1, 1, 400},   
+        {0, 3, 300},   
+        {1, 2, 250},   
+        {0, 2, 500},   
+        {1, 1, 800}   
+    };
+    static constexpr int numPasosFiesta = sizeof(secuenciaFiesta) / sizeof(PasoSecuencia);
+
+
     class CAMPANARIO 
     {
         public:
@@ -151,6 +237,7 @@
             void AddCampana (CAMPANA* pCampana);                        //!< Añade una campana al campanario
             void TocaDifuntos (void);                                   //!< Toca la secuencia de campanadas para difuntos   
             void TocaMisa (void);                                       //!< Toca la secuencia de campanadas para misa   
+            void TocaFiesta (void);                                     //!< Toca la secuencia de campanadas para fiestas
             void IniciarSecuenciaCampanadas(void);                      //!< Inicia la secuencia de campanadas
             int ActualizarSecuenciaCampanadas(void);                    //!< Actualiza la secuencia de campanadas, tocando las campanas según el intervalo definido
             void ResetCampanaTocada(void);                              //!< Resetea el número de campana tocada
@@ -163,16 +250,17 @@
             void AddCalefaccion(CALEFACCION* pCalefaccion);             //!< Añade la calefacción al campanario
             void EnciendeCalefaccion(int nMinutos);                     //!< Enciende la calefacción del campanario
             void ApagaCalefaccion(void);                                //!< Apaga la calefacción del campanario
-            double TestTemporizacionCalefaccion(void);                    //!< Testea la temporización de la calefacción del campanario
+            double TestTemporizacionCalefaccion(void);                  //!< Testea la temporización de la calefacción del campanario
             bool GetEstadoCalefaccion(void);                            //!< Devuelve el estado de la calefacción del campanario (true si está encendida, false si está apagada)
             int GetEstadoCampanario(void);                              //!< Devuelve el estado del campanario
             void SetInternetConectado(void);                            //!< Establece el estado de conexión a Internet del campanario
             void ClearInternetConectado(void);                          //!< Limpia el estado de conexión a Internet del campanario
             void SetProteccionCampanadas(void);                         //!< Establece el estado de protección de campanadas
             void ClearProteccionCampanadas(void);                       //!< Limpia el estado de protección de campanadas
-            private:
+        
+        private:
 
-            CAMPANA* _pCampanas[MAX_CAMPANAS];                          //!< Array de punteros a las campanas del campanario
+            CAMPANA* _pCampanas[Config::Campanario::MAX_CAMPANAS];      //!< Array de punteros a las campanas del campanario
             int _nNumCampanas = 0;                                      //!< Número de campanas en el campanario
             
             ToquePlano _aCampanadas[200];                               //!< Array de campanadas a tocar en formato plano, un elemento por campanada, con un máximo de 200 elementos

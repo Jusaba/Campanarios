@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Campanario</title>
+        <title>Campanar</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <script src="Campanas.js"></script>
-        Campanario
+        Campanar
         <style>
             body {
                 font-family: Arial, sans-serif;
@@ -45,6 +45,9 @@
             .button.Difuntos {
                 background-color: #e74c3c;
             }
+           .button.Fiesta {
+                background-color: #bc4fac;
+            }            
             .button:hover {
                 opacity: 0.8;
             }
@@ -251,8 +254,9 @@
         </div>
         <div class="content">
             <div class="button-grid">
-                <button class="button Misa" onclick="SelMisa()">Misa</button>
-                <button class="button Difuntos" onclick="SelDifuntos()">Difuntos</button>
+                <button class="button Misa" onclick="SelMisa()">Missa</button>
+                <button class="button Difuntos" onclick="SelDifuntos()">Difunts</button>
+                <button class="button Fiesta" onclick="SelFiesta()">Festa</button>
                 <div class="calefaccion-container">
                     <button class="button Calefaccion" id="btnCalefaccion" onclick="toggleCalefaccion()">
                         <svg id="iconoCalefaccion" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="orange" stroke-width="2"
@@ -260,7 +264,7 @@
                             <path d="M12 2C12 2 7 8 7 13a5 5 0 0 0 10 0c0-5-5-11-5-11z"/>
                             <path d="M12 22a3 3 0 0 1-3-3c0-2 3-5 3-5s3 3 3 5a3 3 0 0 1-3 3z"/>
                         </svg>
-                        <span>Calefaccion</span>
+                        <span>Calefaccio</span>
                         <span id="minutosCalefaccion" class="minutos-display">000m</span>
                     </button>
                     <button class="button-reloj" onclick="abrirModalMinutos()">
@@ -276,11 +280,11 @@
             <div id="modalMinutos" class="modal">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3>Seleccionar Minutos de Calefaccion</h3>
+                        <h3>Seleccionar Minuts de Calefaccio</h3>
                     </div>
                     <div class="modal-body">
                         <div class="minutos-control">
-                            <label class="minutos-label">Minutos:</label>
+                            <label class="minutos-label">Minuts:</label>
                             <div class="digitos-container">
                                 <div class="digito-control">
                                     <button class="digito-btn" onclick="incrementarDigito(0)">+</button>
@@ -299,12 +303,12 @@
                                 </div>
                             </div>
                             <div class="total-minutos">
-                                Total: <span id="totalMinutos">000</span> minutos
+                                Total: <span id="totalMinutos">000</span> minuts
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button class="modal-btn cancel" onclick="cerrarModalMinutos()">Cancelar</button>
+                        <button class="modal-btn cancel" onclick="cerrarModalMinutos()">Cancel-la</button>
                         <button class="modal-btn accept" onclick="aceptarMinutos()">Aceptar</button>
                     </div>
                 </div>
@@ -326,7 +330,9 @@
             function SelDifuntos() {
                 websocket.send("Difuntos");
             }
-              
+            function SelFiesta() {
+                websocket.send("Fiesta");
+            }  
             function sendCommand(command) {
                 fetch(`/command?value=${command}`)
                     .then(response => {
@@ -373,7 +379,13 @@
              * @param {number} posicion - Posición del dígito (0, 1, 2)
              */
             function incrementarDigito(posicion) {
-                minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] + 1) % 10;
+                if (posicion === 0) {
+                    // ✅ CAMBIO: Dígito 0 (centenas) solo puede ser 0 o 1
+                    minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] + 1) % 2;
+                } else {
+                    // Dígitos 1 y 2 (decenas y unidades) pueden ser 0-9 normalmente
+                    minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] + 1) % 10;
+                }                
                 actualizarVisualizacionDigitos();
                 actualizarTotalMinutos();
             }
@@ -383,7 +395,13 @@
              * @param {number} posicion - Posición del dígito (0, 1, 2)
              */
             function decrementarDigito(posicion) {
-                minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] - 1 + 10) % 10;
+                if (posicion === 0) {
+                    // Dígito 0 (centenas) solo puede ser 0 o 1
+                    minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] - 1 + 2) % 2;
+                } else {
+                    // Dígitos 1 y 2 (decenas y unidades) pueden ser 0-9 normalmente
+                    minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] - 1 + 10) % 10;
+                }                
                 actualizarVisualizacionDigitos();
                 actualizarTotalMinutos();
             }

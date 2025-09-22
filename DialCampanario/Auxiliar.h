@@ -1,747 +1,901 @@
-//Tratamiento de iamgenes  ( redimensionado ) https://www.photopea.com/
-#ifndef DIAL_H
-    #define DIAL_H
 
-//    #define DEBUG
-    #define DEBUGBOTON
-/*    
-    #define DEBUGAUXILIAR
-    #define DEBUGI2CTX
-    #define DEBUGI2CREQUEST
-    #define DEBUGI2CRX
-    #define DEBUGI2CREQUEST
-    #define DEBUGMENU
-*/
+/**
+ * @file Auxiliar.h
+ * @brief Módulo principal de gestión del sistema DialCampanario
+ * 
+ * @details Este archivo contiene todas las funciones de alto nivel para la gestión
+ *          del M5Dial como interfaz de control del campanario. Incluye:
+ *          - Gestión de menús dinámicos según estado del campanario
+ *          - Comunicación I2C con ESP32 del campanario
+ *          - Control de encoder y botones del M5Dial
+ *          - Gestión inteligente de display y modo sleep
+ *          - Sistema de temporizador para calefacción
+ * 
+ * @author Julian Salas Bartolomé
+ * @date 2025-06-15
+ * @version 1.0
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ * @see Display.h, I2CServicio.h, Configuracion.h
+ * 
+ * @note Requiere M5Dial y ESP32 con I2C configurado
+ * @warning Llamar InicializarVariablesGlobales() antes de usar
+ */
+
+#ifndef AUXILIAR_H
+    #define AUXILIAR_H
+
+
     #include <Wire.h>
     #include "Display.h"
     #include <M5Dial.h>
+    #include "I2CServicio.h"
+    #include "Configuracion.h"
+    #include "Debug.h"
+
+    // ============================================================================
+    // VARIABLES
+    // ============================================================================
+    boolean lComandoRecienEnviado = false;                          // Indica si se acaba de enviar un comando I2C (para evitar solapamientos)
+    long nMilisegundoTemporal = 0;                                  // Variable para almacenar el tiempo temporal
 
 
-    #define I2C_SLAVE_ADDR 0x12
-
-    
-    //#define bitEstadoInicio            0x00
-    #define bitEstadoDifuntos          0x01
-    #define bitEstadoMisa              0x02
-    //#define bitEstadoStop              0x04
-    #define bitEstadoCalefaccionOn     0x10
-    //#define bitEstadoCalefaccionOff    0x20
-    //#define bitEstadoCampanario        0x40
-    //#define bitEstadoHora              0x80
-    #define bitEstadoSinInternet        0x20
-    #define bitEstadoProteccionCampanadas 0x40
-
-
-
-    #define SLAVE_ADDRESS 0x08
-
-    #define nEstados                7
-
-    #define nmsGetEstadoCampanario  500 // Tiempo en milisegundos para solicitar el estado del campanario 
-    #define nCiclosDisplaySleep         30 // Tiempo en milisegundos para poner el display en modo sleep
-    #define nCiclosDisplayHora           20 // Tiempo en milisegundos para solicitar la hora al esclavo I2C
-
-        // Define los estados
-        enum Estados {
-           EstadoInicio = 0,
-           EstadoDifuntos,
-           EstadoMisa,
-           EstadoStop,
-           EstadoCalefaccionOn,
-           EstadoCalefaccionOff,
-           EstadoCampanario,
-           EstadoHora,
-           EstadoSinInternet,
-           EstadoProteccionCampanadas,
-           EstadoFechaHora,
-           EstadoSetTemporizador,
-           EstadoFin
-        };
-
-
+    // ============================================================================
+    // MENÚS - Definición de los menús disponibles
+    // ============================================================================
     const int* menuActual = nullptr; 
-    const int menu0[] = {EstadoDifuntos, EstadoMisa, EstadoCalefaccionOn};
-    #define ItemsMenu0  3
-    const int menu1[] = {EstadoDifuntos, EstadoMisa,  EstadoCalefaccionOff};
-    #define ItemsMenu1  3
-    const int menu2[] = { EstadoStop, EstadoCalefaccionOn};
+    const int menu0[] = {Config::States::I2CState::DIFUNTOS, Config::States::I2CState::MISA, Config::States::I2CState::FIESTA, Config::States::I2CState::CALEFACCION_ON};
+    #define ItemsMenu0  4
+    const int menu1[] = {Config::States::I2CState::DIFUNTOS, Config::States::I2CState::MISA, Config::States::I2CState::FIESTA, Config::States::I2CState::CALEFACCION_OFF};
+    #define ItemsMenu1  4
+    const int menu2[] = { Config::States::I2CState::STOP, Config::States::I2CState::CALEFACCION_ON};
     #define ItemsMenu2  2
-    const int menu3[] = { EstadoStop, EstadoCalefaccionOff};
+    const int menu3[] = { Config::States::I2CState::STOP, Config::States::I2CState::CALEFACCION_OFF};
     #define ItemsMenu3  2
-    const int menu4[] = { EstadoCalefaccionOn };
+    const int menu4[] = { Config::States::I2CState::CALEFACCION_ON };
     #define ItemsMenu4  1
-    const int menu5[] = { EstadoCalefaccionOff };
+    const int menu5[] = { Config::States::I2CState::CALEFACCION_OFF };
     #define ItemsMenu5  1
 
-    int nMenu = 0;                                              // Variable para almacenar el numero menú actual
+    // ============================================================================
+    // ESTRUCTURAS DE DATOS
+    // ============================================================================
 
     struct CampanarioEstado                                     //Estructura para almacenar el estado del campanario
     {
-        uint8_t nEstado;                                        // Estado del campanario
+        uint8_t estadoActual;                                   // Estado del campanario
+        uint8_t estadoAnterior;                                 // Estado anterior (para detectar cambios) 
         uint8_t nHora;                                          // Hora actual
         uint8_t nMinutos;                                       // Minutos actuales
         uint8_t nSegundos;                                      // Segundos actuales
         uint8_t nDia;                                           // Día actual
         uint8_t nMes;                                           // Mes actual
         uint8_t nAno;                                           // Año actual (2 dígitos)
+        bool tieneInternet;                                     // Indica si hay conexión a Internet
     };
     CampanarioEstado campanarioEstado;                          // Estructura para almacenar el estado del campanario
 
-    int nMenuItems = 4;                                     // Cambia según el menú activo
+    struct MenuState                                            // Estructura para almacenar el estado del menú
+    {
+        int indiceMenuActivo;                                   // Índice del menú activo (0-5)
+        int posicionSeleccionada;                               // Posición seleccionada en el menú actual
+        int numeroDeOpciones;                                   // Número de opciones del menú actual
+        const int* opcionesDisponibles;                         // Puntero al array de opciones del menú
+        bool hayQueMostrarCambio;                               // Indica si hay que actualizar el display
+    };
+    MenuState menu;
 
-    long nMilisegundoTemporal = 0;                          // Variable para almacenar el tiempo temporal
-    int nContadorCiclosDisplaySleep = 0;                    // Contador de ciclos de sleep del display
+    struct EncoderState                                         // Estructura para almacenar el estado del encoder
+    {
+        int posicionAnterior;                                   // Posición anterior del encoder
+        int posicionActual;                                     // Posición actual del encoder
+        bool hayCambio;                                         // Indica si hubo cambio en el encoder
+    };
+    EncoderState encoder;    
+    
+    struct DisplayState                                         // Estructura para almacenar el estado del display
+    {
+        bool estaEnModoSleep;                                   // Indica si está en modo sleep
+        int contadorCiclosSleep;                                // Contador para activar sleep
+        long tiempoUltimaActividad;                             // Timestamp de última actividad
+    };
+    DisplayState display;
+    
+    struct TemporizadorState                                   // Estructura para almacenar el estado del temporizador de calefacción
+    {
+        int minutosConfiguracion;                              // Minutos configurados para calefacción
+        bool estaConfigurandose;                               // Indica si está en modo configuración
+    };
+    TemporizadorState temporizador;
+    
+    // ============================================================================
+    // TABLA DE OPCIONES
+    // ============================================================================
 
-    int nTemporizacion = 45;                                // Variable para almacenar la temporización de la calefacción
+    struct OpcionConfig                                         // Estructura para definir una opción del menú
+    {
+        int estado;                                             //Estado correspondiente a la opcion de menu
+        void (*funcionMostrar)();                               //Funcion a ejecutar para mostrar la opcion
+        bool esComando;                                         // true = envía comando I2C, false = acción especial
+    };
 
-    int nEstado = EstadoInicio;                             // Estado inicial del sistema
-    uint8_t nEstadoAnterior = EstadoInicio;                 // Estado anterior del menú
-    uint8_t nEstadoActual = EstadoInicio;                   // Estado actual del menú
-    int nPosicionAneterior = 0;                             // Estado anterior del sistema
-    int nPosicionActual = 0;                                // Estado actual del sistema
-    bool lCambioEstado = false;                             // Indica si ha habido un cambio de estado
-    bool lSleep = false;                                    // Indica si el display está en modo sleep
-    bool lInternet = false;                                 // Indica si no hay conexión a Internet
+    
+    const OpcionConfig OPCIONES[] =                             // Tabla con TODAS las opciones 
+    {
+        {Config::States::I2CState::INICIO,              MensajeInicio,          false},
+        {Config::States::I2CState::DIFUNTOS,            MensajeDifuntos,        true},     
+        {Config::States::I2CState::MISA,                MensajeMisa,            true},    
+        {Config::States::I2CState::FIESTA,              MensajeFiesta,          true},     // Acción especial (temporizador) 
+        {Config::States::I2CState::STOP,                MensajeStop,            true},     
+        {Config::States::I2CState::CALEFACCION_ON,      MensajeCalefaccionOn,   false},    // Acción especial (temporizador)
+        {Config::States::I2CState::CALEFACCION_OFF,     MensajeCalefaccionOff,  true},     
+        {Config::States::I2CState::SET_TEMPORIZADOR,    nullptr,                false}     // Acción especial
+    };
 
-    void InicioDisplay (void);                              //!< Inicializa la pantalla del dispositivo M5Dial
-    void AsignaMenu (void);                                 //!< Asigna el menú correspondiente según el estado actual
-    void MostrarOpcion(int seleccionado);                   //!< Muestra un mensaje en pantalla según la opción seleccionada
+    #define NUM_OPCIONES (sizeof(OPCIONES)/sizeof(OpcionConfig))
 
-    void EnviarEstado(int nEstadoMenu);                     //!< Envía el estado actual del menú a un dispositivo esclavo a través del bus I2C
-    void EnviarTemporizacion(void);                         //!< Envía el estado de la calefacción encendida al esclavo I2C con la temporización
+
+
+
+    // ============================================================================
+    // FUNCIONES DE DISPLAY
+    // ============================================================================
+    void DespertarDisplay(void);                                    //!< Despierta el display del modo sleep
+    void ActualizarDisplaySleep(void);                              //!< Actualiza el display en modo sleep 
+
+    // ============================================================================
+    // FUNCIONES DE MENÚ Y NAVEGACIÓN
+    // ============================================================================
+    void MostrarOpcion(int seleccionado);                           //!< Muestra un mensaje en pantalla según la opción seleccionada
+    void AsignaMenu (void);                                         //!< Asigna el menú correspondiente según el estado actual
+    void SeleccionaMenu(void);                                      //!< Selecciona el menú según el estado recibido
+
+    // ============================================================================
+    // FUNCIONES DE CONTROL DE ENTRADA
+    // ============================================================================
+    void ManejarBotonA(void);                                       //!< Maneja el evento del botón A del M5Dial
+    void ManejarEncoder(void);                                      //!< Maneja el evento del encoder del M5Dial
+
+    // ============================================================================
+    // FUNCIONES DE PROCESAMIENTO DE ESTADOS
+    // ============================================================================
+    void ProcesarAccionEstado(int estadoActual);                    //!< Procesa la acción correspondiente al estado seleccionado
+
+    // ============================================================================
+    // FUNCIONES DE TEMPORIZACIÓN DE CALEFACCIÓN
+    // ============================================================================
+    void SetTemporizacion(void);                                    //!< Inicia la configuración del temporizador de calefacción
+
+    // ============================================================================
+    // FUNCIONES DE COMUNICACIÓN I2C
+    // ============================================================================
+    //ENVIO COMANDOS I2C
+    void EnviarEstado(int nEstadoMenu);                             //!< Envía el estado actual del menú a un dispositivo esclavo a través del bus I2C
+    void EnviarTemporizacion(void);                                 //!< Envía el estado de la calefacción encendida al esclavo I2C con la temporización
     void EnviarEstadoConParametro(int nEstadoTx, int nParametroTx); //!< Envía un estado y un parametro al dispositivo esclavo a través del bus I2C
-    void SolicitarEstadoCampanario(void);                   //!< Solicita el estado del campanario al esclavo I2C
-    void SolicitarEstadoHora(void);                         //!< Solicita el estado y la hora al esclavo I2C
-    void SolicitarEstadoFechaHora(void);                    //!< Solicita la fecha y hora al esclavo I2C
+    
+    //SOLICITUDES I2C
+    void SolicitarEstadoCampanario(void);                           //!< Solicita el estado del campanario al esclavo I2C
+    void SolicitarEstadoHora(void);                                 //!< Solicita el estado y la hora al esclavo I2C
+    void SolicitarEstadoFechaHora(bool incluirTemporizacion = false); //!< Solicita la fecha y hora al esclavo I2C
 
-    void SeleccionaMenu(int nEstadoSeleccionado);           //!< Selecciona el menú según el estado recibido
+    // ============================================================================
+    // FUNCIÓN DE INICIALIZACIÓN
+    // ============================================================================
+    void InicializarVariablesGlobales(void);                        //!< Inicializa las variables globales del sistema
 
-    void ReiniciarEstado(int nuevoEstado, int nPosicionMenu);  //!< Reinicia el estado del sistema al nuevo estado especificado y deja el menu en la posición indicada
-    void EnviarYReiniciar(int estado, int nPosicionMenu);   //!< Envía el estado actual y reinicia el sistema al nuevo estado especificado
-    void ManejarBotonA(void);                               //!< Maneja el evento del botón A del M5Dial
-    void DespertarDisplay(void);                            //!< Despierta el display del modo sleep
-    void ProcesarAccionEstado(int estadoActual);            //!< Procesa la acción correspondiente al estado seleccionado
-    void SetTemporizacion(void);                            //!< Inicia la configuración del temporizador de calefacción
-    void ManejarEncoder(void);                              //!< Maneja el evento del encoder del M5Dial
-    void ActualizarDisplaySleep(void);                      //!< Actualiza el display en modo sleep
+
+
+
+    // ============================================================================
+    // FUNCIONES DE DISPLAY
+    // ============================================================================
 
 
 
     /**
-     * @brief Inicializa la pantalla del dispositivo M5Dial
+     * @brief Despierta el display del modo sleep y restaura interfaz
      * 
-     * Esta función configura e inicializa la pantalla del dispositivo M5Dial.
-     * Utiliza la configuración predeterminada del M5 y establece los parámetros
-     * iniciales necesarios para el funcionamiento de la pantalla.
+     * @details Desactiva el modo sleep, reinicia contadores de ciclos, restaura
+     *          el brillo máximo de la pantalla y actualiza la visualización con
+     *          la opción actualmente seleccionada en el menú.
      * 
-     * @note Requiere que el objeto M5Dial esté correctamente definido
+     * @note Función automática llamada cuando se detecta actividad del usuario
+     * @warning Solo debe llamarse cuando display.estaEnModoSleep es true
      * 
-     * @return void No devuelve ningún valor
+     * @see ActualizarDisplaySleep(), BrilloFull(), MostrarOpcion()
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
      */
-        void InicioDisplay (void)
-        {
-            auto cfg = M5.config();
-            M5Dial.begin(cfg, true, false);
-        
-            CreaSpritesMenu();
-        }        
-
+       void DespertarDisplay(void) {
+            DBG_DISPLAY("DespertarDisplay->Despertando display del modo sleep");
+            display.estaEnModoSleep = false;                                    // Indicamos que no estamos en modo sleep                          
+            display.contadorCiclosSleep = 0;                                    // Reiniciamos el contador de ciclos de sleep
+            if (M5.Display.getBrightness() < 100) BrilloFull();                 // Asegurarse de que el brillo esté al máximo
+            MostrarOpcion(menu.opcionesDisponibles[menu.posicionSeleccionada]); // Mostramos la opción actual
+        }
     /**
-     * @brief Muestra un mensaje en pantalla según la opción seleccionada.
+     * @brief Gestiona el modo sleep automático del display y muestra información temporal
+     * 
+     * @details Controla los ciclos de brillo y la transición automática a modo sleep.
+     *          En modo activo, muestra fecha/hora normal o información de calefacción
+     *          temporizada según el bit 4 del estado del sistema. Gestiona transiciones
+     *          de brillo suaves y temporización automática de sleep.
+     * 
+     * @note Usa bit 4 del campanarioEstado.estadoActual para detectar calefacción temporizada
+     * @note Se llama automáticamente desde el loop principal cada 500ms
+     * 
+     * @see BajaBrillo(), SubeBrillo(), MensajeFechaHora()
+     * @see MostrarCalefaccionTemporizada(), Config::Display::CICLOS_PARA_SLEEP
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */        
+        void ActualizarDisplaySleep(void) 
+        {
+            DBG_DISPLAY("ActualizarDisplaySleep->Actualizando display y gestionando sleep");
+            if (lBrillo && !display.estaEnModoSleep) {  // Si hay brillo y no estamos en modo sleep                                         // Si hay brillo y no estamos en modo sleep
+                display.contadorCiclosSleep++;                                                                                              // Incrementamos el contador de ciclos de sleep
+                if (display.contadorCiclosSleep >= Config::Display::CICLOS_PARA_SLEEP) {                                                    // Si se alcanza el límite de ciclos para sleep                     
+                    BajaBrillo();                                                                                                           // Bajamos el brillo de la pantalla            
+                    display.contadorCiclosSleep = 0;                                                                                        // Reiniciamos el contador de ciclos de sleep
+                    display.estaEnModoSleep = true;                                                                                         // Indicamos que estamos en modo sleep
+                }
+            } else {                                                                                                                        // Si no hay brillo o estamos en modo sleep
+                if (!lBrillo) {
+                    if (campanarioEstado.estadoActual & Config::States::BIT_CALEFACCION ) {                                                 // Si el bit 4 está activo (calefacción temporizada)                                                                       
+                        MostrarCalefaccionTemporizada(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, true); // Mostramos la información de calefacción temporizada
+                    }else{                                                                                                                  // Si el bit 4 no está activo (hora normal)                 
+                        MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno); // Mostramos la fecha y hora normal
+                    }
+                    SubeBrillo(40);                                                                                                         // Subimos el brillo de la pantalla                    
+                } else {                                                                                                                    // Si hay brillo y estamos en modo sleep            
+                    if (campanarioEstado.estadoActual & Config::States::BIT_CALEFACCION ) {                                                 // Si el bit 4 está activo (calefacción temporizada)         
+                        MostrarCalefaccionTemporizada(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, false);// Mostramos la información de calefacción temporizada
+                    }else{                                                                                                                  // Si el bit 4 no está activo (hora normal)       
+                        MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno); // Mostramos la fecha y hora normal
+                    }
+                }
+            }
+        }
+    // ============================================================================
+    // FUNCIONES DE MENÚ Y NAVEGACIÓN
+    // ============================================================================
+    
+    /**
+     * @brief Muestra mensaje en pantalla según la opción seleccionada usando tabla OPCIONES
      *
-     * Esta función recibe un valor entero que representa el estado o la opción seleccionada
-     * y muestra el mensaje correspondiente en el display llamando a la función adecuada.
+     * @details Busca automáticamente en la tabla OPCIONES el estado correspondiente
+     *          y ejecuta la función de mostrar asociada. Si la función es nullptr,
+     *          maneja casos especiales como el temporizador. Sistema robusto con
+     *          advertencias de debug para estados no encontrados.
      *
-     * @param seleccionado Valor entero que indica la opción seleccionada. Puede ser uno de los siguientes:
-     *  - EstadoInicio:          Muestra el mensaje de inicio.
-     *  - EstadoDifuntos:        Muestra el mensaje de difuntos.
-     *  - EstadoMisa:            Muestra el mensaje de misa.
-     *  - EstadoStop:            Muestra el mensaje de parada.
-     *  - EstadoCalefaccionOn:   Muestra el mensaje de calefacción encendida.
-     *  - EstadoCalefaccionOff:  Muestra el mensaje de calefacción apagada.
-     *  - EstadoSetTemporizador:  Muestra el mensaje de temporización.
+     * @param seleccionado Valor entero que indica el estado/opción a mostrar
+     * 
+     * @note Utiliza la tabla OPCIONES[] para mapeo automático estado->función
+     * @warning Si el estado no existe en OPCIONES, muestra advertencia de debug
+     * 
+     * @see OPCIONES[], MensajeTemporizacion(), Config::States::SET_TEMPORIZADOR
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
      */
         void MostrarOpcion(int seleccionado) 
         {
-            #ifdef DEBUGMENU
-                Serial.printf("MostrarOpcion->Seleccionado: %d\n", seleccionado);
-            #endif
-            switch (seleccionado) {
-                case EstadoInicio:          
-                     MensajeInicio();
-                    break;
-                case EstadoDifuntos:        
-                    MensajeDifuntos(); 
-                    break;
-                case EstadoMisa:            
-                    MensajeMisa(); 
-                    break;
-                case EstadoStop:            
-                    MensajeStop(); 
-                    break;
-                case EstadoCalefaccionOn:   
-                    MensajeCalefaccionOn(); 
-                    break;
-                case EstadoCalefaccionOff:  
-                    MensajeCalefaccionOff(); 
-                    break;
-                case EstadoSetTemporizador:
-                    MensajeTemporizacion(nTemporizacion, true); 
-                    break;
-            }
-        }
-
-    /**
-     * @brief Asigna el menú actual y muestra la opción correspondiente.
-     *
-     * Esta función selecciona el menú activo y el número de elementos del menú
-     * según el valor de nMenu. Luego, muestra la opción actual del menú basada en nEstado.
-     * Si el sistema está en modo de bajo consumo (lSleep es verdadero), restaura el brillo
-     * de la pantalla al máximo utilizando BrilloFull(), siempre que el brillo actual sea menor a 100.
-     */
-        void AsignaMenu (void) 
-        {
-            switch(nMenu) {
-                case 0: menuActual = menu0; nMenuItems = ItemsMenu0; break;
-                case 1: menuActual = menu1; nMenuItems = ItemsMenu1; break;
-                case 2: menuActual = menu2; nMenuItems = ItemsMenu2; break;
-                case 3: menuActual = menu3; nMenuItems = ItemsMenu3; break;
-                case 4: menuActual = menu4; nMenuItems = ItemsMenu4; break;
-                case 5: menuActual = menu5; nMenuItems = ItemsMenu5; break;
-            }
-            MostrarOpcion(menuActual[nEstado]);
-            if (lSleep) {
-               lSleep = false;                           // Asegurarse de que el brillo esté al máximo
-               if ( M5.Display.getBrightness() < 100) {
-                    BrilloFull();                  // Asegurarse de que el brillo esté al máximo
-                } 
-            }  
-        }
-
-    /**
-     * @brief Selecciona el estado del menú según el estado seleccionado.
-     *
-     * Esta función evalúa el valor de nEstadoSeleccionado utilizando máscaras de bits
-     * para determinar el estado actual del menú. Si bitEstadoProteccionCampanadas está activo,
-     * solo permite opciones de calefacción (menús 4 y 5). Si no, permite todas las opciones.
-     * Asigna un valor a nEstadoMenu según las siguientes condiciones:
-     *   - Si protección activa y calefacción ON: nEstadoMenu = 5 (solo calefacción OFF)
-     *   - Si protección activa y calefacción OFF: nEstadoMenu = 4 (solo calefacción ON)
-     *   - Si está activo Difuntos o Misa y la calefacción está encendida: nEstadoMenu = 3
-     *   - Si está activo Difuntos o Misa y la calefacción está apagada: nEstadoMenu = 2
-     *   - Si no está activo Difuntos ni Misa pero la calefacción está encendida: nEstadoMenu = 1
-     *   - Si no está activo Difuntos ni Misa ni la calefacción: nEstadoMenu = 0
-     *
-     * @param nEstadoSeleccionado Valor entero que representa el estado actual mediante bits.
-     */
-        void SeleccionaMenu(int nEstadoSeleccionado) 
-        {
-            bool ProteccionToqueHoras = nEstadoSeleccionado & bitEstadoProteccionCampanadas;
-            bool calefOn = nEstadoSeleccionado & bitEstadoCalefaccionOn;
-
-            if (ProteccionToqueHoras) {
-                // Si la protección está activa, solo permite opciones de calefacción
-                nMenu = calefOn ? 5 : 4;  // Menu 5: solo CalefaccionOff, Menu 4: solo CalefaccionOn
-            } else {
-                // Comportamiento normal cuando no hay protección
-                bool difuntosMisa = nEstadoSeleccionado & (bitEstadoDifuntos | bitEstadoMisa);
-                nMenu = difuntosMisa ? (calefOn ? 3 : 2) : (calefOn ? 1 : 0);
-            }
-        }
-
-
-    //======================================================================================================
-    // Funciones de envío de ordenes al control del campanario I2C
-    //======================================================================================================
-    /**
-     * @brief Envía el estado actual del menú a un dispositivo esclavo a través del bus I2C.
-     *
-     * Esta función inicia una transmisión I2C con la dirección definida por I2C_SLAVE_ADDR,
-     * envía el valor del estado del menú especificado por nEstadoMenu y finaliza la transmisión.
-     * Informa por el puerto serie si la transmisión fue exitosa o si ocurrió un error.
-     *
-     * @param nEstadoMenu Valor entero que representa el estado actual del menú a enviar al esclavo I2C.
-     */
-        void EnviarEstado (int nEstadoMenu ) 
-        {
-            Wire.beginTransmission(I2C_SLAVE_ADDR);
-            Wire.write(nEstadoMenu); 
-            uint8_t result = Wire.endTransmission();
-            #ifdef DEBUGI2CTX
-                if (result == 0) {
-                    Serial.printf("EnviarEstado->Estado %d enviado correctamente al esclavo I2C\n", nEstadoMenu);
-                } else {
-                    Serial.printf("EnviarEstado->Error al enviar el estado %d al esclavo I2C, código de error: %d\n", nEstadoMenu, result);
+            DBG_DISPLAY_PRINTF("MostrarOpcion->Seleccionado: %d\n", seleccionado);
+            // Buscar en tabla automáticamente:
+            for (int i = 0; i < NUM_OPCIONES; i++) {                                                                        //Recorremos el array de OPCIONES
+                if (OPCIONES[i].estado == seleccionado) {                                                                   //Si el estado coincide
+                    if (OPCIONES[i].funcionMostrar != nullptr) {                                                            //Si la función no es nula
+                        OPCIONES[i].funcionMostrar();                                                                       // Llamar función automáticamente
+                        DBG_MENU_PRINTF("MostrarOpcion->Función encontrada y ejecutada para estado: %d\n", seleccionado);
+                    } else {                                                                                                // Si la función es nula, manejar casos especiales
+                        if (seleccionado == Config::States::SET_TEMPORIZADOR) {                                             // Caso especial para temporizador
+                            MensajeTemporizacion(temporizador.minutosConfiguracion, true);                                  // Mostrar mensaje de temporizador
+                            DBG_MENU("MostrarOpcion->Caso especial temporizador ejecutado\n");
+                        }
+                    }
+                    return;
                 }
-            #endif        
-        }
+            }
+            // Si llegamos aquí, no se encontró el estado en la tabla
+            DBG_MENU_PRINTF("MostrarOpcion->ADVERTENCIA: Estado %d no encontrado en tabla OPCIONES\n", seleccionado);
+        }        
 
     /**
-     * @brief Envía un estado y un parámetro asociado al esclavo I2C.
+     * @brief Asigna el menú correspondiente según índice activo y muestra opción actual
      *
-     * Esta función inicia una transmisión I2C al dispositivo esclavo definido por I2C_SLAVE_ADDR,
-     * enviando primero el valor de estado (nEstadoTx) y luego el parámetro asociado (nParametroTx).
-     * Al finalizar la transmisión, si está habilitada la depuración (DEBUGI2CTX), se imprime en el
-     * puerto serie el resultado de la operación, indicando si fue exitosa o si ocurrió algún error.
+     * @details Selecciona el array de opciones correspondiente según menu.indiceMenuActivo,
+     *          actualiza el número de opciones disponibles y muestra la opción seleccionada.
+     *          Gestiona automáticamente la salida del modo sleep si es necesario,
+     *          restaurando el brillo completo de la pantalla.
      *
-     * @param nEstadoTx Estado u orden a enviar al esclavo I2C.
-     * @param nParametroTx Parámetro asociado al estado/orden enviado.
-     */
-        void EnviarEstadoConParametro(int nEstadoTx, int nParametroTx) 
-        {
-            Wire.beginTransmission(I2C_SLAVE_ADDR);
-            Wire.write(nEstadoTx);                                              // Envía el estado/orden
-            Wire.write(nParametroTx);                                           // Envía el parámetro asociado al estado/orden
-            uint8_t result = Wire.endTransmission();
-            #ifdef DEBUGI2CTX
-                if (result == 0) {
-                    Serial.printf("EnviarEstadoConParametro->Estado %d con parámetro %d enviado correctamente al esclavo I2C\n", nEstadoTx, nParametroTx);
-                } else {
-                    Serial.printf("EnviarEstadoConParametro->Error al enviar el estado %d con parámetro %d al esclavo I2C, código de error: %d\n", nEstadoTx, nParametroTx, result);
-                }
-            #endif
-        }
-
-    //======================================================================================================
-    // Funciones de recepción de información del control del campanario I2C
-    // SolicitarEstadoCampanario.- Solicita solo el estado del campanario
-    // SolicitarEstadoHora.-  Solicita el estado y la hora del campanario
-    // SolicitarEstadoFechaHora.- Solicita el estado, la hora y la fecha del campanario
-    //======================================================================================================
-    /**
-     * @brief Solicita el estado actual del campanario a través del bus I2C.
-     *
-     * Esta función envía una solicitud al dispositivo esclavo I2C identificado por la dirección I2C_SLAVE_ADDR
-     * para obtener el estado actual del campanario. Si se detecta un cambio de estado respecto al anterior,
-     * se actualiza el estado, se selecciona el menú correspondiente y se marca que ha habido un cambio de estado.
+     * @note Se llama automáticamente cuando menu.hayQueMostrarCambio es true
+     * @note Maneja 6 menús diferentes (menu0-menu5) según el contexto del campanario
      * 
-     * Mensajes de depuración pueden ser impresos por el puerto serie si están habilitados los flags DEBUGI2CREQUEST o DEBUGI2CTX.
-     *
-     * Variables externas utilizadas:
-     * - I2C_SLAVE_ADDR: Dirección del dispositivo esclavo I2C.
-     * - EstadoCampanario: Comando para solicitar el estado.
-     * - nEstadoActual: Variable donde se almacena el estado recibido.
-     * - nEstadoAnterior: Variable que almacena el estado anterior para detectar cambios.
-     * - SeleccionaMenu(int): Función que selecciona el menú según el estado recibido.
-     * - nEstado: Variable que indica el elemento actual del menú.
-     * - lCambioEstado: Bandera que indica si ha habido un cambio de estado.
-     */
-        void SolicitarEstadoCampanario() 
-        {
-
-            #ifdef DEBUGI2CREQUEST       
-                Serial.println("SolicitarEstadoCampanario->Solicitando estado del campanario...");
-            #endif 
-        
-            Wire.beginTransmission(I2C_SLAVE_ADDR);                                     // Inicia la transmisión I2C al esclavo
-            Wire.write(EstadoCampanario);                                               // Envía el comando para solicitar el estado del campanario                 
-            Wire.endTransmission();                                                     // Termina la transmisión
-
-            Wire.requestFrom(I2C_SLAVE_ADDR, 1);                                        // Solicita 1 byte al esclavo
-            if (Wire.available()) {
-                nEstadoActual = Wire.read();    
-                campanarioEstado.nEstado = nEstadoActual;                               // Actualiza el estado del campanario            
-                if (nEstadoActual != nEstadoAnterior) {
-                    #ifdef DEBUGI2CREQUEST
-                        Serial.printf("SolicitarEstadoCampanario->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual); 
-                    #endif
-                    nEstadoAnterior = nEstadoActual;
-                    SeleccionaMenu(nEstadoActual); // Llama a la función para seleccionar el menú según el estado recibido
-                    nEstado = 0; // Reinicia el estado al primer elemento del menú
-                    lCambioEstado = true; // Marca que ha habido un cambio de estado
-                } 
-            } else {
-                #ifdef DEBUGI2CREQUEST
-                    Serial.println("SolicitarEstadoCampanario->No se recibió respuesta del campanario");
-                #endif
-            }    
-        }
-
-    /**
-     * @brief Solicita el estado y la hora actual al dispositivo esclavo a través del bus I2C.
-     *
-     * Esta función envía una solicitud al esclavo I2C identificado por la dirección I2C_SLAVE_ADDR
-     * para obtener el estado actual y la hora (hora, minutos y segundos) del campanario.
-     * Si la respuesta es válida (se reciben al menos 4 bytes), actualiza las variables globales
-     * correspondientes con los valores recibidos. Si detecta un cambio de estado respecto al anterior,
-     * actualiza el menú y marca que ha habido un cambio de estado.
-     *
-     * Mensajes de depuración se imprimen si están habilitados los flags DEBUGI2CREQUEST o DEBUGI2CRX.
-     *
-     * Variables globales modificadas:
-     *  - nEstadoActual: Estado actual recibido del esclavo.
-     *  - campanarioEstado.nHora: Hora recibida.
-     *  - campanarioEstado.nMinutos: Minutos recibidos.
-     *  - campanarioEstado.nSegundos: Segundos recibidos.
-     *  - campanarioEstado.nEstado: Estado recibido.
-     *  - nEstadoAnterior: Estado anterior para detectar cambios.
-     *  - nEstado: Índice del menú, reiniciado si hay cambio de estado.
-     *  - lCambioEstado: Bandera que indica si hubo cambio de estado.
-     *
-     * @note Requiere que la comunicación I2C esté inicializada previamente.
-     */
-        void SolicitarEstadoHora() {
-            #ifdef DEBUGI2CREQUEST 
-                Serial.println("SolicitarEstadoHora->Solicitando hora del campanario...");
-            #endif
-        
-            // Solicita la hora al esclavo I2C
-            Wire.beginTransmission(I2C_SLAVE_ADDR);
-            Wire.write(EstadoHora); 
-            Wire.endTransmission();
-        
-            Wire.requestFrom(I2C_SLAVE_ADDR, 4); // Solicita 4 bytes al esclavo
-        
-            if (Wire.available() >= 4) {
-                nEstadoActual = Wire.read();                                        // Lee el estado del esclavo I2C        
-                lInternet = (nEstadoActual & bitEstadoSinInternet) ? false : true;  // Si el bit bitEstadoSinInternet está activo, no hay conexión a Internet
-                campanarioEstado.nHora = Wire.read();                               // Lee la hora del esclavo I2C
-                campanarioEstado.nMinutos = Wire.read();                            // Lee los minutos del esclavo I2C
-                campanarioEstado.nSegundos = Wire.read();                           // Lee los segundos del esclavo I2C
-                campanarioEstado.nEstado = nEstadoActual;                           // Actualiza el estado del campanario
-                if (nEstadoActual != nEstadoAnterior) {
-                    #ifdef DEBUGI2CREQUEST
-                        Serial.printf("SolicitarEstadoHora->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual); 
-                    #endif
-                    nEstadoAnterior = nEstadoActual;                                // Actualiza el estado anterior
-                    SeleccionaMenu(nEstadoActual);                                  // Llama a la función para seleccionar el menú según el estado recibido
-                    nEstado = 0;                                                    // Reinicia el estado al primer elemento del menú
-                    lCambioEstado = true;                                           // Marca que ha habido un cambio de estado
-                } 
-                #ifdef DEBUGI2CRX
-                    Serial.printf("SolicitarEstadoHora->Estado actual del campanario: %d\n", nEstadoActual);
-                    Serial.printf("SolicitarEstadoHora->Hora recibida: %02d:%02d:%02d\n", campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos);
-                #endif        
-            } else {
-                #ifdef DEBUGI2CREQUEST
-                    Serial.println("SolicitarEstadoHora->No se recibió respuesta del campanario");
-                #endif
-            }            
-
-        }
-
-    /**
-     * @brief Solicita la fecha y hora actual al dispositivo esclavo a través del bus I2C.
-     *
-     * Esta función envía una solicitud al esclavo I2C para obtener el estado actual, fecha y hora del campanario.
-     * Lee 7 bytes de respuesta que incluyen el estado, día, mes, año, hora, minutos y segundos.
-     * Si se detecta un cambio de estado respecto al anterior, actualiza el menú y marca el cambio de estado.
-     * Incluye mensajes de depuración opcionales mediante macros de preprocesador.
-     *
-     * Requiere que las variables globales y estructuras relacionadas con el estado del campanario estén definidas.
-     *
-     * @note Utiliza las macros DEBUGI2CREQUEST y DEBUGI2CRX para imprimir información de depuración por Serial.
-     */
-        void SolicitarEstadoFechaHora() {
-            #ifdef DEBUGI2CREQUEST 
-                Serial.println("SolicitarEstadoFechaHora->Solicitando fecha y hora del campanario...");
-            #endif
-        
-            // Solicita la hora al esclavo I2C
-            Wire.beginTransmission(I2C_SLAVE_ADDR);                                     //Hacemos Request I2C al esclavo para solicitar Fecha y Hora
-            Wire.write(EstadoFechaHora); 
-            Wire.endTransmission();
-        
-            Wire.requestFrom(I2C_SLAVE_ADDR, 7);                                        // Solicita 7 bytes al esclavo
-        
-            if (Wire.available() >= 7) {
-                nEstadoActual = Wire.read();                                            // Lee el estado del esclavo I2C
-                lInternet = (nEstadoActual & bitEstadoSinInternet) ? false : true;      // Si el bit bitEstadoSinInternet está activo, no hay conexión a Internet
-                campanarioEstado.nDia = Wire.read();                                    // Lee el día del esclavo I2C
-                campanarioEstado.nMes = Wire.read();                                    // Lee el mes del esclavo I2C
-                campanarioEstado.nAno = Wire.read();                                    // Lee el año del esclavo I2C
-                campanarioEstado.nHora = Wire.read();                                   // Lee la hora del esclavo I2C
-                campanarioEstado.nMinutos = Wire.read();                                // Lee los minutos del esclavo I2C
-                campanarioEstado.nSegundos = Wire.read();                               // Lee los segundos del esclavo I2C
-                campanarioEstado.nEstado = nEstadoActual;                               // Actualiza el estado del campanario
-                if (nEstadoActual != nEstadoAnterior) {                                 // Si hay un cambio de estado
-                    #ifdef DEBUGI2CREQUEST
-                        Serial.printf("SolicitarEstadoFechaHora->Cambio de estado detectado: %d -> %d\n", nEstadoAnterior, nEstadoActual);
-                    #endif
-                    nEstadoAnterior = nEstadoActual;
-                    SeleccionaMenu(nEstadoActual);                                      // Llama a la función para seleccionar el menú según el estado recibido
-                    nEstado = 0;                                                        // Reinicia el estado al primer elemento del menú
-                    lCambioEstado = true;                                               // Marca que ha habido un cambio de estado
-                }
-                #ifdef DEBUGI2CRX
-                    Serial.printf("SolicitarEstadoFechaHora->Estado actual del campanario: %d\n", nEstadoActual);
-                    Serial.printf("SolicitarEstadoFechaHora->Hora recibida: %02d:%02d:%02d %02d/%02d/%02d\n", campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
-                #endif        
-            } else {
-                #ifdef DEBUGI2CREQUEST
-                    Serial.println("SolicitarEstadoFechaHora->No se recibió respuesta del campanario");
-                #endif
-            }            
-
-        }
-
-
-    /**
-     * @brief Reinicia el estado actual y asigna un nuevo estado anterior.
+     * @see menu0-menu5[], MostrarOpcion(), BrilloFull()
+     * @see menu.indiceMenuActivo, menu.numeroDeOpciones
      * 
-     * Esta función establece la variable nEstado a 0 y actualiza nEstadoAnterior
-     * con el valor proporcionado en el parámetro nuevoEstado.
-     * 
-     * @param nuevoEstado Valor que se asignará a nEstadoAnterior.
+     * @since v1.0
+     * @author Julian Salas Bartolomé
      */
-        void ReiniciarEstado(int nuevoEstado, int nPosicionMenu ) {
-            nEstado = nPosicionMenu;
-            nEstadoAnterior = nuevoEstado;
+    void AsignaMenu (void) 
+    {
+        DBG_MENU_PRINTF("AsignaMenu->Asignando menú %d\n", menu.indiceMenuActivo);
+        switch(menu.indiceMenuActivo) {                     
+            case 0: menu.opcionesDisponibles = menu0; menu.numeroDeOpciones = ItemsMenu0; break;
+            case 1: menu.opcionesDisponibles = menu1; menu.numeroDeOpciones = ItemsMenu1; break;
+            case 2: menu.opcionesDisponibles = menu2; menu.numeroDeOpciones = ItemsMenu2; break;
+            case 3: menu.opcionesDisponibles = menu3; menu.numeroDeOpciones = ItemsMenu3; break;
+            case 4: menu.opcionesDisponibles = menu4; menu.numeroDeOpciones = ItemsMenu4; break;
+            case 5: menu.opcionesDisponibles = menu5; menu.numeroDeOpciones = ItemsMenu5; break;
         }
 
+        MostrarOpcion(menu.opcionesDisponibles[menu.posicionSeleccionada]); 
+
+        if (display.estaEnModoSleep) {                      
+           display.estaEnModoSleep = false;                 
+           if (M5.Display.getBrightness() < 100) {
+                BrilloFull();
+            } 
+        }  
+    }
+
     /**
-     * @brief Envía orden al control del campanario y reinicia el estado.
+     * @brief Selecciona el menú activo según el estado actual del campanario
      *
-     * Esta función llama a EnviarEstado para enviar el estado proporcionado como argumento,
-     * y posteriormente llama a ReiniciarEstado para reiniciar ese mismo estado.
+     * @details Implementa la lógica de selección de menús basada en máscaras de bits
+     *          del estado del campanario. Utiliza operadores bitwise para evaluar
+     *          múltiples condiciones simultáneamente: protección de campanadas,
+     *          estados de difuntos/misa y estado de calefacción. Función crítica
+     *          para la navegación, ya que determina qué opciones están disponibles.
      *
-     * @param estado Valor del estado que se enviará y reiniciará.
+     * Lógica de selección:
+     * - Si protección campanadas activa: menú 4 o 5 (según calefacción)
+     * - Si difuntos/misa activos: menú 2 o 3 (según calefacción)
+     * - Estado normal: menú 0 o 1 (según calefacción)
+     *
+     * @note Utiliza campanarioEstado.estadoActual como entrada
+     * @warning Modifica directamente menu.indiceMenuActivo. Llamar AsignaMenu() después
+     * 
+     * @see AsignaMenu(), Config::States::BIT_PROTECCION_CAMPANADAS
+     * @see Config::States::BIT_CALEFACCION, Config::States::BIT_DIFUNTOS
+     * @see Config::States::BIT_MISA
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
      */
-        void EnviarYReiniciar(int estado, int nPosicionMenu ) {
-            EnviarEstado(estado);
-            ReiniciarEstado(estado, nPosicionMenu);
+    void SeleccionaMenu(void)
+    {
+        DBG_MENU_PRINTF("SeleccionaMenu->Estado seleccionado: %d\n", campanarioEstado.estadoActual);
+        bool ProteccionToqueHoras = campanarioEstado.estadoActual & Config::States::BIT_PROTECCION_CAMPANADAS;              // Protección de campanadas activa
+        bool calefOn = campanarioEstado.estadoActual & Config::States::BIT_CALEFACCION;                                     // Calefacción encendida
+
+        if (ProteccionToqueHoras) {                                                                                         // Si la protección de campanadas está activa                   
+            menu.indiceMenuActivo = calefOn ? 5 : 4;                                                                        // Menú 5 si calefacción ON, menú 4 si OFF             
+        } else {                                                                                                            // Si la protección de campanadas NO está activa  
+            bool difuntosMisa = campanarioEstado.estadoActual & (Config::States::BIT_DIFUNTOS | Config::States::BIT_MISA | Config::States::BIT_FIESTA);  // Difuntos, misa o fiesta activa
+            menu.indiceMenuActivo = difuntosMisa ? (calefOn ? 3 : 2) : (calefOn ? 1 : 0);                                   // Menú 3 o 2 si difuntos/misa, menú 1 o 0 si normal  
         }
-    //========================================================================================================
-    //Manejador boton A
-    //========================================================================================================
+    }
+
+    // ============================================================================
+    // FUNCIONES DE CONTROL DE ENTRADA
+    // ============================================================================
     /**
-     * @brief Maneja la acción al presionar el botón A.
-     *
-     * Si está definido DEBUG, imprime un mensaje en el monitor serie indicando que el botón A fue presionado.
-     * Si el sistema está en modo sleep, despierta el display y termina la función.
-     * En caso contrario, procesa la acción correspondiente según el estado actual del menú.
+     * @brief Maneja la pulsación del botón A del M5Dial con lógica de contexto
+     * 
+     * @details Si el display está en modo sleep, lo despierta y termina. Si no,
+     *          procesa la acción correspondiente al estado actual. Distingue entre
+     *          modo normal (navegación de menú) y modo configuración de temporizador.
+     *          Función principal de interacción del usuario con el sistema.
+     * 
+     * @note Función de entrada principal del usuario al sistema
+     * @note Gestiona automáticamente el despertar del display si está en sleep
+     * 
+     * @see DespertarDisplay(), ProcesarAccionEstado()
+     * @see temporizador.estaConfigurandose, menu.opcionesDisponibles
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
      */
         void ManejarBotonA(void) {
 
             int estadoActual;
 
-            #ifdef DEBUG
-                Serial.println("Botón A presionado");
-            #endif
+            DBG_BUTTONS("Botón A presionado");
 
-            // Manejo del modo sleep
-            if (lSleep) {
-                DespertarDisplay();
-                return;
+            
+            if (display.estaEnModoSleep) {                                                      //Si M5Dial esta en sueño
+                DespertarDisplay();                                                             //Despierta el display
+                return;                                                                         //Y salimos de la función
             }
 
             // Procesar acción según el estado actual
-            #ifdef DEBUGBOTON
-                Serial.printf("ManejarBotonA->Estado Actual: %d\n", nEstado);
-                Serial.print(menuActual[0]);
-            #endif
+            DBG_BUTTONS_PRINTF("ManejarBotonA->Estado Actual: %d\n", menu.posicionSeleccionada);
+            DBG_BUTTONS(menu.opcionesDisponibles[0]);
 
-            if (nEstado != EstadoSetTemporizador) {
-                estadoActual = menuActual[nEstado];
+            if (temporizador.estaConfigurandose) {                                                  // Si no estamos en el estado de temporización, 
+                DBG_BUTTONS("ManejarBotonA->Procesando estado de temporización");
+                estadoActual = Config::States::I2CState::SET_TEMPORIZADOR;                          // Si estamos en el estado de temporización, mantenemos ese estado
             }else{
-                estadoActual = EstadoSetTemporizador;                               // Si estamos en el estado de temporización, mantenemos ese estado
+                DBG_BUTTONS("ManejarBotonA->Procesando estado normal");
+                estadoActual = menu.opcionesDisponibles[menu.posicionSeleccionada];                 // procesamos el estado seleccionado
             }
-
+     
             ProcesarAccionEstado(estadoActual);
         }
 
     /**
-     * @brief Despierta el display del modo sleep
-     */
-        void DespertarDisplay(void) {
-            lSleep = false;
-            nContadorCiclosDisplaySleep = 0;
-            if (M5.Display.getBrightness() < 100) BrilloFull();
-            MostrarOpcion(menuActual[nEstado]);
+     * @brief Procesa la entrada del encoder rotatorio con modo dual de operación
+     * 
+     * @details Función dual que maneja dos modos de operación distintos:
+     *          
+     *          **Modo configuración temporizador:**
+     *          - Ajusta minutos entre 1-60 con límites automáticos
+     *          - Actualiza display en tiempo real con MensajeTemporizacion()
+     *          - No marca cambio de menú (menu.hayQueMostrarCambio = false)
+     *          
+     *          **Modo navegación normal:**
+     *          - Navega por opciones del menú actual con límites dinámicos
+     *          - Marca actualización pendiente del display
+     *          - Límites basados en menu.numeroDeOpciones
+     * 
+     * @note Reproduce tono de confirmación en cada cambio (8000Hz, 20ms)
+     * @note Actualiza display.tiempoUltimaActividad para control de sleep automático
+     * @warning Solo procesa cambios si encoder.posicionActual != encoder.posicionAnterior
+     * 
+     * @see SetTemporizacion(), MensajeTemporizacion()
+     * @see ActualizarDisplaySleep(), menu.numeroDeOpciones
+     * @see temporizador.estaConfigurandose, M5Dial.Speaker.tone()
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */        
+        void ManejarEncoder(void) {
+            DBG_AUXILIAR("ManejarEncoder->Manejando entrada del encoder");
+            encoder.posicionActual = M5Dial.Encoder.read();
+            if (encoder.posicionActual != encoder.posicionAnterior) {
+                if (temporizador.estaConfigurandose) {                  // Manejo del encoder en modo de temporización
+                    M5Dial.Speaker.tone(8000, 20);
+                    if (encoder.posicionActual > encoder.posicionAnterior) {
+                         temporizador.minutosConfiguracion = min(60, temporizador.minutosConfiguracion + 1);
+                    } else {
+                        temporizador.minutosConfiguracion = max(1, temporizador.minutosConfiguracion - 1);
+                    }
+                    MensajeTemporizacion(temporizador.minutosConfiguracion, false);
+                    menu.hayQueMostrarCambio = false; 
+                //nPosicionAneterior = nPosicionActual;
+                }else{                                                          // Manejo del encoder en otros estados
+                    if (encoder.posicionActual > encoder.posicionAnterior) {
+                         menu.posicionSeleccionada = min(menu.numeroDeOpciones - 1, menu.posicionSeleccionada + 1);
+                    } else {
+                         menu.posicionSeleccionada = max(0, menu.posicionSeleccionada - 1);
+                    }
+                    menu.hayQueMostrarCambio = true;
+                }
+                DBG_ENCODER_PRINTF("ManejarEncoder->Posición Actual: %d, Posición Anterior: %d, Estado: %d, Posición Menú: %d\n", 
+                                   encoder.posicionActual, encoder.posicionAnterior, campanarioEstado.estadoActual, menu.posicionSeleccionada);
+                encoder.posicionAnterior = encoder.posicionActual;
+                display.tiempoUltimaActividad = millis();
+            }
         }
 
-        /**
-         * @brief Procesa la acción correspondiente según el estado actual del sistema.
-         *
-         * Esta función evalúa el estado actual recibido al pulsar el boton como parámetro y ejecuta la acción asociada,
-         * como enviar órdenes específicas, cambiar banderas de estado, o configurar temporizadores.
-         * Además, si está habilitado el modo de depuración (DEBUGBOTON), imprime información relevante
-         * sobre el estado procesado a través del puerto serie.
-         *
-         * @param estadoActual Estado actual del sistema a procesar. Debe ser uno de los valores definidos
-         *                     por las constantes de estado (por ejemplo, EstadoInicio, EstadoDifuntos, etc.).
-         *
-         * @note Algunas acciones pueden modificar la variable global lCambioEstado para indicar un cambio
-         *       de estado relevante en el sistema.
-         */
+    // ============================================================================
+    // FUNCIONES DE PROCESAMIENTO DE ESTADOS
+    // ============================================================================
+    /**
+     * @brief Procesa acciones según estado actual usando tabla de configuración OPCIONES
+     *
+     * @details Sistema automático que busca en la tabla OPCIONES el estado correspondiente
+     *          y ejecuta la acción asociada. Distingue entre:
+     *          
+     *          **Comandos I2C (esComando = true):**
+     *          - Envío automático al ESP32 del campanario
+     *          - Logging automático de éxito/error
+     *          - Marca actualización de display
+     *          
+     *          **Acciones especiales (esComando = false):**
+     *          - INICIO: Sin acción
+     *          - CALEFACCION_ON: Inicia configuración temporizador
+     *          - SET_TEMPORIZADOR: Confirma y envía temporización
+     *
+     * @param estadoActual Estado del sistema a procesar
+     * 
+     * @note Utiliza tabla OPCIONES[] para mapeo automático estado->acción
+     * @warning Si el estado no existe en OPCIONES, muestra advertencia y marca cambio
+     * 
+     * @see OPCIONES[], I2C_EnviarComando(), SetTemporizacion()
+     * @see EnviarTemporizacion(), Config::States::I2CState
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */
         void ProcesarAccionEstado(int estadoActual) 
         {
-            #ifdef DEBUGBOTON
-                Serial.printf("ProcesarAccionEstado->Estado Actual: %d\n", estadoActual);
-            #endif
-
-            switch (estadoActual) {
-                case EstadoInicio:
-                    #ifdef DEBUGBOTON
-                        Serial.println("Estado Inicio");
-                    #endif
-                    break;
-
-                case EstadoDifuntos:
-                    #ifdef DEBUGBOTON
-                        Serial.println("Estado Difuntos");
-                    #endif
-                    EnviarEstado(EstadoDifuntos);                       // Envía orden de Difuntos
-                    lCambioEstado = true;
-                    break;
-
-                case EstadoMisa:
-                    #ifdef DEBUGBOTON
-                        Serial.println("Estado Misa");
-                    #endif
-                    EnviarEstado(EstadoMisa);                           // Envía orden de Misa
-                    lCambioEstado = true;
-                    break;
-
-                case EstadoStop:
-                    #ifdef DEBUGBOTON
-                        Serial.println("Estado Stop");
-                    #endif
-                    EnviarEstado(EstadoStop);                           // Envía orden de Stop
-                    lCambioEstado = true;
-                    break;
-
-                case EstadoCalefaccionOn:
-                    #ifdef DEBUGBOTON
-                        Serial.println("Estado Calefaccion On");
-                    #endif
-                    SetTemporizacion();
-                    lCambioEstado = false;
-                    break;
-
-                case EstadoCalefaccionOff:
-                    #ifdef DEBUGBOTON
-                        Serial.println("Estado Calefaccion Off");
-                    #endif
-                    EnviarEstado(EstadoCalefaccionOff);                 // Envía orden de Calefacción Off
-                    lCambioEstado = true;
-                    break;
-
-                case EstadoSetTemporizador:
-                    //#ifdef DEBUGBOTON
-                        Serial.println("Estado Set Temporizador");
-                    //#endif
-                    EnviarTemporizacion();
-                    break;
-
-                default:
-                    lCambioEstado = true;
-                    break;
+            DBG_BUTTONS_PRINTF("ProcesarAccionEstado->Estado Actual: %d\n", estadoActual);
+        
+            // Buscar en tabla automáticamente:
+            for (int i = 0; i < NUM_OPCIONES; i++) {
+                if (OPCIONES[i].estado == estadoActual) {
+                    if (OPCIONES[i].esComando) {
+                        // Comando I2C automático:
+                        DBG_BUTTONS_PRINTF("ProcesarAccionEstado->Enviando comando I2C: %d\n", estadoActual);
+                        if (I2C_EnviarComando(estadoActual)) {
+                            DBG_BUTTONS_PRINTF("ProcesarAccionEstado->Estado %d enviado correctamente", estadoActual);
+                        } else {
+                            DBG_BUTTONS_PRINTF("ProcesarAccionEstado->Error al enviar estado %d", estadoActual);
+                        }
+                        //EnviarEstado(estadoActual);
+                       menu.hayQueMostrarCambio = true;
+                    } else {
+                        // Acciones especiales según el estado:
+                        switch (estadoActual) {
+                            case Config::States::I2CState::INICIO:
+                                DBG_BUTTONS("ProcesarAccionEstado->Estado Inicio (sin acción)");
+                                break;
+                            case Config::States::I2CState::CALEFACCION_ON:
+                                DBG_BUTTONS("ProcesarAccionEstado->Estado Calefaccion On -> SetTemporizacion");
+                                SetTemporizacion();
+                                menu.hayQueMostrarCambio = false;
+                                break;
+                            case Config::States::I2CState::SET_TEMPORIZADOR:
+                                DBG_BUTTONS("ProcesarAccionEstado->Estado Set Temporizador -> EnviarTemporizacion");
+                                EnviarTemporizacion();
+                                campanarioEstado.estadoActual = Config::States::I2CState::CALEFACCION_ON;             // Cambia al estado de calefacción encendida
+                                campanarioEstado.estadoAnterior = Config::States::I2CState::SET_TEMPORIZADOR;         // Actualiza el estado anterior al de configuración de temporizador
+                                temporizador.estaConfigurandose = false;                                              // Indica que ya no estamos en modo configuración de temporizador
+                                menu.hayQueMostrarCambio = true;                                                       // Indica que hay que actualizar el
+                                break;
+                        
+                            default:
+                                DBG_BUTTONS_PRINTF("ProcesarAccionEstado->Acción especial no definida para estado: %d\n", estadoActual);
+                                menu.hayQueMostrarCambio = true;
+                                break;
+                        }
+                    }
+                    return;
+                }
             }
+        
+            // Si llegamos aquí, no se encontró el estado en la tabla
+            DBG_BUTTONS_PRINTF("ProcesarAccionEstado->ADVERTENCIA: Estado %d no encontrado en tabla OPCIONES\n", estadoActual);
+            menu.hayQueMostrarCambio = true;  // Fallback seguro
         }
 
-    //========================================================================================================
-    //Funciones de temporizacion de la calefacción
-    //========================================================================================================
-
-    /**
-     * @brief Establece el estado de temporización del sistema.
-     *
-     * Esta función configura el sistema para iniciar el proceso de temporización,
-     * mostrando la pantalla correspondiente y actualizando los estados internos.
-     * Si está habilitado DEBUGBOTON, imprime información de depuración por el puerto serie.
-     */
+    // ============================================================================
+    // FUNCIONES DE TEMPORIZACIÓN DE CALEFACCIÓN
+    // ============================================================================
+        /**
+         * @brief Inicia el modo de configuración del temporizador de calefacción
+         * 
+         * @details Configura el sistema para iniciar el proceso de temporización de
+         *          calefacción. Muestra la pantalla de configuración, actualiza estados
+         *          internos y prepara el sistema para recibir entrada del encoder.
+         *          El usuario podrá ajustar los minutos usando el encoder rotatorio.
+         * 
+         * @note Establece temporizador.estaConfigurandose = true para modo encoder
+         * @note Después de llamar esta función, el encoder controla la temporización
+         * @note No marca cambio de menú (menu.hayQueMostrarCambio = false)
+         * 
+         * @see EnviarTemporizacion(), ManejarEncoder()
+         * @see MensajeTemporizacion(), temporizador.minutosConfiguracion
+         * 
+         * @since v1.0
+         * @author Julian Salas Bartolomé
+         */
         void SetTemporizacion(void) 
         {
-            MensajeTemporizacion(nTemporizacion, true);
-            nEstado = EstadoSetTemporizador;
-            nEstadoAnterior = EstadoSetTemporizador;
-            lCambioEstado = false;
-
-            #ifdef DEBUGBOTON
-                Serial.println("SetTemporizacion->Estado Set Temporizador iniciado");
-                Serial.printf("SetTemporizacion->nEstado: %d, nEstadoAnterior: %d\n", nEstado, nEstadoAnterior);
-            #endif
+            DBG_AUXILIAR("SetTemporizacion->Iniciando configuración de temporización");
+            MensajeTemporizacion(temporizador.minutosConfiguracion, true);                  // Muestra el mensaje de temporización   
+            //menu.posicionSeleccionada = Config::States::I2CState::SET_TEMPORIZADOR;       // Actualiza la posición seleccionada en el menú
+            campanarioEstado.estadoActual = Config::States::I2CState::SET_TEMPORIZADOR;     // Actualiza el estado actual
+            campanarioEstado.estadoAnterior = Config::States::I2CState::SET_TEMPORIZADOR;   // Actualiza el estado anterior
+            menu.hayQueMostrarCambio = false;                                                // Indica que no hay que actualizar el display
+            temporizador.estaConfigurandose = true;                                        // Indica que no estamos en modo configuración de temporizador
+            DBG_BUTTONS("SetTemporizacion->Estado Set Temporizador iniciado");
         }
+
+    // ============================================================================
+    // FUNCIONES DE COMUNICACIÓN I2C
+    // ============================================================================
+    //----------------------------------------------------------------------------
+    // ENVIO COMANDOS
+    // ---------------------------------------------------------------------------
 
     /**
-     * @brief Confirma la configuración del temporizador envia el estado Calefaccio On y la temporizacion.
-     *
-     * Envía el estado de temporización junto con el valor actual de temporización,
-     * cambia el estado al de calefacción encendida y actualiza el estado anterior
-     * al de configuración de temporizador.
+     * @brief Envía comando simple al campanario vía I2C con logging automático
+     * 
+     * @details Wrapper que encapsula el envío de comandos I2C simples con logging
+     *          automático de debug. Proporciona retroalimentación clara del éxito
+     *          o fallo de la operación. Función base para comandos sin parámetros.
+     * 
+     * @param nEstadoMenu Estado/comando a enviar al campanario
+     * 
+     * @note Wrapper con logging de debug automático para I2C_EnviarComando()
+     * @note Proporciona retroalimentación clara en logs de debug
+     * 
+     * @see I2C_EnviarComando(), EnviarEstadoConParametro()
+     * @see ProcesarAccionEstado() para uso automático
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
      */
-        void EnviarTemporizacion(void)
-         {
-            EnviarEstadoConParametro(EstadoSetTemporizador, nTemporizacion); // Envía el estado de temporización con el valor actual
-            nEstado = EstadoCalefaccionOn; // Cambia al estado de calefacción encendida
-            nEstadoAnterior = EstadoSetTemporizador; // Actualiza el estado anterior al de
-            #ifdef DEBUGBOTON
-                Serial.printf("EnviarTemporizacion->Estado Set Temporizador enviado con valor: %d\n", nTemporizacion);
-                Serial.printf("EnviarTemporizacion->Nuevo Estado: %d, Estado Anterior: %d\n", nEstado, nEstadoAnterior);
-            #endif
-        }
-
-        void ManejarEncoder(void) {
-            nPosicionActual = M5Dial.Encoder.read();
-            if (nPosicionActual != nPosicionAneterior) {
-                if (nEstado == EstadoSetTemporizador) {                     // Manejo del encoder en modo de temporización
-                M5Dial.Speaker.tone(8000, 20);
-                if (nPosicionActual > nPosicionAneterior) {
-                    nTemporizacion++;
-                    if (nTemporizacion > 60) nTemporizacion = 60; // Limita el temporizador a 60 minutos
-                } else {
-                    nTemporizacion--;
-                    if (nTemporizacion < 1) nTemporizacion = 1; // Limita el temporizador a 1 minuto
-                }
-                MensajeTemporizacion(nTemporizacion, false);
-                lCambioEstado = false;
-                nPosicionAneterior = nPosicionActual;
-            }else{                                                          // Manejo del encoder en otros estados
-                M5Dial.Speaker.tone(8000, 20);
-                if (nPosicionActual > nPosicionAneterior) {
-                    if (nEstado < nMenuItems - 1) {
-                        nEstado++;
-                    } else {
-                        nEstado = nMenuItems - 1;
-                    }
-                } else {
-                    if (nEstado > 0) {
-                        nEstado--;
-                    } else {
-                        nEstado = 0;
-                    }
-                }
-                #ifdef DEBUG
-                    Serial.printf("Nueva Posicion Actual: %d, Nuevo Estado Actual: %d\n", nPosicionActual, nEstado);
-                #endif
-                lCambioEstado = true;
-                nPosicionAneterior = nPosicionActual;
-            }
-        }
-    }
-
-    /**
-     * @brief Actualiza el estado de brillo y sueño del display.
-     *
-     * Esta función gestiona el ciclo de sueño del display. Si el brillo está activo y el display no está en modo sueño,
-     * incrementa el contador de ciclos y, al alcanzar el límite, reduce el brillo y activa el modo sueño.
-     * Si el brillo no está activo, muestra la fecha y hora y aumenta el brillo. Si el brillo está activo,
-     * actualiza la fecha y hora en el display.
-     *
-     * En modo depuración (DEBUG), imprime un mensaje indicando que el display está activo y mostrando la hora.
-     */
-    void ActualizarDisplaySleep(void) 
-    {
-        if (lBrillo && !lSleep) {
-            nContadorCiclosDisplaySleep++;
-            if (nContadorCiclosDisplaySleep >= nCiclosDisplaySleep) {
-                BajaBrillo();
-                nContadorCiclosDisplaySleep = 0;
-                lSleep = true;
-            }
-        } else {
-            if (!lBrillo) {
-                MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
-                SubeBrillo(40);
+        void EnviarEstado(int nEstadoMenu) {
+            DBG_AUXILIAR_PRINTF("EnviarEstado->Enviando estado %d al campanario...", nEstadoMenu);
+            if (I2C_EnviarComando(nEstadoMenu)) {
+                DBG_I2C_PRINTF("EnviarEstado->Estado %d enviado correctamente", nEstadoMenu);
             } else {
-                EscribeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno);
+                DBG_I2C_PRINTF("EnviarEstado->Error al enviar estado %d", nEstadoMenu);
             }
-            #ifdef DEBUG
-                Serial.println("Display activo, se presenta la hora");
-            #endif
-                
+        }
+
+    /**
+     * @brief Envía comando con parámetro al campanario vía I2C
+     * 
+     * @details Wrapper para comandos I2C que requieren parámetros adicionales.
+     *          Usado principalmente para envío de temporizaciones de calefacción.
+     *          Proporciona logging detallado del comando y parámetro enviados.
+     * 
+     * @param nEstadoTx Estado/comando a enviar al campanario
+     * @param nParametroTx Parámetro asociado al comando (ej: minutos temporizador)
+     * 
+     * @note Usado principalmente para temporizaciones con EnviarTemporizacion()
+     * @note Proporciona logging detallado de comando y parámetro
+     * 
+     * @see EnviarEstado(), I2C_EnviarComandoConParametro()
+     * @see EnviarTemporizacion() para uso específico de temporizador
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */
+    void EnviarEstadoConParametro(int nEstadoTx, int nParametroTx) {
+        DBG_AUXILIAR_PRINTF("EnviarEstadoConParametro->Enviando estado %d con parámetro %d al campanario...", nEstadoTx, nParametroTx);
+        if (I2C_EnviarComandoConParametro(nEstadoTx, nParametroTx)) {
+            DBG_I2C_PRINTF("EnviarEstadoConParametro->Estado %d con parámetro %d enviado", nEstadoTx, nParametroTx);
+        } else {
+            DBG_I2C_PRINTF("EnviarEstadoConParametro->Error al enviar estado %d con parámetro %d", nEstadoTx, nParametroTx);
         }
     }
+
+    /**
+     * @brief Confirma y envía la configuración del temporizador al campanario
+     * 
+     * @details Envía comando I2C con los minutos configurados, actualiza estados
+     *          del sistema y establece el flag de comando recién enviado para
+     *          evitar colisiones I2C. Función final del proceso de temporización.
+     * 
+     * @note Establece lComandoRecienEnviado = true para control de timing I2C
+     * @note Resetea nMilisegundoTemporal para evitar peticiones inmediatas
+     * @warning Debe llamarse solo después de SetTemporizacion()
+     * 
+     * @see SetTemporizacion(), I2C_EnviarComandoConParametro()
+     * @see temporizador.minutosConfiguracion, lComandoRecienEnviado
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */        
+        void EnviarTemporizacion(void)
+        {
+            DBG_AUXILIAR_PRINTF("EnviarTemporizacion->Enviando temporización: %d minutos\n", temporizador.minutosConfiguracion);
+            if (I2C_EnviarComandoConParametro(Config::States::I2CState::SET_TEMPORIZADOR, temporizador.minutosConfiguracion)) {
+                DBG_I2C_PRINTF("EnviarTemporizacion->Estado %d con parámetro %d enviado", Config::States::I2CState::SET_TEMPORIZADOR, temporizador.minutosConfiguracion);
+            } else {
+                DBG_I2C_PRINTF("EnviarTemporizacion->Error al enviar estado %d con parámetro %d", Config::States::I2CState::SET_TEMPORIZADOR, temporizador.minutosConfiguracion);
+            }
+            //EnviarEstadoConParametro(EstadoSetTemporizador, nTemporizacion);                      // Envía el estado de temporización con el valor actual
+            lComandoRecienEnviado = true;                                                        // Indica que se acaba de enviar un comando
+            nMilisegundoTemporal = millis();                                                   // Reinicia el temporizador para la próxima solicitud I2C
+        }
+
+
+    // ---------------------------------------------------------------------------
+    // SOLICITUDES I2C
+    // ---------------------------------------------------------------------------
+    /**
+     * @brief Solicita el estado básico del campanario vía I2C con gestión de menús
+     * 
+     * @details Wrapper que encapsula la comunicación I2C básica y maneja la lógica
+     *          de cambio automático de menú. Detecta cambios de estado y actualiza
+     *          la interfaz automáticamente. Función más simple para consultas
+     *          de estado sin información temporal.
+     * 
+     * @note Actualiza campanarioEstado.estadoActual con respuesta recibida
+     * @note Gestiona cambios de menú automáticamente si hay cambio de estado
+     * 
+     * @see I2C_SolicitarEstado(), SeleccionaMenu()
+     * @see SolicitarEstadoHora(), SolicitarEstadoFechaHora()
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */    
+        void SolicitarEstadoCampanario() {
+            DBG_AUXILIAR("SolicitarEstadoCampanario->Iniciando solicitud de estado del campanario...");
+            I2CResponse response = I2C_SolicitarEstado();
+
+            if (response.success) {
+                //uint8_t nuevoEstado = response.data[0];
+                campanarioEstado.estadoActual = response.data[0];                    //Actualizamos el estado actual    
+                DBG_I2C_PRINTF("SolicitarEstadoCampanario->Estado actual: %d", campanarioEstado.estadoActual);
+
+                if (campanarioEstado.estadoActual != campanarioEstado.estadoAnterior) { //Si hay cambio de estado
+                    DBG_I2C_PRINTF("SolicitarEstadoCampanario->Cambio de estado detectado: %d -> %d", campanarioEstado.estadoAnterior, campanarioEstado.estadoActual);
+                    campanarioEstado.estadoAnterior = campanarioEstado.estadoActual;    //Actualizamos el estado anterior
+                    SeleccionaMenu();                                                   //Seleccionamos el menu en funcion del estado recibido
+                    menu.posicionSeleccionada = 0;                                      //Inicializamos la posicion del menu
+                    menu.hayQueMostrarCambio = true;                                    //Mostramos el cambio en el display
+                }
+            }
+        }
+
+    /**
+     * @brief Solicita estado y hora actual del campanario vía I2C
+     * 
+     * @details Obtiene estado del campanario junto con hora, minutos y segundos
+     *          actuales. Actualiza estado de conectividad a Internet usando
+     *          bit BIT_SIN_INTERNET y gestiona cambios de menú automáticamente.
+     *          Función intermedia entre estado básico y fecha/hora completa.
+     * 
+     * @note Detecta conexión a Internet usando Config::States::BIT_SIN_INTERNET
+     * @note Actualiza campanarioEstado.tieneInternet automáticamente
+     * @note Requiere respuesta mínima de 4 bytes (estado + hora + min + seg)
+     * 
+     * @see I2C_SolicitarEstadoHora(), SolicitarEstadoFechaHora()
+     * @see Config::States::BIT_SIN_INTERNET, campanarioEstado.tieneInternet
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */    
+        void SolicitarEstadoHora() {
+            DBG_AUXILIAR("SolicitarEstadoHora->Iniciando solicitud de hora del campanario...");
+
+            I2CResponse response = I2C_SolicitarEstadoHora();                           // Solicitar estado y hora al campanario
+
+            if (response.success && response.length >= 4) {                             // Verificar éxito de la recepcion y longitud mínima
+                campanarioEstado.estadoActual = response.data[0];
+                campanarioEstado.nHora = response.data[1];
+                campanarioEstado.nMinutos = response.data[2];
+                campanarioEstado.nSegundos = response.data[3];
+
+                campanarioEstado.tieneInternet = !(campanarioEstado.estadoActual & Config::States::BIT_SIN_INTERNET);   // Actualizar estado de Internet
+
+                if (campanarioEstado.estadoActual != campanarioEstado.estadoAnterior) { // Si hay cambio de estado
+                    DBG_I2C_PRINTF("SolicitarEstadoHora->Cambio de estado detectado: %d -> %d", campanarioEstado.estadoAnterior, campanarioEstado.estadoActual);
+                    campanarioEstado.estadoAnterior = campanarioEstado.estadoActual;    // Actualizar estado del campanario
+                    SeleccionaMenu();                                                    // Seleccionar menú según el nuevo estado
+                    menu.posicionSeleccionada = 0;                                      // Inicializar posición del menú
+                    menu.hayQueMostrarCambio = true;                                    // Indicar que hay que mostrar el cambio en el display
+                }
+            }
+        }
+
+    /**
+     * @brief Solicita estado, fecha y hora completa del campanario (versión unificada)
+     * 
+     * @details Función unificada que reemplaza funciones duplicadas anteriores.
+     *          Puede incluir datos de temporización según el parámetro. Obtiene
+     *          información temporal completa: estado, día, mes, año, hora, minutos
+     *          y segundos. Evita duplicación de código y centraliza lógica común.
+     * 
+     * @param incluirTemporizacion true para incluir datos de temporización en petición,
+     *                            false para solicitud básica de fecha/hora
+     * 
+     * @note Función unificada que reemplaza funciones duplicadas anteriores
+     * @note Requiere respuesta mínima de 7 bytes para información completa
+     * @note Actualiza toda la estructura campanarioEstado con información temporal
+     * 
+     * @see I2C_SolicitarEstadoFechaHora(), SolicitarEstadoHora()
+     * @see campanarioEstado estructura completa
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */
+        void SolicitarEstadoFechaHora(bool incluirTemporizacion) {
+
+            DBG_AUXILIAR("SolicitarEstadoFechaHora->Iniciando solicitud de fecha y hora del campanario...");
+            // Seleccionar función I2C según parámetro:
+            I2CResponse response = I2C_SolicitarEstadoFechaHora(incluirTemporizacion);                                  // Solicitar estado y fecha/hora (y opcionalmente temporización)
+
+            const char* operacion = incluirTemporizacion ? 
+                                   "SolicitarEstadoFechaHoraoTemporizacion" : 
+                                   "SolicitarEstadoFechaHora";
+
+            DBG_I2C_PRINTF("SolicitarEstadoFechaHora-> %s->Solicitando fecha y hora del campanario...", operacion);
+            if (response.success && response.length >= 7) {                                                             // Verificar éxito de la recepción y longitud mínima                     
+                // LÓGICA COMÚN (antes duplicada):
+                campanarioEstado.estadoActual = response.data[0];                                                       // Actualizar estado actual
+                campanarioEstado.tieneInternet = !(campanarioEstado.estadoActual & Config::States::BIT_SIN_INTERNET);   // Actualizar estado de Internet
+                // Actualizar estructura campanario:
+                campanarioEstado.nDia = response.data[1];
+                campanarioEstado.nMes = response.data[2];
+                campanarioEstado.nAno = response.data[3];
+                campanarioEstado.nHora = response.data[4];
+                campanarioEstado.nMinutos = response.data[5];
+                campanarioEstado.nSegundos = response.data[6];
+
+
+                if (campanarioEstado.estadoActual != campanarioEstado.estadoAnterior) {                                 // Si hay cambio de estado  
+                    DBG_I2C_PRINTF("%s->Cambio de estado detectado: %d -> %d", 
+                                  operacion, campanarioEstado.estadoAnterior, campanarioEstado.estadoActual);
+                    campanarioEstado.estadoAnterior = campanarioEstado.estadoActual;                                    // Actualizar estado del campanario    
+                    SeleccionaMenu();                                                                                   // Seleccionar menú según el nuevo estado
+                    menu.posicionSeleccionada = 0;                                                                      // Inicializar posición del menú
+                    menu.hayQueMostrarCambio = true;                                                                    // Indicar que hay que mostrar el cambio en el display
+                }
+                DBG_I2C_PRINTF("%s->Estado actual del campanario: %d", operacion, campanarioEstado.estadoActual);
+                DBG_I2C_PRINTF("%s->Hora recibida: %02d:%02d:%02d %02d/%02d/%02d", 
+                              operacion, campanarioEstado.nHora, campanarioEstado.nMinutos, 
+                              campanarioEstado.nSegundos, campanarioEstado.nDia, 
+                              campanarioEstado.nMes, campanarioEstado.nAno);
+            } else {
+                DBG_I2C_PRINTF("%s->No se recibió respuesta del campanario", operacion);
+            }
+        }
+
+    // ============================================================================
+    // FUNCIÓN DE INICIALIZACIÓN
+    // ============================================================================
+
+    /**
+     * @brief Inicializa todas las estructuras y variables globales del sistema
+     * 
+     * @details Establece valores iniciales seguros para todas las estructuras de datos:
+     *          
+     *          **MenuState:** menú 0, posición 0, sin cambios pendientes
+     *          **EncoderState:** posiciones en 0, sin cambios detectados
+     *          **CampanarioEstado:** estado INICIO, sin Internet, fecha/hora en valores por defecto
+     *          **DisplayState:** no sleep, contadores en 0, timestamp actual
+     *          **TemporizadorState:** 45 minutos por defecto, no configurando
+     *          
+     *          Función crítica que debe llamarse antes de cualquier operación del sistema.
+     * 
+     * @note DEBE llamarse en setup() antes de usar cualquier otra función del sistema
+     * @warning No llamar durante funcionamiento normal, solo en inicialización
+     * @warning Resetea todos los estados a valores por defecto
+     * 
+     * @see setup() en DialCampanario.ino
+     * @see MenuState, EncoderState, CampanarioEstado, DisplayState, TemporizadorState
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */
+        void InicializarVariablesGlobales() {
+            // Inicializar estado del menú:
+            DBG_AUXILIAR("InicializarVariablesGlobales->Inicializando variables globales...");
+            menu.indiceMenuActivo = 0;
+            menu.posicionSeleccionada = 0;
+            menu.numeroDeOpciones = 0;
+            menu.opcionesDisponibles = nullptr;
+            menu.hayQueMostrarCambio = false;
+
+            // Inicializar encoder:
+            encoder.posicionAnterior = 0;
+            encoder.posicionActual = 0;
+            encoder.hayCambio = false;
+
+            // Inicializar campanario (mejorar estructura existente):
+            campanarioEstado.estadoActual = Config::States::I2CState::INICIO;
+            campanarioEstado.estadoAnterior = Config::States::I2CState::INICIO;
+            campanarioEstado.tieneInternet = false;
+            campanarioEstado.nHora = 0;
+            campanarioEstado.nMinutos = 0;
+            campanarioEstado.nSegundos = 0;
+            campanarioEstado.nDia = 1;
+            campanarioEstado.nMes = 1;
+            campanarioEstado.nAno = 24;
+
+            // Inicializar display:
+            display.estaEnModoSleep = false;
+            display.contadorCiclosSleep = 0;
+            display.tiempoUltimaActividad = millis();
+
+            // Inicializar temporizador:
+            temporizador.minutosConfiguracion = 45;
+            temporizador.estaConfigurandose = false;
+        }
+
+
 #endif
 

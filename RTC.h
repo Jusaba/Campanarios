@@ -1,90 +1,126 @@
 /**
  * @file RTC.h
- * @brief Clase utilitaria para la gestión del reloj en tiempo real (RTC) del ESP32 usando NTP.
- *
- * Esta clase permite sincronizar la hora del sistema del ESP32 con un servidor NTP y obtener la hora actual
- * en formato de cadena. Utiliza la funcionalidad RTC interna del ESP32, no requiere hardware adicional.
- *
- * - Sincroniza la hora con un servidor NTP configurable.
- * - Permite obtener la hora actual como String.
- * - Incluye opciones para zona horaria y horario de verano.
- *
- * Ejemplo de uso:
- * @code
- *   RTC::begin(); // Sincroniza la hora con NTP
- *   String hora = RTC::getTimeStr(); // Obtiene la hora actual como String
- * @endcode
- *
- * @author  Julian Salas Baertolome
- * @date    Junio/2025
+ * @brief Sistema de sincronización temporal NTP 
+ * 
+ * @details Este header define la clase RTC que gestiona la sincronización temporal
+ *          del sistema usando servidores NTP (Network Time Protocol):
+ *          
+ *          **FUNCIONALIDADES PRINCIPALES:**
+ *          - Sincronización NTP con múltiples servidores para redundancia
+ *          - Configuración automática de zona horaria y horario de verano
+ *          - Validación de fechas recibidas para evitar datos corruptos
+ *          - Timeout configurable para evitar bloqueos en sincronización
+ *          - Sistema de fallback entre servidores si uno falla
+ *          - Formateo y conversión de fechas/horas a strings legibles
+ *          - Estado de sincronización persistente para consulta
+ *          
+ *          **ARQUITECTURA DEL SISTEMA:**
+ *          - Clase estática RTC: No requiere instanciación
+ *          - Integración con configTime() del ESP32 para NTP nativo
+ *          - Soporte para hasta 3 servidores NTP simultáneos
+ *          - Validación automática de fechas realistas (2020-2050)
+ *          - Debug condicional con DEBUGRTC para troubleshooting
+ *          - Estado global ntpSyncOk para verificación de sincronización
+ * 
+ * @note **SERVIDORES NTP CONFIGURADOS:**
+ *       - Servidor 1: Definido en NTP_SERVER1 (típicamente pool.ntp.org)
+ *       - Servidor 2: Definido en NTP_SERVER2 (servidor de backup)
+ *       - Servidor 3: Definido en NTP_SERVER3 (servidor de backup)
+ *       - Rotación automática entre servidores si hay fallos
+ * 
+ * @note **ZONA HORARIA:**
+ *       - GMT_OFFSET_SEC: Offset en segundos respecto GMT
+ *       - DAYLIGHT_OFFSET_SEC: Ajuste horario de verano en segundos
+ *       - Configuración automática según ubicación del sistema
+ * 
+ * @warning **DEPENDENCIAS CRÍTICAS:**
+ *          - WiFi.h: Conexión a Internet requerida para NTP
+ *          - time.h: Funciones de tiempo del sistema ESP32
+ *          - Configuracion.h: Servidores NTP y configuración de zona horaria
+ *          - Debug.h: Sistema de logging condicional
+ * 
+ * @warning **REQUISITOS DE RED:**
+ *          - Conexión Wi-Fi estable y activa
+ *          - Acceso UDP al puerto 123 (protocolo NTP)
+ *          - Resolución DNS funcional para nombres de servidores
+ *          - Latencia de red razonable (< 1000ms recomendado)
+ * 
+ * @author Julian Salas Bartolomé
+ * @date 2025-09-14
+ * @version 2.5
+ * 
+ * @since v1.0 - Sincronización básica con un servidor NTP
+ * @since v2.0 - Múltiples servidores y validación de fechas
+ * @since v2.5 - Timeout configurable y mejor manejo de errores
+ * 
+ * @see RTC.cpp - Implementación de todas las funcionalidades
+ * @see Configuracion.h - Definición de servidores y zona horaria
+ * @see Debug.h - Sistema de logging condicional
+ * 
+ * @todo Implementar cache local de tiempo para funcionamiento offline
+ * @todo Añadir sincronización periódica automática
+ * @todo Implementar detección de drift de reloj interno
+ * @todo Añadir soporte para servidores NTP personalizados dinámicos
  */
 #ifndef RTC_H
     #define RTC_H
 
-    #define DEBUGRTC
+
 
     #include <WiFi.h>
     #include <time.h>
+    #include "Debug.h"
 
     // Configuración por defecto para servidores NTP
-    #define NTP_SERVER "pool.ntp.org"
+    #define NTP_SERVER1 "pool.ntp.org"
+    #define NTP_SERVER2 "es.pool.ntp.org"
+    #define NTP_SERVER3 "time.google.com"
     #define GMT_OFFSET_SEC 3600                                 // Offset horario en segundos (por ejemplo, -5*3600 para GMT-5)
     #define DAYLIGHT_OFFSET_SEC 3600                            // Horario de verano, si aplica
 
-class RTC {
-    public:
-        static void begin(const char* ntpServer = NTP_SERVER, long gmtOffsetSec = GMT_OFFSET_SEC, int daylightOffsetSec = DAYLIGHT_OFFSET_SEC, unsigned long timeout_ms = 10000) {
-            configTime(gmtOffsetSec, daylightOffsetSec, ntpServer);
-            #ifdef DEBUGRTC
-                Serial.println("Sincronizando hora con NTP...");
-            #endif
-            struct tm timeinfo;
-            unsigned long start = millis();
-            bool syncOk = false;
-            while (!getLocalTime(&timeinfo)) {
-                if (millis() - start > timeout_ms) {
-                    #ifdef DEBUGRTC
-                        Serial.println("Timeout esperando sincronización NTP.");
-                    #endif
-                    break;
-                }
-                #ifdef DEBUGRTC
-                    Serial.println("Esperando sincronización NTP...");
-                #endif
-                delay(1000);
-            }
-            syncOk = getLocalTime(&timeinfo);
-            RTC::ntpSyncOk = syncOk;
-            #ifdef DEBUGRTC
-                if (syncOk) {
-                    Serial.println("Hora sincronizada correctamente:");
-                    Serial.println(timeToString(timeinfo).c_str());
-                }
-            #endif
-        }
 
-        static bool isNtpSync() {
-            return ntpSyncOk; // Devuelve el estado de sincronización NTP
-        }
+    /**
+     * @brief Clase estática para gestión de sincronización temporal NTP
+     * 
+     * @details Clase que encapsula todas las funcionalidades relacionadas con
+     *          la sincronización de tiempo usando servidores NTP. Diseñada como
+     *          clase estática para acceso global sin necesidad de instanciación.
+     *          
+     *          **CARACTERÍSTICAS DE DISEÑO:**
+     *          - Métodos estáticos: No requiere instanciación
+     *          - Estado global: ntpSyncOk accesible desde cualquier parte
+     *          - Thread-safe: Operaciones atómicas en ESP32
+     *          - Fallback automático: Rotación entre servidores si hay fallos
+     *          - Validación inteligente: Fechas realistas y rangos válidos
+     * 
+     * @note **PATRÓN DE USO TÍPICO:**
+     *       1. RTC::beginConMultiplesServidores() -                Sincronización inicial con varios servidores
+     *       2. RTC::isNtpSync() -                                  Verificar estado de sincronización
+     *       3. RTC::getTimeStr() -                                 Obtener fecha/hora formateada
+     * 
+     * @warning **LIMITACIONES:**
+     *          - Requiere conexión Wi-Fi activa para funcionar
+     *          - No mantiene tiempo sin conexión a largo plazo
+     *          - ESP32 puede perder tiempo en deep sleep
+     * 
+     * @since v1.0
+     * @author Julian Salas Bartolomé
+     */    
+    class RTC {
+        public:
+            static void begin(const char* ntpServer = NTP_SERVER1, 
+                          long gmtOffsetSec = GMT_OFFSET_SEC, 
+                          int daylightOffsetSec = DAYLIGHT_OFFSET_SEC, 
+                          unsigned long timeout_ms = 10000);
+            static bool beginConMultiplesServidores(unsigned long timeout_ms = 15000);                          
+            static bool isNtpSync();
+            static String getTimeStr();
 
-        static String getTimeStr() {
-            struct tm timeinfo;
-            if (!getLocalTime(&timeinfo)) {
-                return "Error obteniendo hora";
-            }
-            return timeToString(timeinfo);
-        }
+        private:
+            static String timeToString(const struct tm& timeinfo);
+            static bool ValidaFecha(const struct tm& timeinfo);
 
-    private:
-        static String timeToString(const struct tm& timeinfo) {
-            char buffer[30];
-            strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
-            return String(buffer);
-        }
-        static bool ntpSyncOk; // Indica si la sincronización NTP fue exitosa
-};
-
-// Definición del miembro estático fuera de la clase
-bool RTC::ntpSyncOk = false;
+            static bool ntpSyncOk;  // SOLO declaración
+    };
 
 #endif // RTC_H
