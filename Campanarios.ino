@@ -101,13 +101,17 @@
           Campanario.ClearInternetConectado();                                        // Notifica al campanario que no hay conexión a Internet
           DBG_INO("Error al conectar a la red Wi-Fi.");
         }
-        Alarmas.begin();                                                              // carga alarmas por defecto
+        Alarmas.begin(false);                                                         // Inicializa el sistema de alarmas sin cargar configuración por defecto
 
         //Alarmas.add(DOW_TODOS, 8, 30, 300); // añadir más
         //Alarmas.add(DOW_TODOS, 8, 0, 0, &AlarmScheduler::accionTocaHora); // cada día a las 08:00
         //Alarmas.add(DOW_TODOS, ALARMA_WILDCARD, ALARMA_WILDCARD, 10, &AlarmScheduler::accionSecuencia, 300); // cada 10 min secuencia 300
-        Alarmas.addExternal(DOW_DOMINGO, 11, 05, 0, &accionSecuencia, Config::States::I2CState::MISA);                      // Toca misa los domingos a las 11:05
-        Alarmas.addExternal(DOW_DOMINGO, 11, 25, 0, &accionSecuencia, Config::States::I2CState::MISA);                      // Toca misa los domingos a las 11:25
+        Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 0, 0, accionTocaHora, true);                                      // Toca cada hora en punto con accionTocaHora()
+        Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 30, 0, accionTocaMedia, true);                                    // Toca cada media hora con accionTocaMedia()  
+        Alarmas.addExternal0(DOW_TODOS, 12, 2, 0, SincronizaNTP, true);                                                    // Sincroniza NTP al mediodía
+        Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 10, 0, ActualizaDNSSiNecesario, true);                             // Actualiza DNS si es necesario cada hora en el minuto 10
+        Alarmas.addExternal(DOW_DOMINGO, 11, 05, 0, &accionSecuencia, Config::States::I2CState::MISA);                     // Toca misa los domingos a las 11:05
+        Alarmas.addExternal(DOW_DOMINGO, 11, 25, 0, &accionSecuencia, Config::States::I2CState::MISA);                     // Toca misa los domingos a las 11:25
     }
   }
   void loop() {

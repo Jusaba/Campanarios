@@ -47,7 +47,7 @@
             }
            .button.Fiesta {
                 background-color: #bc4fac;
-            }            
+            }
             .button:hover {
                 opacity: 0.8;
             }
@@ -72,7 +72,7 @@
             .button svg {
                 vertical-align: middle;
                 margin-right: 8px;
-            }            
+            }
             .button.Calefaccion {
                 background-color: #41bde3;
                 display: flex;
@@ -109,13 +109,13 @@
                 font-size: 14px; /* Aumentado de 12px a 14px */
                 color: #fff;
                 background-color: rgba(0,0,0,0.2);
-                padding: 3px 8px; /* Aumentado el padding para más espacio */
+                padding: 3px 8px; /* Aumentado el padding para mÃ¡s espacio */
                 border-radius: 10px;
                 margin-top: 2px;
-                font-family: 'Courier New', monospace; /* Fuente monoespaciada para mejor alineación */
+                font-family: 'Courier New', monospace; /* Fuente monoespaciada para mejor alineaciÃ³n */
                 min-width: 60px; /* Aumentado para acomodar formato mmm:ss */
                 text-align: center;
-                font-weight: bold; /* Hacer el texto más bold para mayor visibilidad */
+                font-weight: bold; /* Hacer el texto mÃ¡s bold para mayor visibilidad */
             }
             /* Estilos del Modal */
             .modal {
@@ -245,7 +245,7 @@
             }
             .modal-btn.accept:hover {
                 background-color: #229954;
-            }            
+            }
         </style>
     </head>
     <body>
@@ -316,10 +316,10 @@
         </div>
 
         <script>
-            // Array para almacenar los valores de los 3 dígitos (centenas, decenas, unidades)
+            // Array para almacenar los valores de los 3 dÃ­gitos (centenas, decenas, unidades)
             let minutosDigitos = [0, 0, 0]; // Inicialmente 000 minutos
             let minutosDigitosTemp = [0, 0, 0]; // Valores temporales para el modal
-            
+
             // Variables para el contador regresivo
             let tiempoRestante = 0; // Tiempo restante en segundos
             let intervaloCuentaRegresiva = null; // Referencia al intervalo del contador
@@ -332,7 +332,7 @@
             }
             function SelFiesta() {
                 websocket.send("Fiesta");
-            }  
+            }
             function sendCommand(command) {
                 fetch(`/command?value=${command}`)
                     .then(response => {
@@ -375,39 +375,39 @@
             }
 
             /**
-             * Incrementa el dígito especificado (0=centenas, 1=decenas, 2=unidades)
-             * @param {number} posicion - Posición del dígito (0, 1, 2)
+             * Incrementa el dÃ­gito especificado (0=centenas, 1=decenas, 2=unidades)
+             * @param {number} posicion - PosiciÃ³n del dÃ­gito (0, 1, 2)
              */
             function incrementarDigito(posicion) {
                 if (posicion === 0) {
-                    // ✅ CAMBIO: Dígito 0 (centenas) solo puede ser 0 o 1
+                    // âœ… CAMBIO: DÃ­gito 0 (centenas) solo puede ser 0 o 1
                     minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] + 1) % 2;
                 } else {
-                    // Dígitos 1 y 2 (decenas y unidades) pueden ser 0-9 normalmente
+                    // DÃ­gitos 1 y 2 (decenas y unidades) pueden ser 0-9 normalmente
                     minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] + 1) % 10;
-                }                
+                }
                 actualizarVisualizacionDigitos();
                 actualizarTotalMinutos();
             }
 
             /**
-             * Decrementa el dígito especificado (0=centenas, 1=decenas, 2=unidades)
-             * @param {number} posicion - Posición del dígito (0, 1, 2)
+             * Decrementa el dÃ­gito especificado (0=centenas, 1=decenas, 2=unidades)
+             * @param {number} posicion - PosiciÃ³n del dÃ­gito (0, 1, 2)
              */
             function decrementarDigito(posicion) {
                 if (posicion === 0) {
-                    // Dígito 0 (centenas) solo puede ser 0 o 1
+                    // DÃ­gito 0 (centenas) solo puede ser 0 o 1
                     minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] - 1 + 2) % 2;
                 } else {
-                    // Dígitos 1 y 2 (decenas y unidades) pueden ser 0-9 normalmente
+                    // DÃ­gitos 1 y 2 (decenas y unidades) pueden ser 0-9 normalmente
                     minutosDigitosTemp[posicion] = (minutosDigitosTemp[posicion] - 1 + 10) % 10;
-                }                
+                }
                 actualizarVisualizacionDigitos();
                 actualizarTotalMinutos();
             }
 
             /**
-             * Actualiza la visualización de los dígitos en el modal
+             * Actualiza la visualizaciÃ³n de los dÃ­gitos en el modal
              */
             function actualizarVisualizacionDigitos() {
                 for (let i = 0; i < 3; i++) {
@@ -424,7 +424,7 @@
             }
 
             /**
-             * Actualiza la visualización de minutos en el botón de calefacción
+             * Actualiza la visualizaciÃ³n de minutos en el botÃ³n de calefacciÃ³n
              */
             function actualizarDisplayMinutos() {
                 const total = obtenerMinutosTotales();
@@ -438,17 +438,17 @@
             function iniciarCuentaRegresiva(minutosIniciales) {
                 // Detener contador anterior si existe
                 detenerCuentaRegresiva();
-                
+
                 // Establecer tiempo restante en segundos
                 tiempoRestante = minutosIniciales * 60;
-                
-                // Actualizar inmediatamente la visualización
+
+                // Actualizar inmediatamente la visualizaciÃ³n
                 actualizarVisualizacionCuentaRegresiva();
-                
+
                 // Iniciar el intervalo que se ejecuta cada segundo
                 intervaloCuentaRegresiva = setInterval(function() {
                     tiempoRestante--;
-                    
+
                     if (tiempoRestante <= 0) {
                         // Tiempo agotado
                         detenerCuentaRegresiva();
@@ -466,17 +466,17 @@
             function iniciarCuentaRegresivaSegundos(segundosIniciales) {
                 // Detener contador anterior si existe
                 detenerCuentaRegresiva();
-                
+
                 // Establecer tiempo restante en segundos directamente
                 tiempoRestante = segundosIniciales;
-                
-                // Actualizar inmediatamente la visualización
+
+                // Actualizar inmediatamente la visualizaciÃ³n
                 actualizarVisualizacionCuentaRegresiva();
-                
+
                 // Iniciar el intervalo que se ejecuta cada segundo
                 intervaloCuentaRegresiva = setInterval(function() {
                     tiempoRestante--;
-                    
+
                     if (tiempoRestante <= 0) {
                         // Tiempo agotado
                         detenerCuentaRegresiva();
@@ -499,7 +499,7 @@
             }
 
             /**
-             * Actualiza la visualización del tiempo restante en formato mmm:ss
+             * Actualiza la visualizaciÃ³n del tiempo restante en formato mmm:ss
              */
             function actualizarVisualizacionCuentaRegresiva() {
                 const minutos = Math.floor(tiempoRestante / 60);
@@ -509,7 +509,7 @@
             }
 
             /**
-             * Muestra u oculta el botón del reloj según el estado de la calefacción
+             * Muestra u oculta el botÃ³n del reloj segÃºn el estado de la calefacciÃ³n
              * @param {boolean} mostrar - true para mostrar, false para ocultar
              */
             function mostrarBotonReloj(mostrar) {
@@ -520,7 +520,7 @@
             }
 
             /**
-             * Obtiene el valor total de minutos basado en los 3 dígitos
+             * Obtiene el valor total de minutos basado en los 3 dÃ­gitos
              * @returns {number} Total de minutos (0-999)
              */
             function obtenerMinutosTotales() {
@@ -528,48 +528,48 @@
             }
 
             /**
-             * Establece los minutos desde un valor numérico
+             * Establece los minutos desde un valor numÃ©rico
              * @param {number} minutos - Minutos a establecer (0-999)
              */
             function establecerMinutos(minutos) {
-                // Asegurar que está en el rango 0-999
+                // Asegurar que estÃ¡ en el rango 0-999
                 minutos = Math.max(0, Math.min(999, minutos));
-                
+
                 minutosDigitos[0] = Math.floor(minutos / 100); // Centenas
                 minutosDigitos[1] = Math.floor((minutos % 100) / 10); // Decenas
                 minutosDigitos[2] = minutos % 10; // Unidades
-                
+
                 actualizarDisplayMinutos();
             }
 
             function toggleCalefaccion() {
                 lCalefaccion = !lCalefaccion;               // Cambia el estado de la variable global lCalefaccion
 
-                document.getElementById("iconoCalefaccion").setAttribute("stroke", lCalefaccion ? "red" : "orange");      // Cambia el color del icono según el estado
-                
-                // Mostrar/ocultar botón del reloj según el estado
+                document.getElementById("iconoCalefaccion").setAttribute("stroke", lCalefaccion ? "red" : "orange");      // Cambia el color del icono segÃºn el estado
+
+                // Mostrar/ocultar botÃ³n del reloj segÃºn el estado
                 mostrarBotonReloj(!lCalefaccion);
-    
-                if (typeof websocket !== "undefined") {                 // Envía el comando por WebSocket si está definido
+
+                if (typeof websocket !== "undefined") {                 // EnvÃ­a el comando por WebSocket si estÃ¡ definido
                     if (lCalefaccion) {
                         const minutos = obtenerMinutosTotales();
-                        websocket.send(`CALEFACCION_ON:${minutos}`); // Envía los minutos junto con el comando
-                        console.log(`Calefacción encendida por ${minutos} minutos`);
-                        
+                        websocket.send(`CALEFACCION_ON:${minutos}`); // EnvÃ­a los minutos junto con el comando
+                        console.log(`CalefacciÃ³n encendida por ${minutos} minutos`);
+
                         // Iniciar cuenta regresiva si hay minutos configurados
                         if (minutos > 0) {
                             iniciarCuentaRegresiva(minutos);
                         }
                     } else {
                         websocket.send("CALEFACCION_OFF");
-                        // Detener cuenta regresiva y resetear visualización
+                        // Detener cuenta regresiva y resetear visualizaciÃ³n
                         detenerCuentaRegresiva();
                         actualizarDisplayMinutos();
                     }
                 }
             }
 
-            // Cerrar modal si se hace clic fuera de él
+            // Cerrar modal si se hace clic fuera de Ã©l
             window.onclick = function(event) {
                 const modal = document.getElementById('modalMinutos');
                 if (event.target == modal) {
@@ -577,13 +577,13 @@
                 }
             }
 
-            // Inicializar la visualización al cargar la página
+            // Inicializar la visualizaciÃ³n al cargar la pÃ¡gina
             window.addEventListener('load', function() {
                 actualizarDisplayMinutos();
-                // Asegurar que el botón del reloj esté visible al inicio (calefacción OFF por defecto)
+                // Asegurar que el botÃ³n del reloj estÃ© visible al inicio (calefacciÃ³n OFF por defecto)
                 mostrarBotonReloj(true);
             });
         </script>
-        
+
     </body>
 </html>
