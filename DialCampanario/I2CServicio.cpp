@@ -308,5 +308,105 @@
             return response;
         }
 
+    /**
+     * @brief Solicita el identificador de la secuencia de campanadas activa via I2C
+     * 
+     * @details Función de consulta específica que obtiene únicamente el ID de la
+     *          secuencia de campanadas que está ejecutándose actualmente en el
+     *          ESP32 campanario. Permite identificar exactamente qué tipo de
+     *          secuencia está sonando sin información adicional de estado.
+     *          
+     *          Esta función es ideal para interfaces que necesitan mostrar
+     *          específicamente qué secuencia está activa (Difuntos, Misa, Fiesta)
+     *          sin la sobrecarga de datos adicionales de estado del sistema.
+     *          
+     *          **DIFERENCIAS CON OTRAS CONSULTAS:**
+     *          - I2C_SolicitarEstado(): Estado completo con múltiples flags
+     *          - I2C_SolicitarSecuenciaActiva(): Solo ID específico de secuencia
+     *          - Más eficiente para interfaces que solo necesitan tipo de secuencia
+     * 
+     * @return I2CResponse Estructura con:
+     *         - success: true si la comunicación I2C fue exitosa
+     *         - data[0]: ID de secuencia activa o 0 si ninguna
+     *           * Config::States::DIFUNTOS (1): Secuencia de difuntos activa
+     *           * Config::States::MISA (2): Secuencia de misa activa
+     *           * Config::States::FIESTA (3): Secuencia festiva activa
+     *           * 0: No hay secuencia de campanadas activa
+     *         - length: 1 (solo un byte de identificador)
+     * 
+     * @note **EFICIENTE:** Transferencia mínima de 1 byte solamente
+     * @note **ESPECÍFICO:** Solo identifica secuencia, no otros estados del sistema
+     * @note **TEMPORAL:** Valor cambia automáticamente al cambiar secuencias
+     * @note **PRECISO:** Valor 0 garantiza que no hay campanadas sonando
+     * 
+     * @warning **PROTOCOLO:** Debe existir Config::States::I2CState::GET_SECUENCIA_ACTIVA
+     * @warning **SINCRONIZACIÓN:** ESP32 debe implementar respuesta a este comando
+     * @warning **TIMEOUT:** Sin manejo de timeout, puede bloquearse si no hay respuesta
+     * 
+     * @see I2C_SolicitarEstado() - Para estado completo del campanario
+     * @see I2C_SolicitarEstadoHora() - Para estado + información temporal
+     * @see Config::States::I2CState::GET_SECUENCIA_ACTIVA - Comando utilizado
+     * @see SolicitarSecuenciaActiva() en Auxiliar.h para lógica de negocio
+     * 
+     * @example
+     * @code
+     * // Consultar qué secuencia está sonando
+     * I2CResponse response = I2C_SolicitarSecuenciaActiva();
+     * if (response.success) {
+     *     switch (response.data[0]) {
+     *         case Config::States::DIFUNTOS:
+     *             Serial.println("Secuencia: Difuntos");
+     *             break;
+     *         case Config::States::MISA:
+     *             Serial.println("Secuencia: Misa");
+     *             break;
+     *         case Config::States::FIESTA:
+     *             Serial.println("Secuencia: Fiesta");
+     *             break;
+     *         case 0:
+     *             Serial.println("Sin secuencia activa");
+     *             break;
+     *         default:
+     *             Serial.println("Secuencia desconocida");
+     *             break;
+     *     }
+     * } else {
+     *     Serial.println("Error en comunicación I2C");
+     * }
+     * 
+     * // Uso en interfaz para mostrar estado específico
+     * I2CResponse response = I2C_SolicitarSecuenciaActiva();
+     * if (response.success && response.data[0] != 0) {
+     *     mostrarIconoSecuencia(response.data[0]);
+     * } else {
+     *     ocultarIconoSecuencia();
+     * }
+     * @endcode
+     * 
+     * @author Julian Salas Bartolomé
+     * @since v1.0
+     */
+        I2CResponse I2C_SolicitarSecuenciaActiva() {
+            I2CResponse response = {false, {0}, 0};
+
+            DBG_I2C("I2C_SolicitarSecuenciaActiva->Solicitando secuencia activa...");
+
+            Wire.beginTransmission(Config::I2C::SLAVE_ADDR);
+            Wire.write(Config::States::I2CState::SECUENCIA_ACTIVA);
+            Wire.endTransmission();
+
+            Wire.requestFrom(Config::I2C::SLAVE_ADDR, 1);
+            if (Wire.available()) {
+                response.data[0] = Wire.read();
+                response.length = 1;
+                response.success = true;
+                DBG_I2C_PRINTF("I2C_SolicitarSecuenciaActiva->Secuencia activa recibida: %d", response.data[0]);
+            } else {
+                DBG_I2C("I2C_SolicitarSecuenciaActiva->Sin respuesta del campanario");
+            }
+
+            return response;
+        }
+
 
 

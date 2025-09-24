@@ -361,8 +361,7 @@
      * @warning Modifica directamente menu.indiceMenuActivo. Llamar AsignaMenu() después
      * 
      * @see AsignaMenu(), Config::States::BIT_PROTECCION_CAMPANADAS
-     * @see Config::States::BIT_CALEFACCION, Config::States::BIT_DIFUNTOS
-     * @see Config::States::BIT_MISA
+     * @see Config::States::BIT_CALEFACCION, Config::States::BIT_SECUENCIA
      * 
      * @since v1.0
      * @author Julian Salas Bartolomé
@@ -376,8 +375,8 @@
         if (ProteccionToqueHoras) {                                                                                         // Si la protección de campanadas está activa                   
             menu.indiceMenuActivo = calefOn ? 5 : 4;                                                                        // Menú 5 si calefacción ON, menú 4 si OFF             
         } else {                                                                                                            // Si la protección de campanadas NO está activa  
-            bool difuntosMisa = campanarioEstado.estadoActual & (Config::States::BIT_DIFUNTOS | Config::States::BIT_MISA | Config::States::BIT_FIESTA);  // Difuntos, misa o fiesta activa
-            menu.indiceMenuActivo = difuntosMisa ? (calefOn ? 3 : 2) : (calefOn ? 1 : 0);                                   // Menú 3 o 2 si difuntos/misa, menú 1 o 0 si normal  
+            bool secuencia = campanarioEstado.estadoActual & (Config::States::BIT_SECUENCIA );                           // Una secuencia activa
+            menu.indiceMenuActivo = secuencia ? (calefOn ? 3 : 2) : (calefOn ? 1 : 0);                                   // Menú 3 o 2 si secuencia, menú 1 o 0 si normal  
         }
     }
 

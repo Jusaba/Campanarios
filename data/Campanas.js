@@ -9,11 +9,12 @@ const CampanarioStates = {
     STOP: "PARAR",
     GET_CAMPANARIO: "GET_CAMPANARIO",
     GET_TIEMPO_CALEFACCION: "GET_TIEMPOCALEFACCION",
+    GET_SECUENCIA_ACTIVA: "GET_SECUENCIA_ACTIVA",
 
     // Bits de estado (para ESTADO_CAMPANARIO response)
-    BIT_DIFUNTOS: 0x01,                      // Config::States::BIT_DIFUNTOS
-    BIT_MISA: 0x02,                          // Config::States::BIT_MISA
-    BIT_FIESTA: 0x04,                        // Config::States::BIT_FIESTA
+    BIT_SECUENCIA: 0x01,                      // Config::States::BIT_SECUENCIA
+    BIT_LIBRE_1: 0x02,                        // Config::States::BIT_LIBRE_1
+    BIT_LIBRE_2: 0x04,                        // Config::States::BIT_LIBRE_2
     BIT_HORA: 0x08,                          // Config::States::BIT_HORA
     BIT_CUARTOS: 0x10,                       // Config::States::BIT_CUARTOS
     BIT_CALEFACCION: 0x20,                   // Config::States::BIT_CALEFACCION
@@ -215,13 +216,8 @@ if (event.data.startsWith("PROTECCION:OFF")) {
 if (event.data.startsWith("ESTADO_CAMPANARIO:")) {
     console.log ("Comprobando estado de campanario: " + event.data);
     let EstadoCampanario = parseInt(event.data.split(":")[1]);
-    if ((EstadoCampanario & CampanarioStates.BIT_DIFUNTOS) || (EstadoCampanario & CampanarioStates.BIT_MISA)) {
+    if ((EstadoCampanario & CampanarioStates.BIT_SECUENCIA) ) {
         lCampanas = true;
-        if (EstadoCampanario & CampanarioStates.BIT_DIFUNTOS) {
-           console.log("Difuntos")
-        } else {
-            console.log("Misa");
-        }
         window.location.href = "/Campanas.html";
     }else{
         lCampanas = false;
@@ -241,6 +237,11 @@ if (event.data.startsWith("ESTADO_CAMPANARIO:")) {
     } else {
         habilitarBotonesCampanadas(true); // Habilita los botones si la protecciÃ³n estÃ¡ inactiva
         console.log("ProtecciÃ³n de campanadas inactiva (desde estado campanario)");
+    }
+    if (event.data.startsWith("GET_SECUENCIA_ACTIVA:")) {
+        console.log ("Recibido numero de secuencia activa: " + event.data);        
+        //Tratamiento de secuencia activa
+        //No utilizado en esta version
     }
 }
 
@@ -264,7 +265,7 @@ function activarCampana(num) {
     }
 
     function pararSecuencia() {
-        if (window.confirm("Â¿Seguro que quieres parar la secuencia?")) {
+        if (window.confirm("¿Segur que vols aturar la seqüència?")) {
             if (typeof websocket !== "undefined" && websocket.readyState === 1) {
                 websocket.send("PARAR");
             }

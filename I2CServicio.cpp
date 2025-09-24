@@ -1,5 +1,6 @@
 // I2CServicio.cpp - Implementación del servicio I2C
 #include "Arduino.h"
+#include <stdint.h>
 #include "I2CServicio.h"
 #include "Configuracion.h"
 #include "Auxiliar.h"        // Para acceder a Campanario y variables globales
@@ -152,6 +153,9 @@ void enviarRequest() {
             break;
         case Config::States::FECHA_HORA_O_TEMPORIZACION:
             enviarFechaoTemporizacionI2C();
+            break;
+        case Config::States::SECUENCIA_ACTIVA:
+            enviarSecuenciaActivaI2C();
             break;
     }
     requestI2C = 0; // Resetea la solicitud I2C
@@ -452,4 +456,48 @@ void enviarFechaoTemporizacionI2C(void) {
         enviarFechaHoraI2C();
         DBG_I2C_REQ("I2CServicio -> enviarFechaoTemporizacionI2C ->Enviando fecha y hora por I2C");
     }
+}
+
+/**
+ * @brief Envía el identificador de la secuencia activa a través de I2C
+ * 
+ * @details Función que responde a solicitudes I2C enviando únicamente el
+ *          identificador de la secuencia de campanadas que está ejecutándose
+ *          actualmente. Permite al maestro conocer específicamente qué
+ *          secuencia está sonando sin información adicional.
+ *          
+ *          **DATOS ENVIADOS (1 byte):**
+ *          - Byte 0: ID de secuencia activa (Config::States::* o 0 si ninguna)
+ *          
+ *          **VALORES POSIBLES:**
+ *          - Config::States::DIFUNTOS (1): Secuencia de difuntos activa
+ *          - Config::States::MISA (2): Secuencia de misa activa
+ *          - Config::States::FIESTA (3): Secuencia festiva activa
+ *          - 0: No hay secuencia de campanadas activa
+ *          
+ *          **DIFERENCIA CON ESTADO:**
+ *          - GetEstadoCampanario(): Estado completo con múltiples bits
+ *          - GetSecuenciaActiva(): Solo ID específico de secuencia sonando
+ * 
+ * @note **TAMAÑO:** 1 byte total enviado
+ * @note **ESPECÍFICO:** Solo identifica secuencia, no calefacción ni otros estados
+ * @note **CONTEXTO:** Ejecuta en callback onRequest de Wire
+ * @note **PRECISIÓN:** Valor 0 indica definitivamente que no hay campanadas
+ * 
+ * @warning **CALLBACK I2C:** No usar Wire.endTransmission() en contexto onRequest
+ * @warning **SINCRONIZACIÓN:** Maestro debe leer exactamente 1 byte
+ * @warning **TEMPORAL:** Valor cambia automáticamente al cambiar secuencias
+ * 
+ * @see Campanario.GetSecuenciaActiva() - Función que obtiene ID de secuencia
+ * @see Config::States - Constantes de identificadores utilizadas
+ * @see enviarRequest() - Función que debe llamar esta según requestI2C
+ * @see Wire.write() - Función utilizada para envío del byte
+ * 
+ * @since v1.0
+ * @author Julian Salas Bartolomé
+ */
+void enviarSecuenciaActivaI2C(void) {
+    uint8_t secuenciaActiva = Campanario.GetSecuenciaActiva();
+    Wire.write(secuenciaActiva);                           // Envía la secuencia activa
+    DBG_I2C_SEQ_PRINTF("I2CServicio -> Secuencia activa enviada por I2C: %d\n", secuenciaActiva);
 }

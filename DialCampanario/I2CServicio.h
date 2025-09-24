@@ -76,5 +76,6 @@
             I2CResponse I2C_SolicitarEstado();
             I2CResponse I2C_SolicitarEstadoHora();
             I2CResponse I2C_SolicitarEstadoFechaHora(bool incluirTemporizacion = false);
+            I2CResponse I2C_SolicitarSecuenciaActiva();                                         // --- NO UTILIZADA EN ESTA VERSION ----
 
 #endif

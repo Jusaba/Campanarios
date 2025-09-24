@@ -254,6 +254,9 @@
         } else if (mensaje == "GET_CAMPANARIO") {                           // Si el mensaje es "GET_CAMPANARIO"  
             String EstadoCampanario = String(Campanario.GetEstadoCampanario()); // Obtiene el estado del campanario 
             ws.textAll("ESTADO_CAMPANARIO:" + EstadoCampanario);            // Envía el estado al cliente que lo pidió
+        }else if (mensaje== "GET_SECUENCIA_ACTIVA") {                       // Si el mensaje es "GET_SECUENCIA"  
+            String secuenciaActiva = String(Campanario.GetSecuenciaActiva());  // Obtiene la secuencia actual
+            ws.textAll("SECUENCIAACTIVA:" + secuenciaActiva);               // Envía la secuencia al cliente que lo pidió    ---- NO UTILIZADO EN ESTA VERSION ----
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             DBG_SRV("Mensaje no reconocido, reseteando secuencia.");

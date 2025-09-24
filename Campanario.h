@@ -55,8 +55,9 @@
  */
 #ifndef CAMPANARIO_H
 	#define CAMPANARIO_H
-
-    #include  "CAMPANA.h"
+    #include <stdint.h>
+    #include <Arduino.h>  
+    #include "Campana.h"
     #include "Calefaccion.h"
     #include "Debug.h"
     #include "Configuracion.h"
@@ -256,9 +257,10 @@
             void SetInternetConectado(void);                            //!< Establece el estado de conexión a Internet del campanario
             void ClearInternetConectado(void);                          //!< Limpia el estado de conexión a Internet del campanario
             void SetProteccionCampanadas(void);                         //!< Establece el estado de protección de campanadas
-            void ClearProteccionCampanadas(void);                       //!< Limpia el estado de protección de campanadas
-        
-        private:
+            void ClearProteccionCampanadas(void);                       //!< Limpia el estado de protección de campanadas        
+           uint8_t GetSecuenciaActiva(void);                           //!< Devuelve la secuencia activa actualmente (Difuntos, Misa, Horas, Cuartos, Ninguna)
+
+         private:
 
             CAMPANA* _pCampanas[Config::Campanario::MAX_CAMPANAS];      //!< Array de punteros a las campanas del campanario
             int _nNumCampanas = 0;                                      //!< Número de campanas en el campanario
@@ -281,6 +283,8 @@
 
             bool _tocando = false;                                      //!< Flag que indica si las campanas estan en reposo o tocando (1/0)
             bool _Calefaccion = false;                                  //!< Flag que indica si la calefacción está encendida o apagada (1/0)
+
+            uint8_t secuenciaActiva = Config::Secuencia::NINGUNA;       //<! Secuencia actualmente activa (Difuntos, Misa, Horas, Cuartos, Ninguna)
 
         };
 #endif

@@ -94,5 +94,6 @@
     void enviarFechaHoraI2C();
     void enviarEstadoTemporizacionI2C();
     void enviarFechaoTemporizacionI2C();
+    void enviarSecuenciaActivaI2C();                // ----- NO UTILIZADO EN ESTA VERSION ------
 
 #endif

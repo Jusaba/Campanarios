@@ -75,20 +75,31 @@
                 SET_TEMPORIZADOR            = 12,
                 FIN                         = 13,
                 FECHA_HORA_O_TEMPORIZACION  = 14,
-                TEMPORIZACION               = 15
+                TEMPORIZACION               = 15,
+                SECUENCIA_ACTIVA            = 16
             };
 
             // Bits de estado
-            constexpr uint8_t BIT_DIFUNTOS                    = 0x01;       // bit 0
-            constexpr uint8_t BIT_MISA                        = 0x02;       // bit 1
-            constexpr uint8_t BIT_FIESTA                      = 0x04;       // bit 2
+            constexpr uint8_t BIT_SECUENCIA                   = 0x01;       // bit 0
+            constexpr uint8_t BIT_LIBRE_1                     = 0x02;       // bit 1
+            constexpr uint8_t BIT_LIBRE_2                     = 0x04;       // bit 2
             constexpr uint8_t BIT_HORA                        = 0x08;       // bit 3
             constexpr uint8_t BIT_CUARTOS                     = 0x10;       // bit 4
             constexpr uint8_t BIT_CALEFACCION                 = 0x20;       // bit 5
             constexpr uint8_t BIT_SIN_INTERNET                = 0x40;       // bit 6
             constexpr uint8_t BIT_PROTECCION_CAMPANADAS       = 0x80;       // bit 7
         }
-
+        // ==================== SECUENCIAS ====================
+        namespace Secuencia {
+            constexpr uint8_t NINGUNA       = 0;
+            constexpr uint8_t DIFUNTOS      = 1;
+            constexpr uint8_t MISA          = 2;
+            constexpr uint8_t FIESTA        = 3;
+            constexpr uint8_t HORA          = 4;
+            constexpr uint8_t CUARTOS       = 5;
+            constexpr uint8_t PERSONALIZADA = 6;
+            // ... futuras secuencias
+        }        
         // ==================== CALEFACCIÓN ====================
         namespace Heating {
             constexpr int DEFAULT_TIMER_MINUTES = 45;  // Era nTemporizacionCalefaccion por defecto

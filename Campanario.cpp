@@ -135,9 +135,10 @@
         DBG_CAM("Tocando campanas para difuntos...");
         DBG_CAM_PRINT ("numPasosDifuntos: ");
         DBG_CAM(numPasosDifuntos);
+        this->secuenciaActiva = Config::Secuencia::DIFUNTOS;                        // Indica que la secuencia activa es Difuntos
         this->_GeneraraCampanadas(secuenciaDifuntos, numPasosDifuntos);             // Genera la secuencia plana de campanadas para difuntos
         this->IniciarSecuenciaCampanadas();                                         // Inicia la secuencia de toque de campanadas
-        this->_nEstadoCampanario |= Config::States::BIT_DIFUNTOS;                   // Marca el estado del campanario como tocando difuntos
+        this->_nEstadoCampanario |= Config::States::BIT_SECUENCIA;                  // Marca el estado del campanario como tocando difuntos
     }
 
     /**
@@ -171,9 +172,10 @@
         DBG_CAM ("Tocando campanas para misa...");
         DBG_CAM_PRINT ("numPasosMisa: ");
         DBG_CAM(numPasosMisa);
+        this->secuenciaActiva = Config::Secuencia::MISA;                            // Indica que la secuencia activa es Misa
         this->_GeneraraCampanadas(secuenciaMisa, numPasosMisa);
         this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
-        this->_nEstadoCampanario |= Config::States::BIT_MISA;
+        this->_nEstadoCampanario |= Config::States::BIT_SECUENCIA;
     }
     /**
      * @brief Inicia la secuencia festiva de campanadas para celebraciones
@@ -191,7 +193,7 @@
      * 
      * @note **SECUENCIA FESTIVA:** Diseñada para crear ambiente celebrativo
      * @note **ENERGÉTICA:** Más dinámica y rápida que secuencias solemnes
-     * @note **ESTADO:** Establece BIT_FIESTA durante la ejecución
+     * @note **ESTADO:** Establece BIT_SECUENCIA durante la ejecución
      * 
      * @warning **SOLAPAMIENTO:** No inicia si hay otra secuencia activa
      * @warning **CAMPANAS:** Requiere al menos 2 campanas para efectos dinámicos
@@ -217,9 +219,10 @@
         DBG_CAM ("Tocando campanas para fiesta...");
         DBG_CAM_PRINT ("numPasosFiesta: ");
         DBG_CAM(numPasosFiesta);
+        this->secuenciaActiva = Config::Secuencia::FIESTA;                          // Indica que la secuencia activa es Fiesta
         this->_GeneraraCampanadas(secuenciaFiesta, numPasosFiesta);
         this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
-        this->_nEstadoCampanario |= Config::States::BIT_FIESTA;
+        this->_nEstadoCampanario |= Config::States::BIT_SECUENCIA;
     }
     /**
      * @brief Genera secuencia de campanadas planas desde pasos definidos
@@ -429,6 +432,7 @@
     void CAMPANARIO::ParaSecuencia(void) {
         this->_tocandoSecuencia = false;                                                                // Detiene la secuencia de campanadas
         this->_LimpiaraCampanadas();                                                                    // Limpia las campanadas
+        this -> secuenciaActiva = Config::Secuencia::NINGUNA;                                           // Resetea la secuencia activa
         DBG_CAM("Secuencia de campanadas detenida.");
         this->_nEstadoCampanario &= ~((Config::States::BIT_CALEFACCION - 1));                           // Limpia los bits de estado del campanario relacionados con las campanadas                     
     }
@@ -811,4 +815,9 @@
      */
     int CAMPANARIO::GetEstadoCampanario(void) {
         return this->_nEstadoCampanario;
+    }
+
+
+    uint8_t CAMPANARIO::GetSecuenciaActiva(void) {
+        return this->secuenciaActiva;
     }
