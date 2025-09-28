@@ -60,8 +60,7 @@
     void accionTocaMedia(void);                                                         // Ejecuta toque de media hora
 
 
-    void SincronizaNTP( void );                                                         // Sincroniza reloj con servidor NTP    
-    
+    void SincronizaNTP( void );                                                        // Sincroniza reloj con servidor NTP    
 
 
 #endif

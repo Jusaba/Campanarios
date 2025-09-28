@@ -354,12 +354,25 @@ void AlarmScheduler::check() {
         } 
         // Lógica para alarmas de horario fijo/wildcard
         else {
-            if ((oAlarma.hora == ALARMA_WILDCARD || oAlarma.hora == horaActual) &&
-                (oAlarma.minuto == ALARMA_WILDCARD || oAlarma.minuto == minutoActual) &&
-                !(oAlarma.ultimoDiaAno == diaAnoActual && oAlarma.ultimoMinuto == minutoActual))
-            {
-                disparar = true;
-            }
+            bool coincideHora = (oAlarma.hora == ALARMA_WILDCARD || oAlarma.hora == horaActual);
+            bool coincideMinuto = (oAlarma.minuto == ALARMA_WILDCARD || oAlarma.minuto == minutoActual);
+
+           if (coincideHora && coincideMinuto) {               
+                bool yaEjecutadaEstaHora = false;
+                
+                if (oAlarma.hora == ALARMA_WILDCARD) {
+                     yaEjecutadaEstaHora = (oAlarma.ultimoDiaAno == diaAnoActual && 
+                                          oAlarma.ultimoMinuto == minutoActual &&
+                                          oAlarma.ultimaHora == horaActual);  // ← NUEVA VARIABLE NECESARIA
+                } else {
+                    yaEjecutadaEstaHora = (oAlarma.ultimoDiaAno == diaAnoActual && 
+                                          oAlarma.ultimoMinuto == minutoActual);
+                }
+                
+                if (!yaEjecutadaEstaHora) {
+                    disparar = true;
+                }
+            }        
         }
 
         if (!disparar) continue;
@@ -380,6 +393,7 @@ void AlarmScheduler::check() {
         // Actualizar cache para prevenir re-ejecución
         oAlarma.ultimoDiaAno     = diaAnoActual;
         oAlarma.ultimoMinuto     = minutoActual;
+        oAlarma.ultimaHora       = horaActual;
         oAlarma.ultimaEjecucion  = ahora;
     }
 }
@@ -571,6 +585,60 @@ uint8_t AlarmScheduler::mascaraDesdeDiaSemana(int diaSemana) {
 }
 
 /**
+ * @brief Resetea el cache temporal de todas las alarmas
+ * 
+ * @details Función utilitaria que limpia el cache de prevención de duplicados
+ *          de todas las alarmas registradas. Útil después de cambios de hora
+ *          del sistema, reinicializaciones o cuando se detectan problemas
+ *          de ejecución de alarmas.
+ *          
+ *          **VARIABLES RESETEADAS:**
+ *          - ultimoDiaAno: Se establece a -1 (valor inicial)
+ *          - ultimoMinuto: Se establece a 255 (valor inicial)  
+ *          - ultimaEjecucion: Se establece a 0 (timestamp inicial)
+ *          
+ *          Esto permite que las alarmas se ejecuten nuevamente sin esperar
+ *          al cambio natural de día o configuración temporal.
+ * 
+ * @note **USO TÍPICO:** Después de sincronización NTP o ajustes de sistema
+ * @note **EFECTO:** Permite re-ejecución inmediata de alarmas en el minuto actual
+ * @note **SEGURIDAD:** No afecta configuración de alarmas, solo cache temporal
+ * @note **DEBUG:** Util para depuración de problemas de ejecución de alarmas
+ * 
+ * @warning **DUPLICADOS:** Puede causar ejecución múltiple si se llama repetidamente
+ * @warning **USO MODERADO:** Solo llamar cuando sea realmente necesario
+ * 
+ * @see check() - Función que utiliza el cache para prevenir duplicados
+ * @see ultimoDiaAno, ultimoMinuto, ultimaEjecucion - Variables afectadas
+ * @see begin() - Inicialización que resetea automáticamente el cache
+ * 
+ * @example
+ * @code
+ * // Después de sincronización manual
+ * if (RTC::beginConMultiplesServidores()) {
+ *     Alarmas.resetCache();  // Permitir nuevas ejecuciones
+ * }
+ * 
+ * // Para debug de alarmas que no se ejecutan
+ * Alarmas.resetCache();
+ * Serial.println("Cache de alarmas reseteado para debug");
+ * @endcode
+ * 
+ * @since v2.1 - Función añadida para depuración y mantenimiento
+ * @author Julian Salas Bartolomé
+ */
+void AlarmScheduler::resetCache() {
+    for (uint8_t i = 0; i < _num; ++i) {
+        _alarmas[i].ultimoDiaAno = -1;
+        _alarmas[i].ultimoMinuto = 255;
+        _alarmas[i].ultimaHora = 255;
+        _alarmas[i].ultimaEjecucion = 0;
+    }
+    DBG_ALM_PRINTF("[ALARM] Cache de %u alarmas reseteado\n", _num);
+}
+
+
+/**
  * @brief Carga configuración de alarmas predeterminadas del sistema
  * 
  * @details Función privada que configura un conjunto básico de alarmas
@@ -620,3 +688,5 @@ void AlarmScheduler::initDefaults() {
 
     DBG_ALM_PRINTF("[ALARM] Configuración por defecto cargada: %u alarmas\n", _num);
 }
+
+

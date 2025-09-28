@@ -106,6 +106,7 @@ struct Alarm {
     uint16_t intervaloMin        = 0;                           // Intervalo (minutos)
     int16_t  ultimoDiaAno        = -1;                          // Último día del año
     uint8_t  ultimoMinuto        = 255;                         // Último minuto  
+    uint8_t  ultimaHora          = 255;                         // Última hora ejecutada (255 inicial)
     time_t   ultimaEjecucion     = 0;                           // Acciones a ejecutar
     void     (AlarmScheduler::*accion)(uint16_t) = nullptr;     // Método miembro
     void     (*accionExt)(uint16_t) = nullptr;                  // Función externa con parámetro
@@ -146,6 +147,7 @@ void clear();
 uint8_t count() const;
 const Alarm* get(uint8_t idx) const;
 bool esHorarioNocturno() const;
+void resetCache();
 
 private:
     Alarm  _alarmas[MAX_ALARMAS];

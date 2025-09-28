@@ -120,6 +120,8 @@
             if (hayInternet()) {
                 ActualizaDNSSiNecesario();
             }
+        }else{
+            DBG_ACCIONES_PRINTF("No se ha ejecutado el toque de hora a las %02d:00 por horario nocturno", hora);
         }
     }
     /**
@@ -223,3 +225,5 @@
 
         }
     }
+
+

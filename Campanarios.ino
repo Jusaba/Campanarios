@@ -106,6 +106,7 @@
         //Alarmas.add(DOW_TODOS, 8, 30, 300); // añadir más
         //Alarmas.add(DOW_TODOS, 8, 0, 0, &AlarmScheduler::accionTocaHora); // cada día a las 08:00
         //Alarmas.add(DOW_TODOS, ALARMA_WILDCARD, ALARMA_WILDCARD, 10, &AlarmScheduler::accionSecuencia, 300); // cada 10 min secuencia 300
+        //Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 29, 4, accionPruebaReloj, true);         
         Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 0, 0, accionTocaHora, true);                                      // Toca cada hora en punto con accionTocaHora()
         Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 30, 0, accionTocaMedia, true);                                    // Toca cada media hora con accionTocaMedia()  
         Alarmas.addExternal0(DOW_TODOS, 12, 2, 0, SincronizaNTP, true);                                                    // Sincroniza NTP al mediodía
