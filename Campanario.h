@@ -101,7 +101,7 @@
         {0, 1, 2000}
     };
     const int numPasosDifuntos = sizeof(secuenciaDifuntos) / sizeof(PasoSecuencia);
-    const PasoSecuencia secuenciaMisa[] PROGMEM = {
+    const PasoSecuencia secuenciaFiesta[] PROGMEM = {
         {0, 1, 1000},
         {1, 1, 1000},
         {0, 1, 600},
@@ -166,9 +166,9 @@
         {1, 1, 1000},
         {1, 1, 2000} 
     };    
-    const int numPasosMisa = sizeof(secuenciaMisa) / sizeof(PasoSecuencia);
+    const int numPasosFiesta = sizeof(secuenciaFiesta) / sizeof(PasoSecuencia);
 
-    const PasoSecuencia secuenciaFiesta[] = {
+    const PasoSecuencia secuenciaMisa[] = {
         {0, 1, 1200},  
         {1, 1, 1000},
         {0, 1, 900},
@@ -226,7 +226,7 @@
         {0, 2, 500},   
         {1, 1, 800}   
     };
-    static constexpr int numPasosFiesta = sizeof(secuenciaFiesta) / sizeof(PasoSecuencia);
+    static constexpr int numPasosMisa = sizeof(secuenciaMisa) / sizeof(PasoSecuencia);
 
 
     class CAMPANARIO 

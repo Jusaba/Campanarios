@@ -50,30 +50,37 @@
             DBG_SRV("ha ocurrido un error montando SPIFFS");
         }
         if (!servidorIniciado) {                                                                  // Si el servidor no ha sido iniciado
-          ws.onEvent(onEvent);                                                                    // Configura el manejador de eventos del WebSocket          
-          server.addHandler(&ws);                                                                 // Añade el manejador de WebSocket al servidor HTTP
+            ws.onEvent(onEvent);                                                                    // Configura el manejador de eventos del WebSocket          
+            server.addHandler(&ws);                                                                 // Añade el manejador de WebSocket al servidor HTTP
 
-          server.on("/", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
-            if(!request->authenticate(usuario, clave)) {
-              return request->requestAuthentication();
-            }
-            request->send(SPIFFS, "/index.html", "text/html");
-            nToque = 0; // Resetea la secuencia a 0 al cargar la página principal
-          });
+            server.on("/", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
+              if(!request->authenticate(usuario, clave)) {
+                return request->requestAuthentication();
+              }
+              request->send(SPIFFS, "/index.html", "text/html");
+              nToque = 0; // Resetea la secuencia a 0 al cargar la página principal
+            });
 
-          server.on("/Campanas.html", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
-            if(!request->authenticate(usuario, clave)) {
-              return request->requestAuthentication();
-            }
-            request->send(SPIFFS, "/Campanas.html", "text/html");
-          });
+            server.on("/Campanas.html", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
+              if(!request->authenticate(usuario, clave)) {
+                return request->requestAuthentication();
+              }
+              request->send(SPIFFS, "/Campanas.html", "text/html");
+            });
 
-          server.serveStatic("/", SPIFFS, "/");
-          // Iniciar el servidor
-          server.begin();
-          DBG_SRV("Servidor HTTP iniciado en el puerto 80.");
-          DBG_SRV("Servidor HTTP iniciado. Esperando conexiones...");
-          servidorIniciado = true;                                       // Marca el servidor como iniciado
+            server.on("/alarmas.html", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
+              if(!request->authenticate(usuario, clave)) {
+                return request->requestAuthentication();
+              }
+              request->send(SPIFFS, "/alarmas.html", "text/html");
+            });
+
+            server.serveStatic("/", SPIFFS, "/");
+            // Iniciar el servidor
+            server.begin();
+            DBG_SRV("Servidor HTTP iniciado en el puerto 80.");
+            DBG_SRV("Servidor HTTP iniciado. Esperando conexiones...");
+            servidorIniciado = true;                                       // Marca el servidor como iniciado
         }
     }
 
@@ -257,6 +264,118 @@
         }else if (mensaje== "GET_SECUENCIA_ACTIVA") {                       // Si el mensaje es "GET_SECUENCIA"  
             String secuenciaActiva = String(Campanario.GetSecuenciaActiva());  // Obtiene la secuencia actual
             ws.textAll("SECUENCIAACTIVA:" + secuenciaActiva);               // Envía la secuencia al cliente que lo pidió    ---- NO UTILIZADO EN ESTA VERSION ----
+        } else if (mensaje == "GET_ALARMAS_WEB") {
+            DBG_SRV("📋 Solicitando lista de alarmas personalizadas");
+            String jsonAlarmas = AlarmasWeb.obtenerTodasJSON();
+            ws.textAll("ALARMAS_WEB:" + jsonAlarmas);
+        } else if (mensaje == "GET_STATS_ALARMAS_WEB") {
+            DBG_SRV("📊 Solicitando estadísticas de alarmas");
+            String stats = AlarmasWeb.obtenerEstadisticas();
+            ws.textAll("STATS_ALARMAS_WEB:" + stats);
+        }else if (mensaje.startsWith("ADD_ALARMA_WEB:")) {
+            DBG_SRV("➕ Creando nueva alarma personalizada");
+            String jsonData = mensaje.substring(15);                        // Quitar "ADD_ALARMA_WEB:"        
+            JsonDocument doc;                                               // Parsear JSON
+            DeserializationError error = deserializeJson(doc, jsonData);    // Parsear JSON
+    
+            if (error) {
+                DBG_SRV("❌ Error parseando JSON de alarma");
+                ws.textAll("ERROR_ALARMA:JSON_INVALIDO");
+                return;
+            }
+
+            AlarmaPersonalizada nuevaAlarma;                                // Crear alarma desde JSON
+            nuevaAlarma.nombre = doc["nombre"] | "";
+            nuevaAlarma.dia = doc["dia"] | 0;
+            nuevaAlarma.hora = doc["hora"] | 0;
+            nuevaAlarma.minuto = doc["minuto"] | 0;
+            nuevaAlarma.segundo = doc["segundo"] | 0;
+            nuevaAlarma.accion = doc["accion"] | "MISA";
+            nuevaAlarma.parametro = doc["parametro"] | 0;
+            nuevaAlarma.habilitada = doc["habilitada"] | true;
+            nuevaAlarma.descripcion = doc["descripcion"] | "";
+    
+            int nuevoId = AlarmasWeb.crearAlarma(nuevaAlarma);
+            if (nuevoId > 0) {
+                DBG_SRV_PRINTF("✅ Alarma creada con ID: %d", nuevoId);
+                AlarmasWeb.actualizarSistemaAlarmas(&Alarmas);              // Actualizar sistema
+                ws.textAll("ALARMA_CREADA:" + String(nuevoId));
+                ws.textAll("ALARMAS_WEB:" + AlarmasWeb.obtenerTodasJSON()); // Enviar lista actualizada
+            } else {
+                DBG_SRV("❌ Error creando alarma");
+                ws.textAll("ERROR_ALARMA:NO_CREADA");
+            }
+        } else if (mensaje.startsWith("EDIT_ALARMA_WEB:")) {                // Modificar alarma existente
+            DBG_SRV("✏️ Modificando alarma personalizada");
+            String jsonData = mensaje.substring(16);                        // Quitar "EDIT_ALARMA_WEB:"
+            JsonDocument doc;
+            DeserializationError error = deserializeJson(doc, jsonData);    // Parsear JSON
+    
+            if (error) {                                                    // Si hay error al parsear
+                ws.textAll("ERROR_ALARMA:JSON_INVALIDO");
+                return;
+            }
+
+            int id = doc["id"] | 0;                                         // Obtener ID de la alarma
+            if (id == 0) {                                                  // Validar ID  
+                ws.textAll("ERROR_ALARMA:ID_INVALIDO");
+                return;
+            }
+
+            AlarmaPersonalizada alarmaModificada;                           // Crear alarma desde JSON
+            alarmaModificada.nombre = doc["nombre"] | "";
+            alarmaModificada.dia = doc["dia"] | 0;
+            alarmaModificada.hora = doc["hora"] | 0;
+            alarmaModificada.minuto = doc["minuto"] | 0;
+            alarmaModificada.segundo = doc["segundo"] | 0;
+            alarmaModificada.accion = doc["accion"] | "MISA";
+            alarmaModificada.parametro = doc["parametro"] | 0;
+            alarmaModificada.habilitada = doc["habilitada"] | true;
+            alarmaModificada.descripcion = doc["descripcion"] | "";
+
+            if (AlarmasWeb.modificarAlarma(id, alarmaModificada)) {         // Modificar alarma
+                DBG_SRV_PRINTF("✅ Alarma %d modificada", id);
+                AlarmasWeb.actualizarSistemaAlarmas(&Alarmas);              // Actualizar sistema
+                ws.textAll("ALARMA_MODIFICADA:" + String(id));
+                ws.textAll("ALARMAS_WEB:" + AlarmasWeb.obtenerTodasJSON());
+            } else {
+                ws.textAll("ERROR_ALARMA:NO_MODIFICADA");
+            }
+        } else if (mensaje.startsWith("DELETE_ALARMA_WEB:")) {                  // Eliminar alarma existente
+            int id = mensaje.substring(18).toInt();                             // Quitar "DELETE_ALARMA_WEB:"
+            DBG_SRV_PRINTF("🗑️ Eliminando alarma ID: %d", id);
+            if (AlarmasWeb.eliminarAlarma(id)) {                                // Eliminar alarma
+                DBG_SRV("✅ Alarma eliminada");
+                AlarmasWeb.actualizarSistemaAlarmas(&Alarmas);                  // Actualizar sistema 
+                ws.textAll("ALARMA_ELIMINADA:" + String(id));
+                ws.textAll("ALARMAS_WEB:" + AlarmasWeb.obtenerTodasJSON());
+            } else {
+                ws.textAll("ERROR_ALARMA:NO_ELIMINADA");
+            }
+        } else if (mensaje.startsWith("TOGGLE_ALARMA_WEB:")) {                  // Habilitar/deshabilitar alarma
+            int id = mensaje.substring(18).toInt();                             // Quitar "TOGGLE_ALARMA_WEB:"
+            DBG_SRV_PRINTF("🔄 Cambiando estado alarma ID: %d", id);
+    
+            AlarmaPersonalizada* alarma = AlarmasWeb.obtenerAlarma(id);         // Obtener alarma
+            if (alarma) {                                                       // Si la alarma existe
+                bool nuevoEstado = !alarma->habilitada;                         // Nuevo estado es el opuesto al actual
+                if (AlarmasWeb.habilitarAlarma(id, nuevoEstado)) {              // Cambiar estado
+                    DBG_SRV_PRINTF("✅ Alarma %s", nuevoEstado ? "habilitada" : "deshabilitada");
+                    AlarmasWeb.actualizarSistemaAlarmas(&Alarmas);              // Actualizar sistema
+                    ws.textAll("ALARMA_TOGGLE:" + String(id) + ":" + (nuevoEstado ? "ON" : "OFF"));
+                    ws.textAll("ALARMAS_WEB:" + AlarmasWeb.obtenerTodasJSON());
+                } else {
+                    ws.textAll("ERROR_ALARMA:NO_TOGGLE");
+                }
+            } else {
+                ws.textAll("ERROR_ALARMA:NO_ENCONTRADA");
+            }
+        } else if (mensaje == "CLEAR_ALL_ALARMAS_WEB") {                         // Limpiar todas las alarmas (comando de emergencia)
+            DBG_SRV("🧹 Limpiando todas las alarmas personalizadas");
+            AlarmasWeb.limpiarTodas();                                          // Limpiar todas las alarmas   
+            AlarmasWeb.actualizarSistemaAlarmas(&Alarmas);                      // Actualizar sistema 
+            ws.textAll("ALARMAS_CLEARED");
+            ws.textAll("ALARMAS_WEB:" + AlarmasWeb.obtenerTodasJSON());
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             DBG_SRV("Mensaje no reconocido, reseteando secuencia.");

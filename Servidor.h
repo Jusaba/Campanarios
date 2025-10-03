@@ -72,7 +72,10 @@
     #include "Debug.h"
     
     #include "Campanario.h"
-    
+    #include "AlarmasPersonalizadas.h"
+    #include "Alarmas.h" 
+    #include <ArduinoJson.h>
+
 
 
     extern bool servidorIniciado;
@@ -81,6 +84,7 @@
     extern AsyncWebServer server;
     extern WiFiClient client;
 
+    extern AlarmScheduler Alarmas;
 
     extern CAMPANARIO Campanario;
 

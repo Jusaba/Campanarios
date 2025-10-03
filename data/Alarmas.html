@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⏰ Gestión de Alarmas - Campanarios</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .alarm-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .alarm-list {
+            margin: 20px 0;
+        }
+        
+        .alarm-item {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+        }
+        
+        .alarm-item.enabled {
+            border-color: #4CAF50;
+            background-color: #e8f5e8;
+        }
+        
+        .alarm-item.disabled {
+            border-color: #ccc;
+            background-color: #f5f5f5;
+            opacity: 0.7;
+        }
+        
+        .alarm-info h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        
+        .alarm-info p {
+            margin: 2px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .alarm-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .alarm-controls button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            min-width: 80px;
+        }
+        
+        .enable-btn { background-color: #4CAF50; color: white; }
+        .disable-btn { background-color: #ff9800; color: white; }
+        .edit-btn { background-color: #2196F3; color: white; }
+        .delete-btn { background-color: #f44336; color: white; }
+        
+        .add-alarm-form {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        
+        .form-row input, .form-row select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 120px;
+        }
+        
+        .form-row button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .stats-panel {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .navigation {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .navigation a {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 0 10px;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.info { background-color: #d1ecf1; color: #0c5460; }
+        
+        @media (max-width: 768px) {
+            .alarm-item {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .alarm-controls {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="alarm-container">
+        <h1>⏰ Gestión de Alarmas del Campanario</h1>
+        
+        <!-- Panel de estado -->
+        <div class="stats-panel" id="statsPanel">
+            <p>Cargando estadísticas...</p>
+        </div>
+        
+        <!-- Mensajes de estado -->
+        <div id="statusMessages"></div>
+        
+        <!-- Lista de alarmas -->
+        <div class="alarm-list">
+            <h2>📋 Alarmas Configuradas</h2>
+            <div id="alarmList">
+                <p>Cargando alarmas...</p>
+            </div>
+        </div>
+        
+        <!-- Formulario para nueva alarma -->
+        <div class="add-alarm-form">
+            <h3>➕ Crear Nueva Alarma</h3>
+            <form id="alarmForm">
+                <div class="form-row">
+                    <input type="text" id="nombre" placeholder="Nombre de la alarma" required>
+                    <input type="text" id="descripcion" placeholder="Descripción (opcional)">
+                </div>
+                
+                <div class="form-row">
+                    <select id="dia" required>
+                        <option value="0">Todos los días</option>
+                        <option value="1">Domingo</option>
+                        <option value="2">Lunes</option>
+                        <option value="3">Martes</option>
+                        <option value="4">Miércoles</option>
+                        <option value="5">Jueves</option>
+                        <option value="6">Viernes</option>
+                        <option value="7">Sábado</option>
+                    </select>
+                    
+                    <input type="number" id="hora" min="0" max="23" placeholder="Hora (0-23)" required>
+                    <input type="number" id="minuto" min="0" max="59" placeholder="Minuto (0-59)" required>
+                </div>
+                
+                <div class="form-row">
+                    <select id="accion" required>
+                        <option value="MISA">Campanadas de Misa</option>
+                        <option value="DIFUNTOS">Campanadas de Difuntos</option>
+                        <option value="FIESTA">Campanadas de Fiesta</option>
+                    </select>
+                    
+                </div>
+                
+                <div class="form-row">
+                    <button type="submit">🔔 Crear Alarma</button>
+                    <button type="button" onclick="limpiarFormulario()">🧹 Limpiar</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Navegación -->
+        <div class="navigation">
+            <a href="/index.html">🏠 Inicio</a>
+            <a href="/Campanas.html">🔔 Control Manual</a>
+            <a href="javascript:location.reload()">🔄 Actualizar</a>
+        </div>
+    </div>
+    
+    <script src="/Alarmas.js"></script>
+</body>
+</html>

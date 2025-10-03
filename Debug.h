@@ -12,14 +12,14 @@
 #define DEBUG                       // Debug general del sistema
 
 // Debug específico por módulos
-#define DEBUGI2C                    // Debug general del módulo I2C
-#define DEBUGI2CREQUEST             // Debug de requests I2C (envío/recepción)
-#define DEBUGI2CSECUENCIA           // Debug de secuencias I2C recibidas
+//#define DEBUGI2C                    // Debug general del módulo I2C
+//#define DEBUGI2CREQUEST             // Debug de requests I2C (envío/recepción)
+//#define DEBUGI2CSECUENCIA           // Debug de secuencias I2C recibidas
 
-#define DEBUGINO                    // Debug del módulo INO
+//#define DEBUGINO                    // Debug del módulo INO
 
 //#define DEBUGAUXILIAR             // Debug del módulo Auxiliar
-#define DEBUGPROTECCION             // Debug de protección de campanadas
+//#define DEBUGPROTECCION             // Debug de protección de campanadas
 //#define DEBUGACCIONES             // Debug de las acciones de alarmas
  #define DEBUGSERVIDOR              // Debug del servidor web
 // #define DEBUGDNS                 // Debug del servicio DNS
@@ -30,7 +30,7 @@
 // #define DEBUGAP                  // Debug del modo AP
 // #define DEBUGCALEFACCION         // Debug del sistema de calefacción
 // #define DEBUGCAMPANA             // Debug del sistema de campanas
-
+#define DBG_ALARMS_ENABLED          // Habilita macros de debug para alarmas personalizadas
 
 // ============================================================================
 // MACROS DE DEBUG - Simplifica el uso de debug condicional
@@ -205,7 +205,13 @@
     #define DBG_CAMPANA_PRINTF(fmt, ...)
 #endif
 
-
+#ifdef DBG_ALARMS_ENABLED
+    #define DBG_ALARMS(msg) Serial.println("[ALARMS] " + String(msg))
+    #define DBG_ALARMS_PRINTF(format, ...) Serial.printf("[ALARMS] " format "\n", ##__VA_ARGS__)
+#else
+    #define DBG_ALARMS(msg)
+    #define DBG_ALARMS_PRINTF(format, ...)
+#endif
 
 // ============================================================================
 // FUNCIONES DE DEBUG AVANZADAS (Opcional)
