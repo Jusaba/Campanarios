@@ -75,6 +75,9 @@
 
 #include <time.h>
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include <SPIFFS.h>
+#include <vector>
 #include "Acciones.h"
 #include "Configuracion.h"
 #include "Debug.h"
@@ -111,7 +114,20 @@ struct Alarm {
     void     (AlarmScheduler::*accion)(uint16_t) = nullptr;     // Método miembro
     void     (*accionExt)(uint16_t) = nullptr;                  // Función externa con parámetro
     void     (*accionExt0)() = nullptr;                         // Función externa sin parámetro
-    uint16_t parametro           = 0;                           // Parámetro para la acción             
+    uint16_t parametro           = 0;                           // Parámetro para la acción  
+    //Campos para la personalizacion via web
+    char     nombre[50];                                        // Nombre descriptivo
+    char     descripcion[100];                                  // Descripción opcional  
+    char     tipoString[20];                                    // "MISA", "DIFUNTOS", "FIESTA", "SISTEMA"
+    bool     esPersonalizable;                                  // true = editable vía web, false = sistema
+    int      idWeb = -1;                                        // ID único para interfaz web (-1 si no aplica)  
+    
+   // Constructor para inicializar nuevos campos
+    Alarm() : esPersonalizable(false), idWeb(-1) {
+        nombre[0] = '\0';
+        descripcion[0] = '\0';
+        strcpy(tipoString, "SISTEMA");
+    }    
 };
 
 class AlarmScheduler {
@@ -119,45 +135,73 @@ public:
     static constexpr uint8_t MAX_ALARMAS = 16;
     struct tm t;
 
-bool begin(bool cargarPorDefecto = true);
-void check();
-uint8_t add(uint8_t mascaraDias,
-                uint8_t hora,
-                uint8_t minuto,
-                uint16_t intervaloMin,
-                void (AlarmScheduler::*accion)(uint16_t),
-                uint16_t parametro = 0,
-                bool habilitada = true);
-uint8_t addExternal(uint8_t mascaraDias,
-                     uint8_t hora,
-                     uint8_t minuto,
-                     uint16_t intervaloMin,
-                     void (*ext)(uint16_t),
-                     uint16_t parametro = 0,
-                     bool habilitada = true);      
-uint8_t addExternal0(uint8_t mascaraDias,
-                     uint8_t hora,
-                     uint8_t minuto,
-                     uint16_t intervaloMin,
-                     void (*ext0)(),
-                     bool habilitada = true);                     
-void disable(uint8_t idx);
-void enable(uint8_t idx);
-void clear();
-uint8_t count() const;
-const Alarm* get(uint8_t idx) const;
-bool esHorarioNocturno() const;
-void resetCache();
+    bool begin(bool cargarPorDefecto = true);
+    void check();
+    uint8_t add(uint8_t mascaraDias,
+                    uint8_t hora,
+                    uint8_t minuto,
+                    uint16_t intervaloMin,
+                    void (AlarmScheduler::*accion)(uint16_t),
+                    uint16_t parametro = 0,
+                    bool habilitada = true);
+    uint8_t addExternal(uint8_t mascaraDias,
+                         uint8_t hora,
+                         uint8_t minuto,
+                         uint16_t intervaloMin,
+                         void (*ext)(uint16_t),
+                         uint16_t parametro = 0,
+                         bool habilitada = true);      
+    uint8_t addExternal0(uint8_t mascaraDias,
+                         uint8_t hora,
+                         uint8_t minuto,
+                         uint16_t intervaloMin,
+                         void (*ext0)(),
+                         bool habilitada = true);                     
+    void disable(uint8_t idx);
+    void enable(uint8_t idx);
+    void clear();
+    uint8_t count() const;
+    const Alarm* get(uint8_t idx) const;
+    bool esHorarioNocturno() const;
+    void resetCache();
+
+    // === GESTIÓN WEB DE ALARMAS PERSONALIZABLES ===
+    uint8_t addPersonalizable(const char* nombre, const char* descripcion,
+                         uint8_t mascaraDias, uint8_t hora, uint8_t minuto,
+                         const char* tipoString, uint16_t parametro,
+                         void (*callback)(uint16_t), bool habilitada = true);
+    
+    bool    modificarPersonalizable(int idWeb, const char* nombre, const char* descripcion,
+                                   uint8_t mascaraDias, uint8_t hora, uint8_t minuto,
+                                   const char* tipoAccion, bool habilitada);
+    
+    bool    eliminarPersonalizable(int idWeb);
+    bool    habilitarPersonalizable(int idWeb, bool estado);
+    
+    String  obtenerPersonalizablesJSON();
+    String  obtenerEstadisticasJSON();
+    
+    bool    cargarPersonalizablesDesdeJSON();
+    bool    guardarPersonalizablesEnJSON();
+    
+
 
 private:
     Alarm  _alarmas[MAX_ALARMAS];
     uint8_t _num = 0;
 
-static uint8_t mascaraDesdeDiaSemana(int diaSemana);
-void initDefaults(); 
+    static uint8_t mascaraDesdeDiaSemana(int diaSemana);
+    void initDefaults(); 
 
-
+    // === VARIABLES PARA GESTIÓN WEB ===
+    int     _siguienteIdWeb;
     
+    // === MÉTODOS AUXILIARES ===
+    uint8_t _buscarIndicePorIdWeb(int idWeb);
+    int     _generarNuevoIdWeb();
+     
+    String  _diaToString(int dia);
+    void    _crearAlarmasPersonalizablesPorDefecto();
 };
 
 #endif

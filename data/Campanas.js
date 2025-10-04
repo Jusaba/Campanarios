@@ -381,3 +381,59 @@ function activarCampana(num) {
 
         console.log("Botones de campanadas " + (habilitar ? "habilitados" : "deshabilitados"));
     }
+
+    function SelMisa() {
+    console.log("🔔 Activando Misa");
+    if (typeof ws !== 'undefined' && ws.readyState === WebSocket.OPEN) {
+        ws.send("MISA");
+    } else {
+        console.error("WebSocket no disponible");
+    }
+}
+
+function SelDifuntos() {
+    console.log("🕊️ Activando Difuntos");
+    if (typeof ws !== 'undefined' && ws.readyState === WebSocket.OPEN) {
+        ws.send("DIFUNTOS");
+    } else {
+        console.error("WebSocket no disponible");
+    }
+}
+
+function SelFiesta() {
+    console.log("🎉 Activando Fiesta");
+    if (typeof ws !== 'undefined' && ws.readyState === WebSocket.OPEN) {
+        ws.send("FIESTA");
+    } else {
+        console.error("WebSocket no disponible");
+    }
+}
+
+function pararSecuencia() {
+    console.log("⏹️ Parando secuencia");
+    if (typeof ws !== 'undefined' && ws.readyState === WebSocket.OPEN) {
+        ws.send("STOP");
+    } else {
+        console.error("WebSocket no disponible");
+    }
+}
+
+function encenderCalefaccion() {
+    console.log("🔥 Encendiendo calefacción");
+    if (typeof ws !== 'undefined' && ws.readyState === WebSocket.OPEN) {
+        ws.send("CALEFACCION_ON");
+    } else {
+        console.error("WebSocket no disponible");
+    }
+}
+
+function mostrarConfiguracionTiempo() {
+    console.log("⏰ Mostrando configuración de tiempo");
+    // Mostrar modal o formulario para configurar tiempo
+    const minutos = prompt(t('configurar_tiempo'), '30');
+    if (minutos && !isNaN(minutos)) {
+        if (typeof ws !== 'undefined' && ws.readyState === WebSocket.OPEN) {
+            ws.send(`CALEFACCION_TIMER:${minutos}`);
+        }
+    }
+}

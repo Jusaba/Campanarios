@@ -57,7 +57,7 @@
   #include "Acciones.h"
   #include "I2CServicio.h"
   #include "Debug.h"
-  #include "AlarmasPersonalizadas.h"
+  //#include "AlarmasPersonalizadas.h"
   //#include "Acciones.h"
   
   
@@ -114,16 +114,6 @@
         Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 10, 0, ActualizaDNSSiNecesario, true);                             // Actualiza DNS si es necesario cada hora en el minuto 10
 //        Alarmas.addExternal(DOW_DOMINGO, 11, 05, 0, &accionSecuencia, Config::States::I2CState::MISA);                     // Toca misa los domingos a las 11:05
 //        Alarmas.addExternal(DOW_DOMINGO, 11, 25, 0, &accionSecuencia, Config::States::I2CState::MISA);                     // Toca misa los domingos a las 11:25
-
-
-// Inicializar sistema de alarmas personalizables
-DBG_INO("🔔 Inicializando alarmas personalizables...");
-AlarmasWeb.inicializar();                                    // Cargar alarmas desde JSON
-AlarmasWeb.setCallbackMisa(&accionSecuencia);               // Callback para MISA
-AlarmasWeb.setCallbackDifuntos(&accionSecuencia);           // Callback para DIFUNTOS
-AlarmasWeb.setCallbackFiesta(&accionSecuencia);             // Callback para FIESTA
-AlarmasWeb.registrarEnSistemaAlarmas(&Alarmas);             // Registrar en sistema de alarmas
-DBG_INO("✅ Alarmas personalizables configuradas");
 
     }
   }

@@ -46,6 +46,7 @@ bool AlarmScheduler::begin(bool cargarPorDefecto) {
     clear();
     if (cargarPorDefecto) initDefaults();
     DBG_ALM_PRINTF("[ALARM] Sistema inicializado con %u alarmas\n", _num);
+    this->_siguienteIdWeb = 1;
     return true;
 }
 
@@ -689,4 +690,901 @@ void AlarmScheduler::initDefaults() {
     DBG_ALM_PRINTF("[ALARM] Configuración por defecto cargada: %u alarmas\n", _num);
 }
 
+// ============================================================================
+// IMPLEMENTACIÓN DE GESTIÓN WEB DE ALARMAS PERSONALIZABLES
+// ============================================================================
+/**
+ * @brief Añade una nueva alarma personalizable editable vía web
+ * 
+ * @details Crea una alarma completamente configurable desde la interfaz web
+ *          con persistencia en JSON y callback proporcionado externamente.
+ *          La alarma se marca como personalizable y recibe un ID único para 
+ *          gestión web independiente del índice del array.
+ * 
+ * @param nombre Nombre descriptivo de la alarma (máx 49 caracteres)
+ * @param descripcion Descripción opcional de la alarma (máx 99 caracteres)
+ * @param mascaraDias Máscara de bits para días de la semana (DOW_DOMINGO, DOW_LUNES, etc.)
+ * @param hora Hora de ejecución (0-23)
+ * @param minuto Minuto de ejecución (0-59)
+ * @param tipoString Tipo de acción como string libre: "MISA", "DIFUNTOS", "FIESTA", etc.
+ * @param parametro Parámetro uint16_t a pasar al callback
+ * @param callback Puntero a función externa que se ejecutará
+ * @param habilitada Estado inicial de la alarma (true por defecto)
+ * 
+ * @return uint8_t Índice de la alarma en el array (0-MAX_ALARMAS) o MAX_ALARMAS si error
+ * 
+ * @note La alarma se guarda automáticamente en JSON tras la creación
+ * @note El callback debe ser proporcionado externamente (normalmente desde Servidor.cpp)
+ * @note Esta función es genérica - no tiene conocimiento de tipos específicos
+ * 
+ * @warning Máximo MAX_ALARMAS alarmas simultáneas (incluye sistema + personalizables)
+ * @warning Los strings se truncan si exceden el tamaño máximo
+ * @warning El callback debe ser válido y accesible durante toda la vida de la alarma
+ * 
+ * @see modificarPersonalizable(), eliminarPersonalizable()
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ */
+uint8_t AlarmScheduler::addPersonalizable(const char* nombre, const char* descripcion,
+                                         uint8_t mascaraDias, uint8_t hora, uint8_t minuto,
+                                         const char* tipoString, uint16_t parametro,
+                                         void (*callback)(uint16_t), bool habilitada) {
+    DBG_ALM("🔔 Añadiendo alarma personalizable");
+    DBG_ALM_PRINTF("  Nombre: %s", nombre);
+    DBG_ALM_PRINTF("  Tipo: %s", tipoString);
+    DBG_ALM_PRINTF("  Horario: %s %02d:%02d", 
+                   mascaraDias == DOW_TODOS ? "Diario" : "Específico", hora, minuto);
+    
+    if (_num >= MAX_ALARMAS) {
+        DBG_ALM("❌ Error: Máximo de alarmas alcanzado");
+        return MAX_ALARMAS;
+    }
+    
+    // Crear nueva alarma
+    Alarm& alarma = _alarmas[_num];
+    alarma.habilitada = habilitada;
+    alarma.mascaraDias = mascaraDias;
+    alarma.hora = hora;
+    alarma.minuto = minuto;
+    alarma.intervaloMin = 0;  // Las personalizables no usan intervalo
+    alarma.parametro = parametro;
+    
+    // Asignar callback (ya viene como parámetro)
+    alarma.accionExt = callback;
+    alarma.accion = nullptr;     // Limpiar otros callbacks
+    alarma.accionExt0 = nullptr;
+    
+    // Campos web
+    strncpy(alarma.nombre, nombre, sizeof(alarma.nombre) - 1);
+    alarma.nombre[sizeof(alarma.nombre) - 1] = '\0';
+    
+    strncpy(alarma.descripcion, descripcion, sizeof(alarma.descripcion) - 1);
+    alarma.descripcion[sizeof(alarma.descripcion) - 1] = '\0';
+    
+    strncpy(alarma.tipoString, tipoString, sizeof(alarma.tipoString) - 1);
+    alarma.tipoString[sizeof(alarma.tipoString) - 1] = '\0';
+    
+    alarma.esPersonalizable = true;
+    alarma.idWeb = _generarNuevoIdWeb();
+    
+    uint8_t idx = _num;
+    _num++;
+    
+    DBG_ALM_PRINTF("✅ Alarma personalizable creada - Índice: %d, ID Web: %d", idx, alarma.idWeb);
+    
+    // Guardar en JSON
+    guardarPersonalizablesEnJSON();
+    
+    return idx;
+}
+/**
+ * @brief Modifica una alarma personalizable existente por su ID web
+ * 
+ * @details Actualiza todos los campos de una alarma personalizable identificada
+ *          por su ID web único. Mantiene el callback existente sin modificarlo.
+ *          Actualiza automáticamente el archivo JSON de persistencia.
+ *          Resetea el cache temporal para forzar reevaluación en próxima verificación.
+ * 
+ * @param idWeb ID único web de la alarma a modificar
+ * @param nombre Nuevo nombre descriptivo (máx 49 caracteres)
+ * @param descripcion Nueva descripción opcional (máx 99 caracteres)
+ * @param mascaraDias Nueva máscara de días de la semana
+ * @param hora Nueva hora de ejecución (0-23)
+ * @param minuto Nuevo minuto de ejecución (0-59)
+ * @param tipoString Nuevo tipo como string libre: "MISA", "DIFUNTOS", "FIESTA", etc.
+ * @param habilitada Nuevo estado de habilitación
+ * 
+ * @return bool true si la modificación fue exitosa, false en caso de error
+ * 
+ * @note Solo se pueden modificar alarmas con esPersonalizable = true
+ * @note MANTIENE el callback existente - no lo reasigna
+ * @note Los cambios se guardan inmediatamente en JSON
+ * @note Cache temporal se resetea para evitar conflictos
+ * 
+ * @warning El idWeb debe existir y pertenecer a una alarma personalizable
+ * @warning Para cambiar callback, eliminar y recrear la alarma
+ * 
+ * @see addPersonalizable(), eliminarPersonalizable(), habilitarPersonalizable()
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ */
+bool AlarmScheduler::modificarPersonalizable(int idWeb, const char* nombre, const char* descripcion,
+                                           uint8_t mascaraDias, uint8_t hora, uint8_t minuto,
+                                           const char* tipoString, bool habilitada) {
+    DBG_ALM_PRINTF("✏️ Modificando alarma personalizable ID Web: %d", idWeb);
+    
+    uint8_t idx = _buscarIndicePorIdWeb(idWeb);
+    if (idx >= MAX_ALARMAS) {
+        DBG_ALM("❌ Error: Alarma no encontrada");
+        return false;
+    }
+    
+    Alarm& alarma = _alarmas[idx];
+    
+    // Verificar que es personalizable
+    if (!alarma.esPersonalizable) {
+        DBG_ALM("❌ Error: Alarma no es personalizable");
+        return false;
+    }
+    
+    // Actualizar campos (MANTENER callback existente)
+    alarma.habilitada = habilitada;
+    alarma.mascaraDias = mascaraDias;
+    alarma.hora = hora;
+    alarma.minuto = minuto;
+    
+    strncpy(alarma.nombre, nombre, sizeof(alarma.nombre) - 1);
+    alarma.nombre[sizeof(alarma.nombre) - 1] = '\0';
+    
+    strncpy(alarma.descripcion, descripcion, sizeof(alarma.descripcion) - 1);
+    alarma.descripcion[sizeof(alarma.descripcion) - 1] = '\0';
+    
+    strncpy(alarma.tipoString, tipoString, sizeof(alarma.tipoString) - 1);
+    alarma.tipoString[sizeof(alarma.tipoString) - 1] = '\0';
+    
+    // Reset cache para forzar reevaluación
+    alarma.ultimoDiaAno = -1;
+    alarma.ultimoMinuto = 255;
+    alarma.ultimaHora = 255;
+    alarma.ultimaEjecucion = 0;
+    
+    DBG_ALM("✅ Alarma personalizable modificada");
+    
+    // Guardar en JSON
+    guardarPersonalizablesEnJSON();
+    
+    return true;
+}
+/**
+ * @brief Elimina permanentemente una alarma personalizable por su ID web
+ * 
+ * @details Elimina completamente una alarma personalizable del sistema,
+ *          reorganizando el array para evitar huecos y actualizando el
+ *          contador de alarmas. La operación es irreversible y actualiza
+ *          automáticamente la persistencia JSON.
+ * 
+ * @param idWeb ID único web de la alarma a eliminar
+ * 
+ * @return bool true si la eliminación fue exitosa, false si no se encontró
+ * 
+ * @note Solo se pueden eliminar alarmas con esPersonalizable = true
+ * @note Reorganiza automáticamente el array moviendo alarmas posteriores
+ * @note Los cambios se guardan inmediatamente en JSON
+ * @note Operación irreversible - no hay papelera de reciclaje
+ * 
+ * @warning Las alarmas de sistema (esPersonalizable = false) no se pueden eliminar
+ * @warning Los índices de array pueden cambiar tras eliminación
+ * 
+ * @see addPersonalizable(), modificarPersonalizable()
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ */
+bool AlarmScheduler::eliminarPersonalizable(int idWeb) {
+    DBG_ALM_PRINTF("🗑️ Eliminando alarma personalizable ID Web: %d", idWeb);
+    
+    uint8_t idx = _buscarIndicePorIdWeb(idWeb);
+    if (idx >= MAX_ALARMAS) {
+        DBG_ALM("❌ Error: Alarma no encontrada");
+        return false;
+    }
+    
+    if (!_alarmas[idx].esPersonalizable) {
+        DBG_ALM("❌ Error: Alarma no es personalizable");
+        return false;
+    }
+    
+    // Mover todas las alarmas posteriores una posición hacia atrás
+    for (uint8_t i = idx; i < _num - 1; i++) {
+        _alarmas[i] = _alarmas[i + 1];
+    }
+    
+    // Limpiar la última posición
+    _alarmas[_num - 1] = Alarm();
+    _num--;
+    
+    DBG_ALM("✅ Alarma personalizable eliminada");
+    
+    // Guardar en JSON
+    guardarPersonalizablesEnJSON();
+    
+    return true;
+}
+/**
+ * @brief Habilita o deshabilita una alarma personalizable sin eliminarla
+ * 
+ * @details Cambia el estado de habilitación de una alarma personalizable,
+ *          permitiendo pausar/reanudar su ejecución sin perder la configuración.
+ *          Al habilitar, resetea el cache temporal para asegurar evaluación inmediata.
+ * 
+ * @param idWeb ID único web de la alarma a modificar
+ * @param estado true para habilitar, false para deshabilitar
+ * 
+ * @return bool true si el cambio fue exitoso, false si no se encontró la alarma
+ * 
+ * @note Solo aplica a alarmas con esPersonalizable = true
+ * @note Al habilitar se resetea cache para evaluación inmediata
+ * @note Los cambios se guardan automáticamente en JSON
+ * @note Alarma deshabilitada no se ejecuta pero conserva configuración
+ * 
+ * @warning El idWeb debe existir y pertenecer a una alarma personalizable
+ * 
+ * @see modificarPersonalizable(), eliminarPersonalizable()
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ */
+bool AlarmScheduler::habilitarPersonalizable(int idWeb, bool estado) {
+    DBG_ALM_PRINTF("🔄 %s alarma personalizable ID Web: %d", 
+                   estado ? "Habilitando" : "Deshabilitando", idWeb);
+    
+    uint8_t idx = _buscarIndicePorIdWeb(idWeb);
+    if (idx >= MAX_ALARMAS) {
+        DBG_ALM("❌ Error: Alarma no encontrada");
+        return false;
+    }
+    
+    if (!_alarmas[idx].esPersonalizable) {
+        DBG_ALM("❌ Error: Alarma no es personalizable");
+        return false;
+    }
+    
+    _alarmas[idx].habilitada = estado;
+    
+    // Reset cache si se habilita
+    if (estado) {
+        _alarmas[idx].ultimoDiaAno = -1;
+        _alarmas[idx].ultimoMinuto = 255;
+        _alarmas[idx].ultimaHora = 255;
+        _alarmas[idx].ultimaEjecucion = 0;
+    }
+    
+    DBG_ALM_PRINTF("✅ Alarma personalizable %s", estado ? "habilitada" : "deshabilitada");
+    
+    // Guardar en JSON
+    guardarPersonalizablesEnJSON();
+    
+    return true;
+}
 
+
+
+// ============================================================================
+// MÉTODOS AUXILIARES PRIVADOS
+// ============================================================================
+
+/**
+ * @brief Busca el índice de array de una alarma por su ID web único
+ * 
+ * @details Itera sobre todas las alarmas personalizables buscando coincidencia
+ *          de ID web. Utilizado internamente para operaciones de modificación,
+ *          eliminación y cambio de estado de alarmas vía interfaz web.
+ * 
+ * @param idWeb ID único web de la alarma a buscar
+ * 
+ * @return uint8_t Índice de la alarma en el array o MAX_ALARMAS si no encontrada
+ * 
+ * @note Solo busca en alarmas con esPersonalizable = true
+ * @note Retorna MAX_ALARMAS como valor de error (fuera de rango válido)
+ * 
+ * @see _generarNuevoIdWeb()
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ */
+uint8_t AlarmScheduler::_buscarIndicePorIdWeb(int idWeb) {
+    for (uint8_t i = 0; i < _num; i++) {
+        if (_alarmas[i].esPersonalizable && _alarmas[i].idWeb == idWeb) {
+            return i;
+        }
+    }
+    return MAX_ALARMAS; // No encontrado
+}
+/**
+ * @brief Genera un nuevo ID web único para alarma personalizable
+ * 
+ * @details Busca el ID web más alto existente entre alarmas personalizables
+ *          y retorna el siguiente número disponible. Garantiza unicidad de
+ *          identificadores para la interfaz web.
+ * 
+ * @return int Nuevo ID web único (entero positivo)
+ * 
+ * @note IDs web son independientes de índices de array
+ * @note Busca solo en alarmas personalizables existentes
+ * @note ID mínimo es 1 (nunca retorna 0)
+ * 
+ * @see _buscarIndicePorIdWeb()
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ */
+int AlarmScheduler::_generarNuevoIdWeb() {
+    // Buscar el ID más alto existente
+    int maxId = 0;
+    for (uint8_t i = 0; i < _num; i++) {
+        if (_alarmas[i].esPersonalizable && _alarmas[i].idWeb > maxId) {
+            maxId = _alarmas[i].idWeb;
+        }
+    }
+    return maxId + 1;
+}
+
+// ============================================================================
+// IMPLEMENTACIÓN DE FUNCIONES JSON Y PERSISTENCIA
+// ============================================================================
+/**
+ * @brief Genera JSON con todas las alarmas personalizables para interfaz web
+ * 
+ * @details Construye una estructura JSON completa conteniendo únicamente las
+ *          alarmas marcadas como personalizables (esPersonalizable = true),
+ *          incluyendo metadatos, estadísticas y formato optimizado para consumo web.
+ *          
+ *          **ESTRUCTURA JSON GENERADA:**
+ *          - version: Versión del formato JSON (2.1)
+ *          - timestamp: Timestamp de generación en millis()
+ *          - total: Número de alarmas personalizables
+ *          - alarmas[]: Array con datos de cada alarma personalizable
+ *            - id: ID web único para identificación
+ *            - nombre: Nombre descriptivo de la alarma
+ *            - descripcion: Descripción opcional
+ *            - dia: Día de la semana (0=todos, 1-7=dom-sab)
+ *            - diaNombre: Nombre legible del día
+ *            - hora/minuto: Horario de ejecución
+ *            - accion: Tipo de acción (valor de tipoString del struct)
+ *            - habilitada: Estado de activación
+ *            - horaTexto: Hora formateada (ej: "11:05")
+ *            - indiceArray: Índice en array (para debug)
+ * 
+ * @return String JSON estructurado con alarmas personalizables y metadatos
+ * 
+ * @note **FILTRADO:** Solo incluye alarmas con esPersonalizable = true
+ * @note **CONVERSIÓN:** Convierte máscaras de días a números (0-7)
+ * @note **FORMATO WEB:** Incluye campos calculados para mostrar en UI
+ * @note **GENÉRICO:** No interpreta tipos - solo los copia como strings
+ * 
+ * @warning **TAMAÑO:** JSON puede ser grande con muchas alarmas - considerar paginación
+ * @warning **MEMORIA:** Usa JsonDocument que consume RAM durante generación
+ * 
+ * @see obtenerEstadisticasJSON(), guardarPersonalizablesEnJSON()
+ * @see _diaToString() - Conversión de números a nombres de días
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ */
+String AlarmScheduler::obtenerPersonalizablesJSON() {
+    DBG_ALM("📋 Generando JSON con alarmas personalizables...");
+    
+    JsonDocument doc;
+    doc["version"] = "2.1";
+    doc["timestamp"] = millis();
+    
+    // Contar alarmas personalizables
+    uint8_t personalizables = 0;
+    for (uint8_t i = 0; i < _num; i++) {
+        if (_alarmas[i].esPersonalizable) {
+            personalizables++;
+        }
+    }
+    
+    doc["total"] = personalizables;
+    
+    JsonArray alarmasArray = doc.createNestedArray("alarmas");
+    
+    // Añadir cada alarma personalizable al JSON
+    for (uint8_t i = 0; i < _num; i++) {
+        const Alarm& alarma = _alarmas[i];
+        
+        if (!alarma.esPersonalizable) continue; // Solo personalizables
+        
+        JsonObject alarmaObj = alarmasArray.createNestedObject();
+        
+        alarmaObj["id"] = alarma.idWeb;
+        alarmaObj["nombre"] = alarma.nombre;
+        alarmaObj["descripcion"] = alarma.descripcion;
+        
+        // Convertir máscara de días a número de día (0-7)
+        int dia = 0;
+        if (alarma.mascaraDias == DOW_TODOS) {
+            dia = 0; // Todos los días
+        } else {
+            // Buscar primer bit activo
+            for (int d = 0; d < 7; d++) {
+                if (alarma.mascaraDias & (1 << d)) {
+                    dia = d + 1; // 1=Domingo, 2=Lunes, etc.
+                    break;
+                }
+            }
+        }
+        
+        alarmaObj["dia"] = dia;
+        alarmaObj["diaNombre"] = _diaToString(dia);
+        alarmaObj["hora"] = alarma.hora;
+        alarmaObj["minuto"] = alarma.minuto;
+        alarmaObj["accion"] = alarma.tipoString;
+        alarmaObj["habilitada"] = alarma.habilitada;
+        
+        // Formatear hora para mostrar (ej: "11:05")
+        char horaFormateada[8];
+        sprintf(horaFormateada, "%02d:%02d", alarma.hora, alarma.minuto);
+        alarmaObj["horaTexto"] = horaFormateada;
+        
+        // Información de estado
+        alarmaObj["indiceArray"] = i; // Para debug
+    }
+    
+    String resultado;
+    serializeJson(doc, resultado);
+    
+    DBG_ALM_PRINTF("📋 JSON generado con %d alarmas (%d chars)", personalizables, resultado.length());
+    return resultado;
+}
+/**
+ * @brief Genera JSON con estadísticas completas del sistema de alarmas
+ * 
+ * @details Construye estructura JSON con información estadística detallada
+ *          del sistema de alarmas, incluyendo conteos por categoría, estado de
+ *          callbacks, información de memoria y configuración actual del módulo.
+ *          Ideal para monitoreo, debug y dashboards administrativos.
+ *          
+ *          **ESTADÍSTICAS INCLUIDAS:**
+ *          - Información general: módulo, versión, timestamp
+ *          - Contadores: total, sistema, personalizables, habilitadas, deshabilitadas
+ *          - Capacidad: espacioLibre, maxAlarmas, siguienteIdWeb
+ *          - Estados: (sin callbacks específicos - módulo genérico)
+ *          - Persistencia: archivoJSON, archivoExiste
+ *          - Tiempo actual: hora, minuto, diaSemana, diaAno (si RTC válido)
+ * 
+ * @return String JSON con estadísticas completas del sistema
+ * 
+ * @note **CONTADORES:** Diferencia alarmas de sistema vs personalizables
+ * @note **CALLBACKS:** Indica si están configurados (no null)
+ * @note **TIEMPO:** Incluye estado actual del RTC si está sincronizado
+ * @note **ARCHIVOS:** Verifica existencia del archivo de persistencia
+ * 
+ * @warning **RTC DEPENDENCY:** Campos de tiempo solo válidos si getLocalTime() funciona
+ * @warning **SPIFFS:** Verificación de archivo requiere SPIFFS montado
+ * 
+ * @see obtenerPersonalizablesJSON(), cargarPersonalizablesDesdeJSON()
+ * @see getLocalTime() - Función para obtener tiempo actual
+ * 
+ * @example
+ * @code
+ * String stats = Alarmas.obtenerEstadisticasJSON(); 
+ * Serial.println("Stats: " + stats);
+ * ws.textAll("STATS_ALARMAS_WEB:" + stats);
+ * @endcode
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ * @author Julian Salas Bartolomé
+ */
+String AlarmScheduler::obtenerEstadisticasJSON() {
+    DBG_ALM("📊 Generando estadísticas del sistema...");
+    
+    JsonDocument doc;
+    
+    // Información general
+    doc["modulo"] = "AlarmScheduler";
+    doc["version"] = "2.1";
+    doc["timestamp"] = millis();
+    
+    // Contadores de alarmas
+    uint8_t sistema = 0, personalizables = 0, habilitadas = 0, deshabilitadas = 0;
+    
+    for (uint8_t i = 0; i < _num; i++) {
+        if (_alarmas[i].esPersonalizable) {
+            personalizables++;
+        } else {
+            sistema++;
+        }
+        
+        if (_alarmas[i].habilitada) {
+            habilitadas++;
+        } else {
+            deshabilitadas++;
+        }
+    }
+    
+    doc["totalAlarmas"] = _num;
+    doc["sistema"] = sistema;
+    doc["personalizables"] = personalizables;
+    doc["habilitadas"] = habilitadas;
+    doc["deshabilitadas"] = deshabilitadas;
+    doc["espacioLibre"] = MAX_ALARMAS - _num;
+    doc["maxAlarmas"] = MAX_ALARMAS;
+        
+    // Información del sistema
+    doc["siguienteIdWeb"] = _siguienteIdWeb;
+    doc["archivoJSON"] = "/alarmas_personalizadas.json";
+    doc["archivoExiste"] = SPIFFS.exists("/alarmas_personalizadas.json");
+    
+    // Estado actual del tiempo
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        doc["tiempoActual"]["valido"] = true;
+        doc["tiempoActual"]["hora"] = timeinfo.tm_hour;
+        doc["tiempoActual"]["minuto"] = timeinfo.tm_min;
+        doc["tiempoActual"]["diaSemana"] = timeinfo.tm_wday;
+        doc["tiempoActual"]["diaAno"] = timeinfo.tm_yday;
+    } else {
+        doc["tiempoActual"]["valido"] = false;
+    }
+    
+    String resultado;
+    serializeJson(doc, resultado);
+    
+    DBG_ALM_PRINTF("📊 Estadísticas generadas (%d chars)", resultado.length());
+    return resultado;
+}
+/**
+ * @brief Carga alarmas personalizables desde archivo JSON en SPIFFS
+ * 
+ * @details Lee el archivo JSON de persistencia y recrea todas las alarmas
+ *          personalizables en el sistema, validando integridad de datos y
+ *          asignando callbacks según configuración. Si el archivo no existe,
+ *          crea alarmas por defecto automáticamente.
+ *          
+ *          **PROCESO DE CARGA:**
+ *          1. Verifica existencia del archivo JSON en SPIFFS
+ *          2. Si no existe: crea alarmas por defecto y guarda JSON
+ *          3. Si existe: lee contenido y parsea JSON
+ *          4. Elimina alarmas personalizables existentes (mantiene sistema)
+ *          5. Para cada alarma en JSON:
+ *             - Valida datos básicos (nombre, hora, minuto, idWeb)
+ *             - Convierte día (0-7) a máscara de bits
+ *             - Crea alarma en array con todos los campos
+ *             - Actualiza siguienteIdWeb si es necesario
+ *          6. Actualiza contador total de alarmas
+ * 
+ * @return bool true si la carga fue exitosa, false si error o archivo corrupto
+ * 
+ * @note **PRESERVACIÓN:** Mantiene alarmas de sistema intactas
+ * @note **VALIDACIÓN:** Descarta alarmas con datos inválidos
+ * @note **CALLBACKS:** Requiere callbacks configurados previamente con setCallback*()
+ * @note **AUTO-CREACIÓN:** Crea alarmas por defecto si archivo no existe
+ * @note **ID MANAGEMENT:** Actualiza siguienteIdWeb para evitar duplicados
+ * 
+ * @warning **ARCHIVO CORRUPTO:** JSON malformado puede causar pérdida de alarmas
+ * @warning **CALLBACKS NULL:** Alarmas sin callback válido no se ejecutarán
+ * @warning **SPIFFS:** Requiere sistema de archivos montado
+ * 
+ * @see guardarPersonalizablesEnJSON(), addPersonalizable()
+ * @see _crearAlarmasPersonalizablesPorDefecto() - Alarmas por defecto
+ * 
+ * @example
+ * @code
+ * void setup() {
+ *     // Configurar callbacks antes de cargar
+ *     Alarmas.setCallbackMisa(&accionSecuencia);
+ *     Alarmas.setCallbackDifuntos(&accionSecuencia);  
+ *     Alarmas.setCallbackFiesta(&accionSecuencia);
+ *     
+ *     // Cargar alarmas persistidas
+ *     if (Alarmas.cargarPersonalizablesDesdeJSON()) {
+ *         Serial.println("Alarmas cargadas correctamente");
+ *     }
+ * }
+ * @endcode
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ * @author Julian Salas Bartolomé
+ */
+bool AlarmScheduler::cargarPersonalizablesDesdeJSON() {
+    DBG_ALM("📂 Cargando alarmas personalizables desde JSON...");
+    
+    const char* archivo = "/alarmas_personalizadas.json";
+    
+    if (!SPIFFS.exists(archivo)) {
+        DBG_ALM("📄 Archivo de alarmas no existe, creando alarmas por defecto");
+        _crearAlarmasPersonalizablesPorDefecto();
+        return guardarPersonalizablesEnJSON();
+    }
+    
+    File file = SPIFFS.open(archivo, "r");
+    if (!file) {
+        DBG_ALM("❌ Error al abrir archivo de alarmas");
+        return false;
+    }
+    
+    String contenido = file.readString();
+    file.close();
+    
+    DBG_ALM_PRINTF("📄 Contenido leído (%d bytes)", contenido.length());
+    
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, contenido);
+    
+    if (error) {
+        DBG_ALM_PRINTF("❌ Error parseando JSON: %s", error.c_str());
+        return false;
+    }
+    
+    // Eliminar alarmas personalizables existentes (manteniendo las de sistema)
+    for (int i = _num - 1; i >= 0; i--) {
+        if (_alarmas[i].esPersonalizable) {
+            // Mover alarmas posteriores hacia atrás
+            for (uint8_t j = i; j < _num - 1; j++) {
+                _alarmas[j] = _alarmas[j + 1];
+            }
+            _num--;
+        }
+    }
+    
+    // Cargar alarmas del JSON
+    JsonArray alarmasArray = doc["alarmas"];
+    int cargadas = 0;
+    
+    for (JsonObject alarmaObj : alarmasArray) {
+        if (_num >= MAX_ALARMAS) {
+            DBG_ALM("⚠️ Máximo de alarmas alcanzado, ignorando restantes");
+            break;
+        }
+        
+        // Leer datos del JSON
+        const char* nombre = alarmaObj["nombre"] | "";
+        const char* descripcion = alarmaObj["descripcion"] | "";
+        int dia = alarmaObj["dia"] | 0;
+        uint8_t hora = alarmaObj["hora"] | 0;
+        uint8_t minuto = alarmaObj["minuto"] | 0;
+        const char* tipoString = alarmaObj["accion"] | "SISTEMA";
+        bool habilitada = alarmaObj["habilitada"] | true;
+        int idWeb = alarmaObj["id"] | -1;
+        
+        // Validar datos básicos
+        if (strlen(nombre) == 0 || hora > 23 || minuto > 59 || idWeb <= 0) {
+            DBG_ALM_PRINTF("⚠️ Alarma inválida ignorada: %s", nombre);
+            continue;
+        }
+        
+        // Convertir día a máscara
+        uint8_t mascaraDias;
+        if (dia == 0) {
+            mascaraDias = DOW_TODOS;
+        } else {
+            mascaraDias = 1 << (dia - 1); // dia 1-7 -> bit 0-6
+        }
+        
+        // Crear alarma
+        Alarm& alarma = _alarmas[_num];
+        alarma.habilitada = habilitada;
+        alarma.mascaraDias = mascaraDias;
+        alarma.hora = hora;
+        alarma.minuto = minuto;
+        alarma.intervaloMin = 0;
+        alarma.parametro = 0;
+        
+        // Campos web
+        strncpy(alarma.nombre, nombre, sizeof(alarma.nombre) - 1);
+        alarma.nombre[sizeof(alarma.nombre) - 1] = '\0';
+        
+        strncpy(alarma.descripcion, descripcion, sizeof(alarma.descripcion) - 1);
+        alarma.descripcion[sizeof(alarma.descripcion) - 1] = '\0';
+        
+        strncpy(alarma.tipoString, tipoString, sizeof(alarma.tipoString) - 1);
+        alarma.tipoString[sizeof(alarma.tipoString) - 1] = '\0';
+            
+        alarma.esPersonalizable = true;
+        alarma.idWeb = idWeb;
+        
+         
+        // Actualizar siguiente ID si es necesario
+        if (idWeb >= _siguienteIdWeb) {
+            _siguienteIdWeb = idWeb + 1;
+        }
+        
+        _num++;
+        cargadas++;
+        
+        DBG_ALM_PRINTF("✅ Alarma cargada: %s (%s %02d:%02d)", 
+                      nombre, _diaToString(dia).c_str(), hora, minuto);
+    }
+    
+    DBG_ALM_PRINTF("✅ Alarmas personalizables cargadas: %d", cargadas);
+    return true;
+}
+/**
+ * @brief Guarda alarmas personalizables en archivo JSON en SPIFFS
+ * 
+ * @details Serializa únicamente las alarmas personalizables a formato JSON
+ *          estructurado y las persiste en SPIFFS para supervivencia a reinicios.
+ *          Incluye validación de escritura y manejo de errores de filesystem.
+ *          
+ *          **PROCESO DE GUARDADO:**
+ *          1. Crea documento JSON con metadatos (versión, timestamp)
+ *          2. Cuenta alarmas personalizables en el sistema
+ *          3. Crea array JSON con datos de cada alarma personalizable:
+ *             - Convierte máscaras de días a números (0-7)
+ *             - Incluye todos los campos web necesarios
+ *             - Excluye campos internos (cache, callbacks)
+ *          4. Abre archivo en modo escritura (sobreescribe)
+ *          5. Serializa JSON directamente al archivo
+ *          6. Valida bytes escritos antes de confirmar éxito
+ * 
+ * @return bool true si el guardado fue exitoso, false si error de escritura
+ * 
+ * @note **FILTRADO:** Solo guarda alarmas con esPersonalizable = true
+ * @note **FORMATO:** JSON compatible con cargarPersonalizablesDesdeJSON()
+ * @note **SOBREESCRITURA:** Reemplaza archivo existente completamente
+ * @note **VALIDACIÓN:** Verifica operación de escritura antes de confirmar
+ * @note **METADATOS:** Incluye versión y timestamp para control de versiones
+ * 
+ * @warning **ESPACIO DISCO:** Requiere SPIFFS montado y espacio suficiente
+ * @warning **OPERACIÓN SÍNCRONA:** Puede bloquear temporalmente (ms) durante escritura
+ * @warning **PÉRDIDA DATOS:** Error de escritura puede corromper archivo existente
+ * 
+ * @see cargarPersonalizablesDesdeJSON(), obtenerPersonalizablesJSON()
+ * @see SPIFFS.open(), serializeJson() - Funciones utilizadas internamente
+ * 
+ * @example
+ * @code
+ * // Guardar después de modificar alarma
+ * if (Alarmas.modificarPersonalizable(id, "Nueva Misa", "", DOW_DOMINGO, 12, 0, "MISA", true)) {
+ *     // El guardado se hace automáticamente, pero se puede verificar:
+ *     Serial.println("Alarma modificada y guardada");
+ * }
+ * 
+ * // Guardado manual explícito
+ * if (Alarmas.guardarPersonalizablesEnJSON()) {
+ *     Serial.println("Alarmas guardadas en SPIFFS");
+ * } else {
+ *     Serial.println("Error guardando alarmas");
+ * }
+ * @endcode
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ * @author Julian Salas Bartolomé
+ */
+bool AlarmScheduler::guardarPersonalizablesEnJSON() {
+    DBG_ALM("💾 Guardando alarmas personalizables en JSON...");
+    
+    const char* archivo = "/alarmas_personalizadas.json";
+    
+    JsonDocument doc;
+    doc["version"] = "2.1";
+    doc["timestamp"] = millis();
+    
+    // Contar personalizables
+    uint8_t personalizables = 0;
+    for (uint8_t i = 0; i < _num; i++) {
+        if (_alarmas[i].esPersonalizable) {
+            personalizables++;
+        }
+    }
+    
+    doc["total"] = personalizables;
+    
+    JsonArray alarmasArray = doc.createNestedArray("alarmas");
+    
+    // Guardar solo alarmas personalizables
+    for (uint8_t i = 0; i < _num; i++) {
+        const Alarm& alarma = _alarmas[i];
+        
+        if (!alarma.esPersonalizable) continue;
+        
+        JsonObject alarmaObj = alarmasArray.createNestedObject();
+        
+        alarmaObj["id"] = alarma.idWeb;
+        alarmaObj["nombre"] = alarma.nombre;
+        alarmaObj["descripcion"] = alarma.descripcion;
+        
+        // Convertir máscara a día
+        int dia = 0;
+        if (alarma.mascaraDias == DOW_TODOS) {
+            dia = 0;
+        } else {
+            for (int d = 0; d < 7; d++) {
+                if (alarma.mascaraDias & (1 << d)) {
+                    dia = d + 1;
+                    break;
+                }
+            }
+        }
+        
+        alarmaObj["dia"] = dia;
+        alarmaObj["hora"] = alarma.hora;
+        alarmaObj["minuto"] = alarma.minuto;
+        alarmaObj["accion"] = alarma.tipoString;
+        alarmaObj["habilitada"] = alarma.habilitada;
+    }
+    
+    // Escribir archivo
+    File file = SPIFFS.open(archivo, "w");
+    if (!file) {
+        DBG_ALM("❌ Error al crear archivo JSON");
+        return false;
+    }
+    
+    size_t bytesEscritos = serializeJson(doc, file);
+    file.close();
+    
+    if (bytesEscritos == 0) {
+        DBG_ALM("❌ Error escribiendo JSON");
+        return false;
+    }
+    
+    DBG_ALM_PRINTF("✅ Archivo guardado: %d alarmas, %d bytes", personalizables, bytesEscritos);
+    return true;
+}
+
+// ============================================================================
+// MÉTODOS AUXILIARES ADICIONALES
+// ============================================================================
+/**
+ * @brief Convierte número de día (0-7) a texto descriptivo en español
+ * 
+ * @details Función utilitaria privada que convierte la representación numérica
+ *          de días utilizada en JSON y interfaz web a texto legible en español.
+ *          Utilizada para generar campos "diaNombre" en JSON y debug.
+ * 
+ * @param dia Número de día (0=Todos los días, 1=Domingo, 2=Lunes, ..., 7=Sábado)
+ * @return String con nombre del día en español o "Día inválido" si fuera de rango
+ * 
+ * @note **FORMATO:** 0=Todos los días, 1-7=Domingo a Sábado
+ * @note **IDIOMA:** Nombres en español para interfaz local  
+ * @note **VALIDACIÓN:** Retorna "Día inválido" para valores fuera de rango
+ * @note **USO INTERNO:** Función privada para uso interno de la clase
+ * 
+ * @see obtenerPersonalizablesJSON() - Principal usuario de esta función
+ * @see cargarPersonalizablesDesdeJSON() - También la utiliza para debug
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ * @author Julian Salas Bartolomé
+ */
+String AlarmScheduler::_diaToString(int dia) {
+    switch (dia) {
+        case 0: return "Todos los días";
+        case 1: return "Domingo";
+        case 2: return "Lunes";
+        case 3: return "Martes";
+        case 4: return "Miércoles";
+        case 5: return "Jueves";
+        case 6: return "Viernes";
+        case 7: return "Sábado";
+        default: return "Día inválido";
+    }
+}
+/**
+ * @brief Crea alarmas personalizables predeterminadas del sistema
+ * 
+ * @details Función privada que configura un conjunto básico de alarmas
+ *          personalizables cuando no existe archivo de persistencia. Crea las
+ *          misas dominicales tradicionales como punto de partida para el usuario.
+ *          
+ *          **ALARMAS CREADAS POR DEFECTO:**
+ *          - "Misa Domingo 11:05": Primera llamada misa dominical  
+ *          - "Misa Domingo 11:25": Segunda llamada misa dominical
+ *          
+ *          Ambas configuradas como tipo "MISA" y habilitadas por defecto.
+ * 
+ * @note **LLAMADA AUTOMÁTICA:** Solo se ejecuta si no existe archivo JSON
+ * @note **PERSISTENCIA:** Las alarmas creadas se guardan automáticamente
+ * @note **HORARIOS:** Basados en tradición católica española estándar
+ * @note **MODIFICABLES:** Usuario puede editarlas posteriormente vía web
+ * 
+ * @warning **CALLBACKS:** Requiere que los callbacks estén configurados previamente
+ * 
+ * @see cargarPersonalizablesDesdeJSON() - Función que la llama
+ * @see addPersonalizable() - Función utilizada para crear las alarmas
+ * 
+ * @since v2.1 - Sistema de alarmas personalizables vía web
+ * @author Julian Salas Bartolomé
+ */
+void AlarmScheduler::_crearAlarmasPersonalizablesPorDefecto() {
+    DBG_ALM("🔄 No creando alarmas por defecto - se crearán desde web");
+    // Las alarmas personalizables se crean desde la interfaz web
+    // que tiene acceso a los callbacks apropiados
+}

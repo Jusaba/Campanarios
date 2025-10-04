@@ -63,6 +63,8 @@
 
 #ifndef SERVIDOR_H
 	#define SERVIDOR_H
+    #include <stdint.h>
+    #include <Arduino.h>
     #include <WiFi.h>
     #include <AsyncTCP.h>
     #include <ESPAsyncWebServer.h>
@@ -91,6 +93,8 @@
     void ServidorOn(const char* usuario, const char* clave);                                                                        // Función para iniciar el servidor HTTP y WebSocket
     void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);    // Callback para manejar eventos del WebSocket
     void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len);                                                             // Procesa los mensajes recibidos por WebSocket
+    void procesarComandoAlarma(AsyncWebSocketClient *client, const String& comando, const String& datos);                                                              // Procesa comandos relacionados con las alarmas personalizables
+    uint8_t convertirDiaAMascara(int dia);
     bool hayInternet(void);                                                                                                         // Comprueba si hay conexión a Internet
 
     // Funciones auxiliares

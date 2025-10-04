@@ -118,6 +118,10 @@
         namespace Campanario {
             constexpr int MAX_CAMPANAS = 2;  // Número máximo de campanas en el campanario
         }
+        // ==================== ALARMAS ====================
+        namespace Alarmas {
+            constexpr int MAX_ALARMAS = 5;  // Número máximo de alarmas
+        }
     }
 
     // ==================== COMPATIBILITY (transición) ====================
