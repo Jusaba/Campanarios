@@ -40,7 +40,12 @@ const IDIOMAS = {
         'configurar_tiempo': 'Configurar Temps',
         'minutos': 'minuts',
         'horas': 'hores',
-        
+        'calefaccion_apagar': 'Apagar',
+        'total_minutos': 'Total:',
+        'tiempo_agotado': 'Temps acabat',
+        'calefaccion_funcionando': 'Funcionant...',        
+        'limite_maximo': 'Màxim permès: 120 minuts',
+
         // CONFIGURACIÓN
         'gestion_alarmas': 'Gestió d\'Alarmes',
         'gestion_alarmas_desc': 'Programar tocs automàtics',
@@ -101,7 +106,30 @@ const IDIOMAS = {
         'hora_invalida': 'Hora invàlida (0-23)',
         'minuto_invalido': 'Minut invàlid (0-59)',
         'nombre_muy_largo': 'El nom és massa llarg (màx 49 caràcters)',
-        'descripcion_muy_larga': 'La descripció és massa llarga (màx 99 caràcters)'
+        'descripcion_muy_larga': 'La descripció és massa llarga (màx 99 caràcters)',
+
+        // ACERCA DE
+        'acerca_de': 'Acerca de...',
+        'acerca_de_desc': 'Informació del sistema',
+        'sistema_campanario': 'Sistema de Control del Campanar',
+        'version': 'Versió 1.0.0',
+        'desarrollado_por': 'Desenvolupat per:',
+        'caracteristicas': 'Característiques:',
+        'feat_control_campanas': 'Control remot de campanes',
+        'feat_calefaccion': 'Sistema de calefacció intel·ligent',
+        'feat_multiidioma': 'Interfície multiidioma',
+        'feat_alarmas': 'Programació d\'alarmes',
+        'tecnologia': 'Tecnologia:',
+        'copyright': '© 2024 Tu Empresa. Tots els drets reservats.',
+        'licencia': 'Llicència: MIT',
+        'cerrar': 'Tancar',
+    
+        // Repique de campanas
+        'titulo_campanas': '🔔 Repic en Curs',
+        'repique_en_curso': 'Repic en Curs',
+        'secuencia_activa': 'Seqüència activa',
+        'campana_1': 'Campana 1',
+        'campana_2': 'Campana 2',
     },
     
     'es': {
@@ -141,6 +169,11 @@ const IDIOMAS = {
         'configurar_tiempo': 'Configurar Tiempo',
         'minutos': 'minutos',
         'horas': 'horas',
+        'calefaccion_apagar': 'Apagar',
+        'total_minutos': 'Total:',
+        'tiempo_agotado': 'Tiempo agotado',
+        'calefaccion_funcionando': 'Funcionando...',
+        'limite_maximo': 'Máximo permitido: 120 minutos',
         
         // CONFIGURACIÓN
         'gestion_alarmas': 'Gestión de Alarmas',
@@ -202,7 +235,30 @@ const IDIOMAS = {
         'hora_invalida': 'Hora inválida (0-23)',
         'minuto_invalido': 'Minuto inválido (0-59)',
         'nombre_muy_largo': 'El nombre es demasiado largo (máx 49 caracteres)',
-        'descripcion_muy_larga': 'La descripción es demasiado larga (máx 99 caracteres)'
+        'descripcion_muy_larga': 'La descripción es demasiado larga (máx 99 caracteres)',
+
+        // ACERCA DE
+         'acerca_de': 'Acerca de...',
+         'acerca_de_desc': 'Información del sistema',
+         'sistema_campanario': 'Sistema de Control del Campanario',
+         'version': 'Versión 1.0.0',
+         'desarrollado_por': 'Desarrollado por:',
+         'caracteristicas': 'Características:',
+         'feat_control_campanas': 'Control remoto de campanas',
+         'feat_calefaccion': 'Sistema de calefacción inteligente',
+         'feat_multiidioma': 'Interfaz multiidioma',
+         'feat_alarmas': 'Programación de alarmas',
+         'tecnologia': 'Tecnología:',
+         'copyright': '© 2024 Tu Empresa. Todos los derechos reservados.',
+         'licencia': 'Licencia: MIT',
+         'cerrar': 'Cerrar',
+
+        // Repique de campanas
+        'titulo_campanas': '🔔 Repique en Curso',
+        'repique_en_curso': 'Repique en Curso',
+        'secuencia_activa': 'Secuencia activa',
+        'campana_1': 'Campana 1',
+        'campana_2': 'Campana 2',         
     }
 };
 
@@ -254,8 +310,8 @@ function cambiarIdioma(nuevoIdioma) {
     actualizarTextosInterfaz();
     
     // Enviar al servidor para sincronizar
-    if (typeof ws !== 'undefined' && ws.readyState === WebSocket.OPEN) {
-        ws.send(`SET_IDIOMA:${nuevoIdioma}`);
+    if (typeof websocket !== 'undefined' && websocket.readyState === WebSocket.OPEN) {
+        websocket.send(`SET_IDIOMA:${nuevoIdioma}`);
     }
 }
 
@@ -286,27 +342,34 @@ function actualizarTextosInterfaz() {
         const clave = elemento.getAttribute('data-i18n');
         elemento.textContent = t(clave);
     });
+    setTimeout(function() {
+        if (typeof actualizarEstadoCalefaccion === 'function') {
+            actualizarEstadoCalefaccion();
+            console.log("🔥 Estado de calefacción actualizado después del cambio de idioma");
+        }
+    }, 100); // Pequeño delay para asegurar que los textos se han actualizado
 }
 
 /**
  * Inicializa el sistema de idiomas
  */
 function inicializarIdiomas() {
-    // Cargar idioma guardado, si no hay, usar catalán por defecto
-    const idiomaGuardado = localStorage.getItem('idioma_campanario');
+    console.log("🌍 Inicializando sistema de idiomas...");
     
-    // ✅ SIEMPRE usar idioma guardado si existe, si no catalán
-    idiomaActual = idiomaGuardado || 'ca';
+    // 1. Primero cargar desde localStorage como fallback
+    const idiomaLocal = localStorage.getItem('idioma_campanario') || 'ca';
+    idiomaActual = idiomaLocal;
     
-    // Asegurar que el idioma es válido
-    if (!IDIOMAS[idiomaActual]) {
-        idiomaActual = 'ca'; // Fallback a catalán
-    }
+    console.log(`Idioma local temporal: ${idiomaActual}`);
     
-    console.log(`Idioma inicializado: ${idiomaActual}`);
-    
-    // ✅ AÑADIR: Actualizar selector cuando esté disponible
+    // 2. Solicitar idioma del servidor cuando la conexión esté lista
     document.addEventListener('DOMContentLoaded', function() {
+        // Esperar a que WebSocket esté conectado
+        setTimeout(function() {
+            solicitarIdiomaDelServidor();
+        }, 1000); // Dar tiempo a que se conecte el WebSocket
+        
+        // Actualizar interfaz con idioma temporal
         actualizarSelectorIdioma();
         actualizarTextosInterfaz();
     });
@@ -315,9 +378,22 @@ function inicializarIdiomas() {
     if (document.readyState !== 'loading') {
         actualizarSelectorIdioma();
         actualizarTextosInterfaz();
+        setTimeout(solicitarIdiomaDelServidor, 1000);
     }
 }
-
+/**
+ * Solicita el idioma configurado en el servidor
+ */
+function solicitarIdiomaDelServidor() {
+    if (typeof websocket !== 'undefined' ) {
+        console.log("📤 Solicitando idioma del servidor...");
+        websocket.send("GET_IDIOMA");
+    } else {
+        console.warn("⚠️ WebSocket no disponible, usando idioma local");
+        // Reintentar después
+        setTimeout(solicitarIdiomaDelServidor, 2000);
+    }
+}
 /**
  * Actualiza el selector de idioma en el HTML
  */
@@ -330,8 +406,7 @@ function actualizarSelectorIdioma() {
 }
 
 /**
- * Cambia el idioma actual y actualiza toda la interfaz
- * @param {string} nuevoIdioma - Código del idioma ('ca' o 'es')
+ * Cambia el idioma y lo sincroniza con el servidor
  */
 function cambiarIdioma(nuevoIdioma) {
     if (!IDIOMAS[nuevoIdioma]) {
@@ -339,22 +414,19 @@ function cambiarIdioma(nuevoIdioma) {
         return;
     }
     
+    console.log(`🔄 Cambiando idioma a: ${nuevoIdioma}`);
+    
     idiomaActual = nuevoIdioma;
     
-    // ✅ GUARDAR preferencia en localStorage INMEDIATAMENTE
+    // Guardar localmente como backup
     localStorage.setItem('idioma_campanario', nuevoIdioma);
-    console.log(`Idioma guardado: ${nuevoIdioma}`);
     
-    // Actualizar selector
+    // Actualizar interfaz
     actualizarSelectorIdioma();
-    
-    // Actualizar toda la interfaz
     actualizarTextosInterfaz();
-    
-    // Enviar al servidor para sincronizar (si está disponible)
-    if (typeof ws !== 'undefined' && ws.readyState === WebSocket.OPEN) {
-        ws.send(`SET_IDIOMA:${nuevoIdioma}`);
-    }
+
+    websocket.send(`SET_IDIOMA:${nuevoIdioma}`);
+    console.log("📤 Idioma enviado al servidor para persistir");
 }
 
 // Inicializar automáticamente

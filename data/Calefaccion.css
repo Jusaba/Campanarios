@@ -1,0 +1,362 @@
+/* ============================================================================ */
+/* DISPLAY DE TIEMPO Y CONTROLES DE CALEFACCIÓN */
+/* ============================================================================ */
+
+.display-tiempo {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    margin: 10px 0;
+    border: 2px solid #cc5500;
+}
+
+.tiempo-configurado {
+    font-family: 'Courier New', monospace;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #cc5500;
+    letter-spacing: 2px;
+}
+
+/* ============================================================================ */
+/* MODAL PARA CONFIGURAR MINUTOS */
+/* ============================================================================ */
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    backdrop-filter: blur(3px);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-50px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #cc5500, #ff6b35);
+    color: white;
+    padding: 20px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.close {
+    font-size: 2em;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.close:hover {
+    transform: scale(1.1);
+}
+
+.modal-body {
+    padding: 30px 20px;
+    text-align: center;
+}
+
+.selector-digitos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.digito-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.digito-btn {
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    color: white;
+    border: none;
+    width: 50px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.5em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.digito-btn:hover {
+    background: linear-gradient(135deg, #357abd, #2868a3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.digito-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.digito {
+    background: #f8f9fa;
+    border: 3px solid #cc5500;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    color: #cc5500;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.minutos-label {
+    font-size: 1.1em;
+    color: #666;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.total-minutos {
+    background: linear-gradient(135deg, #e8f4fd, #f0f8ff);
+    border: 2px solid #4a90e2;
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #4a90e2;
+}
+
+.total-minutos #totalMinutos {
+    font-family: 'Courier New', monospace;
+    font-size: 1.4em;
+    color: #cc5500;
+    margin: 0 5px;
+}
+
+.modal-footer {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn-cancelar, .btn-aceptar {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancelar {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+}
+
+.btn-cancelar:hover {
+    background: linear-gradient(135deg, #5a6268, #495057);
+    transform: translateY(-2px);
+}
+
+.btn-aceptar {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.btn-aceptar:hover {
+    background: linear-gradient(135deg, #20c997, #17a2b8);
+    transform: translateY(-2px);
+}
+
+/* ============================================================================ */
+/* ADVERTENCIA DE LÍMITE MÁXIMO */
+/* ============================================================================ */
+
+.advertencia-limite {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 2px solid #dc3545;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 15px;
+    text-align: center;
+    color: #721c24;
+    font-weight: bold;
+    font-size: 0.95em;
+    animation: advertenciaFadeIn 0.3s ease;
+}
+
+.icono-advertencia {
+    font-size: 1.2em;
+    margin-right: 8px;
+}
+
+@keyframes advertenciaFadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.advertencia-shake {
+    animation: shake 0.5s ease-in-out !important;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* ============================================================================ */
+/* BOTÓN ACEPTAR DESHABILITADO */
+/* ============================================================================ */
+
+.btn-deshabilitado {
+    background: linear-gradient(135deg, #6c757d, #5a6268) !important;
+    color: #999 !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+    pointer-events: none;
+}
+
+.btn-deshabilitado:hover {
+    background: linear-gradient(135deg, #6c757d, #5a6268) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* ============================================================================ */
+/* ESTADOS DE ERROR EN TOTAL MINUTOS */
+/* ============================================================================ */
+
+.total-minutos.error {
+    border-color: #dc3545 !important;
+    background: linear-gradient(135deg, #ffe6e6, #ffefef) !important;
+    color: #dc3545 !important;
+}
+
+.total-minutos.error #totalMinutos {
+    color: #dc3545 !important;
+}
+
+/* ============================================================================ */
+/* RESPONSIVE PARA MODAL */
+/* ============================================================================ */
+
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 10% auto;
+        width: 95%;
+    }
+    
+    .selector-digitos {
+        gap: 10px;
+    }
+    
+    .digito-btn {
+        width: 45px;
+        height: 35px;
+        font-size: 1.3em;
+    }
+    
+    .digito {
+        width: 50px;
+        height: 50px;
+        font-size: 1.8em;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .btn-cancelar, .btn-aceptar {
+        padding: 15px;
+        font-size: 1.1em;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        margin: 5% auto;
+    }
+    
+    .modal-header {
+        padding: 15px;
+    }
+    
+    .modal-body {
+        padding: 20px 15px;
+    }
+    
+    .selector-digitos {
+        gap: 8px;
+    }
+    
+    .digito-btn {
+        width: 40px;
+        height: 32px;
+        font-size: 1.2em;
+    }
+    
+    .digito {
+        width: 45px;
+        height: 45px;
+        font-size: 1.6em;
+    }
+}
+
+/* ============================================================================ */
+/* RESPONSIVE PARA ADVERTENCIA */
+/* ============================================================================ */
+
+@media (max-width: 768px) {
+    .advertencia-limite {
+        padding: 10px;
+        font-size: 0.9em;
+    }
+    
+    .icono-advertencia {
+        font-size: 1.1em;
+    }
+}
+
+@media (max-width: 480px) {
+    .advertencia-limite {
+        padding: 8px;
+        font-size: 0.85em;
+        margin-top: 12px;
+    }
+}

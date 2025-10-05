@@ -4,14 +4,17 @@
     <meta charset="UTF-8"> 
     <title data-i18n="titulo_principal">🔔 Control del Campanar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="idiomas.js"></script>
+    <script src="Calefaccion.js"></script>
+    <script src="Campanas.js"></script>
+    <!--<link rel="stylesheet" type="text/css" href="style.css">-->
     <link rel="stylesheet" type="text/css" href="campanas.css">
+    <link rel="stylesheet" type="text/css" href="Calefaccion.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1 data-i18n="titulo_principal">🔔 Control del Campanar</h1>
-            <div class="estado-conexion" id="estadoConexion" data-i18n="conectando">Connectant...</div>
         </header>
 
         <!-- CUADRO 1: TOQUES Y CAMPANADAS -->
@@ -49,7 +52,7 @@
             </div>
         </section>
 
-        <!-- CUADRO 2: CALEFACCIÓN -->
+        <!-- CUADRO 2: CALEFACCIÓN CON CONTROL COMPLETO -->
         <section class="seccion-calefaccion">
             <h3>
                 <span class="icono">🔥</span>
@@ -65,16 +68,16 @@
                     <span class="texto-estado" id="textoCalefaccion" data-i18n="calefaccion_apagada">Apagada</span>
                 </div>
                 
-                <div class="cuenta-regresiva" id="cuentaRegresiva" style="display: none;">
-                    <span data-i18n="tiempo_restante">⏱️ Temps restant: </span>
-                    <span id="tiempoRestante">--:--</span>
+                <!-- ✅ AÑADIR: Display de tiempo configurado/restante -->
+                <div class="display-tiempo">
+                    <span class="tiempo-configurado" id="minutosCalefaccion">030m</span>
                 </div>
                 
                 <div class="botones-calefaccion">
-                    <button class="button-calefaccion" onclick="encenderCalefaccion()" data-i18n="calefaccion_encender">
+                    <button class="button-calefaccion" onclick="toggleCalefaccion()" data-i18n="calefaccion_encender">
                         🔥 Encendre
                     </button>
-                    <button class="button-reloj" id="btnReloj" onclick="mostrarConfiguracionTiempo()" data-i18n="calefaccion_configurar">
+                    <button class="button-reloj" id="btnReloj" onclick="abrirModalMinutos()" data-i18n="calefaccion_configurar">
                         ⏰ Configurar
                     </button>
                 </div>
@@ -89,6 +92,8 @@
             </h3>
             
             <div class="botones-configuracion">
+
+                <!-- ✅ GESTIÓN DE ALARMAS - Mantener al final -->
                 <a href="/Alarmas.html" class="boton-config">
                     <div class="icono-config">📅</div>
                     <div class="texto-config">
@@ -96,15 +101,8 @@
                         <small data-i18n="gestion_alarmas_desc">Programar tocs automàtics</small>
                     </div>
                 </a>
-                
-                <a href="/Estadisticas.html" class="boton-config">
-                    <div class="icono-config">📊</div>
-                    <div class="texto-config">
-                        <strong data-i18n="estadisticas">Estadístiques</strong>
-                        <small data-i18n="estadisticas_desc">Historial i informes</small>
-                    </div>
-                </a>
-                
+
+                <!-- ✅ SELECTOR DE IDIOMA - Mantener estilo original -->
                 <div class="boton-config selector-idioma-config">
                     <div class="icono-config">🌍</div>
                     <div class="texto-config">
@@ -116,18 +114,134 @@
                     </div>
                 </div>
                 
-                <a href="/Configuracion.html" class="boton-config">
+                <!-- ✅ CONFIGURACIÓN DESHABILITADA - Estilo original pero gris -->
+                <div class="boton-config boton-deshabilitado">
                     <div class="icono-config">🔧</div>
                     <div class="texto-config">
                         <strong data-i18n="configuracion">Configuració</strong>
                         <small data-i18n="configuracion_desc">Ajustos del sistema</small>
                     </div>
-                </a>
+                </div>
+                
+                <!-- ✅ ACERCA DE - Estilo original -->
+                <div class="boton-config" onclick="abrirModalAcercaDe()">
+                    <div class="icono-config">ℹ️</div>
+                    <div class="texto-config">
+                        <strong data-i18n="acerca_de">Acerca de...</strong>
+                        <small data-i18n="acerca_de_desc">Informació del sistema</small>
+                    </div>
+                </div>
+
+
             </div>
         </section>
     </div>
 
-    <script src="idiomas.js"></script>
-    <script src="Campanas.js"></script>
+    <!-- ✅ MODAL PARA CONFIGURAR MINUTOS CON VALIDACIÓN -->
+    <div id="modalMinutos" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-i18n="configurar_tiempo">Configurar Temps</h2>
+                <span class="close" onclick="cerrarModalMinutos()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="selector-digitos">
+                    <div class="digito-container">
+                        <button class="digito-btn" onclick="incrementarDigito(0)">▲</button>
+                        <div class="digito" id="digito0">0</div>
+                        <button class="digito-btn" onclick="decrementarDigito(0)">▼</button>
+                    </div>
+                    
+                    <div class="digito-container">
+                        <button class="digito-btn" onclick="incrementarDigito(1)">▲</button>
+                        <div class="digito" id="digito1">3</div>
+                        <button class="digito-btn" onclick="decrementarDigito(1)">▼</button>
+                    </div>
+                    
+                    <div class="digito-container">
+                        <button class="digito-btn" onclick="incrementarDigito(2)">▲</button>
+                        <div class="digito" id="digito2">0</div>
+                        <button class="digito-btn" onclick="decrementarDigito(2)">▼</button>
+                    </div>
+                    
+                    <div class="minutos-label">
+                        <span data-i18n="minutos">minuts</span>
+                    </div>
+                </div>
+                
+                <div class="total-minutos">
+                    <span data-i18n="total_minutos">Total:</span>
+                    <span id="totalMinutos">030</span>
+                    <span data-i18n="minutos">minuts</span>
+                </div>
+                
+                <!-- ✅ NUEVA ADVERTENCIA DE LÍMITE MÁXIMO -->
+                <div id="advertenciaLimite" class="advertencia-limite" style="display: none;">
+                    <span class="icono-advertencia">⚠️</span>
+                    <span data-i18n="limite_maximo">Màxim permès: 120 minuts</span>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancelar" onclick="cerrarModalMinutos()" data-i18n="cancelar">Cancel·lar</button>
+                <button class="btn-aceptar" id="btnAceptarMinutos" onclick="aceptarMinutos()" data-i18n="aceptar">Acceptar</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="modalAcercaDe" class="modal">
+        <div class="modal-content modal-acerca-de">
+            <div class="modal-header modal-header-info">
+                <h2 data-i18n="acerca_de">Acerca de...</h2>
+                <span class="close" onclick="cerrarModalAcercaDe()">&times;</span>
+            </div>
+            
+            <div class="modal-body modal-body-info">
+                <div class="info-logo">
+                    🔔
+                </div>
+                
+                <div class="info-titulo">
+                    <h3 data-i18n="sistema_campanario">Sistema de Control del Campanar</h3>
+                    <p class="version" data-i18n="version">Versió 1.0.0</p>
+                </div>
+                
+                <div class="info-seccion">
+                    <h4 data-i18n="desarrollado_por">Desenvolupat per:</h4>
+                    <p><strong>Tu Nombre / Tu Empresa</strong></p>
+                    <p class="email">contacto@tuempresa.com</p>
+                </div>
+                
+                <div class="info-seccion">
+                    <h4 data-i18n="caracteristicas">Característiques:</h4>
+                    <ul>
+                        <li data-i18n="feat_control_campanas">Control remot de campanes</li>
+                        <li data-i18n="feat_calefaccion">Sistema de calefacció intel·ligent</li>
+                        <li data-i18n="feat_multiidioma">Interfície multiidioma</li>
+                        <li data-i18n="feat_alarmas">Programació d'alarmes</li>
+                    </ul>
+                </div>
+                
+                <div class="info-seccion">
+                    <h4 data-i18n="tecnologia">Tecnologia:</h4>
+                    <p>ESP32 + WebSocket + HTML5</p>
+                </div>
+                
+                <div class="info-copyright">
+                    <p data-i18n="copyright">© 2024 Tu Empresa. Tots els drets reservats.</p>
+                    <p class="licencia" data-i18n="licencia">Llicència: MIT</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-aceptar btn-solo" onclick="cerrarModalAcercaDe()" data-i18n="cerrar">Tancar</button>
+            </div>
+        </div>
+    </div>
+
+    
 </body>
 </html>
+

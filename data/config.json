@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "idioma": "ca",
+  "configuracion": {
+    "idioma_defecto": "ca",
+    "zona_horaria": "Europe/Madrid",
+    "formato_hora": "24h"
+  }
+}

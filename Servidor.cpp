@@ -46,9 +46,13 @@
     void ServidorOn(const char* usuario, const char* clave)
     {
       
-        if(!SPIFFS.begin(true)){                                                                  // Inicializar SPIFFS 
-            DBG_SRV("ha ocurrido un error montando SPIFFS");
-        }
+        if (!SPIFFS.begin(true)) {
+            DBG_SRV("❌ Error al montar SPIFFS");
+        } else {
+            DBG_SRV("✅ SPIFFS montado correctamente");
+            String idiomaServidor = cargarIdiomaDesdeConfig();
+            DBG_SRV_PRINTF("🌍 Idioma del servidor: %s", idiomaServidor.c_str());
+        }        
         if (!servidorIniciado) {                                                                  // Si el servidor no ha sido iniciado
             ws.onEvent(onEvent);                                                                    // Configura el manejador de eventos del WebSocket          
             server.addHandler(&ws);                                                                 // Añade el manejador de WebSocket al servidor HTTP
@@ -275,6 +279,31 @@
             String comando = (separador > 0) ? mensaje.substring(0, separador) : mensaje;
             String datos = (separador > 0) ? mensaje.substring(separador + 1) : "{}";
             procesarComandoAlarma(nullptr, comando, datos);
+        } else if (mensaje.startsWith("SET_IDIOMA:")) {
+            String nuevoIdioma = mensaje.substring(11);
+            DBG_SRV_PRINTF("🌍 Cambiando idioma a: %s", nuevoIdioma.c_str());
+
+            if (nuevoIdioma == "ca" || nuevoIdioma == "es") {
+                if (guardarIdiomaEnConfig(nuevoIdioma)) {
+                    // Notificar a todos los clientes conectados
+                    ws.textAll("IDIOMA_CAMBIADO:" + nuevoIdioma);
+                    DBG_SRV("✅ Idioma guardado y notificado a todos los clientes");
+                } else {
+                    ws.textAll("ERROR_IDIOMA:No se pudo guardar");
+                }
+            } else {
+                ws.textAll("ERROR_IDIOMA:Idioma no soportado");
+            }
+
+        } else if (mensaje == "GET_CONFIG") {
+            DBG_SRV("📋 Enviando configuración actual");
+            String config = obtenerConfiguracionJSON();
+            ws.textAll("CONFIG_ACTUAL:" + config);
+
+        } else if (mensaje == "GET_IDIOMA") {
+            String idioma = cargarIdiomaDesdeConfig();
+            ws.textAll("IDIOMA_ACTUAL:" + idioma);
+            DBG_SRV_PRINTF("📤 Enviando idioma actual: %s", idioma.c_str());
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             DBG_SRV("Mensaje no reconocido, reseteando secuencia.");
@@ -370,6 +399,116 @@ uint8_t convertirDiaAMascara(int dia) {
     if (dia == 0) return DOW_TODOS;
     return (dia >= 1 && dia <= 7) ? (1 << (dia - 1)) : DOW_TODOS;
 }
+
+// ============================================================================
+// GESTIÓN DE IDIOMA PERSISTENTE
+// ============================================================================
+
+/**
+ * @brief Carga la configuración de idioma desde SPIFFS
+ * @return String Código de idioma ('ca' o 'es')
+ */
+String cargarIdiomaDesdeConfig() {
+    DBG_SRV("📂 Cargando idioma desde configuración...");
+    
+    if (!SPIFFS.exists("/config.json")) {
+        DBG_SRV("⚠️ Archivo config.json no existe, creando con idioma por defecto");
+        guardarIdiomaEnConfig("ca"); // Catalán por defecto
+        return "ca";
+    }
+    
+    File file = SPIFFS.open("/config.json", "r");
+    if (!file) {
+        DBG_SRV("❌ Error al abrir config.json");
+        return "ca";
+    }
+    
+    String contenido = file.readString();
+    file.close();
+    
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, contenido);
+    
+    if (error) {
+        DBG_SRV_PRINTF("❌ Error al parsear config.json: %s", error.c_str());
+        return "ca";
+    }
+    
+    String idioma = doc["idioma"] | "ca";
+    DBG_SRV_PRINTF("✅ Idioma cargado: %s", idioma.c_str());
+    
+    return idioma;
+}
+
+/**
+ * @brief Guarda el idioma en la configuración SPIFFS
+ * @param idioma Código de idioma a guardar
+ * @return bool true si se guardó correctamente
+ */
+bool guardarIdiomaEnConfig(const String& idioma) {
+    DBG_SRV_PRINTF("💾 Guardando idioma en configuración: %s", idioma.c_str());
+    
+    JsonDocument doc;
+    
+    // Cargar configuración existente si existe
+    if (SPIFFS.exists("/config.json")) {
+        File file = SPIFFS.open("/config.json", "r");
+        if (file) {
+            String contenido = file.readString();
+            file.close();
+            deserializeJson(doc, contenido); // Ignorar errores, usar estructura vacía si falla
+        }
+    }
+    
+    // Actualizar idioma
+    doc["version"] = "1.0";
+    doc["idioma"] = idioma;
+    doc["configuracion"]["idioma_defecto"] = idioma;
+    doc["configuracion"]["zona_horaria"] = "Europe/Madrid";
+    doc["configuracion"]["formato_hora"] = "24h";
+    
+    // Guardar archivo
+    File file = SPIFFS.open("/config.json", "w");
+    if (!file) {
+        DBG_SRV("❌ Error al crear config.json");
+        return false;
+    }
+    
+    serializeJson(doc, file);
+    file.close();
+    
+    DBG_SRV("✅ Configuración guardada correctamente");
+    return true;
+}
+
+/**
+ * @brief Obtiene la configuración completa como JSON
+ * @return String JSON con la configuración
+ */
+String obtenerConfiguracionJSON() {
+    if (!SPIFFS.exists("/config.json")) {
+        // Crear configuración por defecto
+        JsonDocument doc;
+        doc["version"] = "1.0";
+        doc["idioma"] = "ca";
+        doc["configuracion"]["idioma_defecto"] = "ca";
+        doc["configuracion"]["zona_horaria"] = "Europe/Madrid";
+        doc["configuracion"]["formato_hora"] = "24h";
+        
+        String resultado;
+        serializeJson(doc, resultado);
+        return resultado;
+    }
+    
+    File file = SPIFFS.open("/config.json", "r");
+    if (!file) return "{}";
+    
+    String contenido = file.readString();
+    file.close();
+    
+    return contenido;
+}
+
   /**
    * @brief Verifica si hay conexión activa a Internet
    * 

@@ -95,6 +95,11 @@
     void procesaMensajeWebSocket(void *arg, uint8_t *data, size_t len);                                                             // Procesa los mensajes recibidos por WebSocket
     void procesarComandoAlarma(AsyncWebSocketClient *client, const String& comando, const String& datos);                                                              // Procesa comandos relacionados con las alarmas personalizables
     uint8_t convertirDiaAMascara(int dia);
+    String cargarIdiomaDesdeConfig(void);
+    String obtenerConfiguracionJSON(void);
+    
+    bool guardarIdiomaEnConfig(const String& idioma);
+
     bool hayInternet(void);                                                                                                         // Comprueba si hay conexión a Internet
 
     // Funciones auxiliares
