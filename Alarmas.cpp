@@ -610,6 +610,7 @@ uint8_t AlarmScheduler::mascaraDesdeDiaSemana(int diaSemana) {
  *          **VARIABLES RESETEADAS:**
  *          - ultimoDiaAno: Se establece a -1 (valor inicial)
  *          - ultimoMinuto: Se establece a 255 (valor inicial)  
+ *          - ultimaHora: Se establece a 255 (valor inicial)
  *          - ultimaEjecucion: Se establece a 0 (timestamp inicial)
  *          
  *          Esto permite que las alarmas se ejecuten nuevamente sin esperar
@@ -714,6 +715,15 @@ void AlarmScheduler::initDefaults() {
  *          con persistencia en JSON y callback proporcionado externamente.
  *          La alarma se marca como personalizable y recibe un ID único para 
  *          gestión web independiente del índice del array.
+ *          
+ *          **PROCESO DE CREACIÓN:**
+ *          1. Verifica espacio disponible en array de alarmas
+ *          2. Crea nueva estructura Alarm con datos proporcionados
+ *          3. Configura callback externo (debe ser válido)
+ *          4. Asigna ID web único incremental
+ *          5. Marca alarma como personalizable (esPersonalizable = true)
+ *          6. Guarda automáticamente en JSON para persistencia
+ *          7. Incrementa contador de alarmas y retorna índice
  * 
  * @param nombre Nombre descriptivo de la alarma (máx 49 caracteres)
  * @param descripcion Descripción opcional de la alarma (máx 99 caracteres)
@@ -721,23 +731,52 @@ void AlarmScheduler::initDefaults() {
  * @param hora Hora de ejecución (0-23)
  * @param minuto Minuto de ejecución (0-59)
  * @param tipoString Tipo de acción como string libre: "MISA", "DIFUNTOS", "FIESTA", etc.
- * @param parametro Parámetro uint16_t a pasar al callback
- * @param callback Puntero a función externa que se ejecutará
+ * @param parametro Parámetro uint16_t a pasar al callback durante ejecución
+ * @param callback Puntero a función externa que se ejecutará: void (*func)(uint16_t)
  * @param habilitada Estado inicial de la alarma (true por defecto)
  * 
- * @return uint8_t Índice de la alarma en el array (0-MAX_ALARMAS) o MAX_ALARMAS si error
+ * @retval uint8_t Índice de la alarma en el array (0 a MAX_ALARMAS-1) si creación exitosa
+ * @retval MAX_ALARMAS Si no hay espacio disponible o error en parámetros
  * 
- * @note La alarma se guarda automáticamente en JSON tras la creación
- * @note El callback debe ser proporcionado externamente (normalmente desde Servidor.cpp)
- * @note Esta función es genérica - no tiene conocimiento de tipos específicos
+ * @note **CALLBACK EXTERNO:** El callback debe ser proporcionado desde código externo
+ * @note **ID WEB ÚNICO:** Cada alarma recibe ID incremental para gestión web
+ * @note **PERSISTENCIA:** Se guarda automáticamente en JSON tras la creación
+ * @note **GENÉRICO:** Esta función no interpreta tipos - es completamente genérica
+ * @note **TRUNCAMIENTO:** Los strings se truncan silenciosamente si exceden límites
  * 
- * @warning Máximo MAX_ALARMAS alarmas simultáneas (incluye sistema + personalizables)
- * @warning Los strings se truncan si exceden el tamaño máximo
- * @warning El callback debe ser válido y accesible durante toda la vida de la alarma
+ * @warning **LÍMITE GLOBAL:** Máximo MAX_ALARMAS alarmas simultáneas (incluye sistema)
+ * @warning **CALLBACK VÁLIDO:** El puntero de función debe ser válido y persistente
+ * @warning **THREAD SAFETY:** No es thread-safe, usar desde hilo principal únicamente
+ * @warning **SPIFFS REQUERIDO:** Requiere sistema de archivos montado para persistencia
  * 
- * @see modificarPersonalizable(), eliminarPersonalizable()
+ * @see modificarPersonalizable() - Para editar alarma existente
+ * @see eliminarPersonalizable() - Para eliminar alarma
+ * @see habilitarPersonalizable() - Para cambiar estado
+ * @see guardarPersonalizablesEnJSON() - Función de persistencia utilizada
+ * 
+ * @example
+ * @code
+ * // Crear misa dominical desde código externo (ej: Servidor.cpp)
+ * uint8_t idx = Alarmas.addPersonalizable(
+ *     "Misa Domingo",           // nombre
+ *     "Primera llamada",        // descripcion  
+ *     DOW_DOMINGO,              // solo domingos
+ *     11, 5,                    // 11:05
+ *     "MISA",                   // tipo
+ *     Config::States::MISA,     // parámetro
+ *     accionSecuencia,          // callback
+ *     true                      // habilitada
+ * );
+ * 
+ * if (idx < MAX_ALARMAS) {
+ *     Serial.println("Alarma creada exitosamente");
+ * } else {
+ *     Serial.println("Error: No hay espacio para más alarmas");
+ * }
+ * @endcode
  * 
  * @since v2.1 - Sistema de alarmas personalizables vía web
+ * @author Julian Salas Bartolomé
  */
 uint8_t AlarmScheduler::addPersonalizable(const char* nombre, const char* descripcion,
                                          uint8_t mascaraDias, uint8_t hora, uint8_t minuto,
@@ -988,20 +1027,56 @@ bool AlarmScheduler::habilitarPersonalizable(int idWeb, bool estado) {
 /**
  * @brief Busca el índice de array de una alarma por su ID web único
  * 
- * @details Itera sobre todas las alarmas personalizables buscando coincidencia
- *          de ID web. Utilizado internamente para operaciones de modificación,
- *          eliminación y cambio de estado de alarmas vía interfaz web.
+ * @details Función auxiliar privada que itera sobre todas las alarmas del sistema
+ *          buscando una coincidencia de ID web en alarmas personalizables.
+ *          Utilizada internamente por todas las operaciones web (modificar,
+ *          eliminar, habilitar/deshabilitar) que reciben ID web como parámetro.
+ *          
+ *          **ALGORITMO DE BÚSQUEDA:**
+ *          1. Itera secuencialmente por array de alarmas (0 a _num-1)
+ *          2. Para cada alarma verifica:
+ *             - Que sea personalizable (esPersonalizable == true)
+ *             - Que el idWeb coincida con el buscado
+ *          3. Retorna índice de la primera coincidencia encontrada
+ *          4. Si no encuentra coincidencia, retorna MAX_ALARMAS (valor error)
  * 
- * @param idWeb ID único web de la alarma a buscar
+ * @param idWeb ID único web de la alarma a buscar (entero positivo)
  * 
- * @return uint8_t Índice de la alarma en el array o MAX_ALARMAS si no encontrada
+ * @retval uint8_t Índice de la alarma en el array (0 a MAX_ALARMAS-1) si encontrada
+ * @retval MAX_ALARMAS Si no se encontró alarma con ese ID web
  * 
- * @note Solo busca en alarmas con esPersonalizable = true
- * @note Retorna MAX_ALARMAS como valor de error (fuera de rango válido)
+ * @note **SOLO PERSONALIZABLES:** Ignora alarmas de sistema (esPersonalizable = false)
+ * @note **PRIMERA COINCIDENCIA:** Retorna el primer índice encontrado
+ * @note **COMPLEJIDAD:** O(n) lineal - aceptable para arrays pequeños (max 16)
+ * @note **FUNCIÓN PRIVADA:** Solo accesible internamente por la clase
+ * @note **VALIDACIÓN:** MAX_ALARMAS es valor de error universalmente reconocido
  * 
- * @see _generarNuevoIdWeb()
+ * @warning **IDs ÚNICOS:** Asume que no hay IDs web duplicados en el sistema
+ * @warning **RANGO VÁLIDO:** Solo busca en rango [0, _num), no en todo el array
+ * @warning **NO VALIDA ENTRADA:** No verifica si idWeb es válido (>0)
+ * 
+ * @see _generarNuevoIdWeb() - Función que garantiza IDs únicos
+ * @see modificarPersonalizable() - Usuario principal de esta función
+ * @see eliminarPersonalizable() - Usuario principal de esta función
+ * @see habilitarPersonalizable() - Usuario principal de esta función
+ * 
+ * @example
+ * @code
+ * // Uso interno típico en funciones de la clase
+ * uint8_t AlarmScheduler::modificarPersonalizable(int idWeb, ...) {
+ *     uint8_t idx = _buscarIndicePorIdWeb(idWeb);
+ *     if (idx >= MAX_ALARMAS) {
+ *         DBG_ALM("❌ Error: Alarma no encontrada");
+ *         return false;
+ *     }
+ *     
+ *     Alarm& alarma = _alarmas[idx];
+ *     // ... modificar alarma ...
+ * }
+ * @endcode
  * 
  * @since v2.1 - Sistema de alarmas personalizables vía web
+ * @author Julian Salas Bartolomé
  */
 uint8_t AlarmScheduler::_buscarIndicePorIdWeb(int idWeb) {
     for (uint8_t i = 0; i < _num; i++) {
@@ -1014,19 +1089,62 @@ uint8_t AlarmScheduler::_buscarIndicePorIdWeb(int idWeb) {
 /**
  * @brief Genera un nuevo ID web único para alarma personalizable
  * 
- * @details Busca el ID web más alto existente entre alarmas personalizables
- *          y retorna el siguiente número disponible. Garantiza unicidad de
- *          identificadores para la interfaz web.
+ * @details Función auxiliar privada que calcula el próximo ID web disponible
+ *          analizando todas las alarmas personalizables existentes. Garantiza
+ *          unicidad de identificadores para evitar conflictos en la interfaz web.
+ *          
+ *          **ALGORITMO DE GENERACIÓN:**
+ *          1. Inicializa maxId a 0 (ID mínimo será 1)
+ *          2. Itera por todas las alarmas del sistema
+ *          3. Para cada alarma personalizable:
+ *             - Compara su idWeb con maxId actual
+ *             - Actualiza maxId si encuentra ID mayor
+ *          4. Retorna maxId + 1 como nuevo ID único
+ *          
+ *          **CARACTERÍSTICAS:**
+ *          - IDs siempre crecientes y únicos
+ *          - No reutiliza IDs de alarmas eliminadas
+ *          - Resistente a eliminación/creación desordenada
+ *          - Mínimo ID generado es 1 (nunca 0)
  * 
- * @return int Nuevo ID web único (entero positivo)
+ * @retval int Nuevo ID web único (entero positivo >= 1)
+ * @retval 1 Si no hay alarmas personalizables existentes
  * 
- * @note IDs web son independientes de índices de array
- * @note Busca solo en alarmas personalizables existentes
- * @note ID mínimo es 1 (nunca retorna 0)
+ * @note **ÚNICA INSTANCIA:** Solo busca en alarmas personalizables existentes
+ * @note **CRECIMIENTO:** IDs solo crecen, nunca decrecen
+ * @note **REINICIO:** Solo resetea si se elimina el archivo JSON y se reinicia
+ * @note **FUNCIÓN PRIVADA:** Solo accesible internamente por la clase
+ * @note **SIN LÍMITE:** No impone límite máximo (depende de int máximo)
  * 
- * @see _buscarIndicePorIdWeb()
+ * @warning **NO REUTILIZA:** IDs eliminados no se reutilizan (por diseño)
+ * @warning **OVERFLOW:** Teóricamente puede overflow tras ~2 mil millones de alarmas
+ * @warning **DEPENDENCIA:** Requiere que idWeb esté correctamente inicializado
+ * 
+ * @see _buscarIndicePorIdWeb() - Función complementaria para búsqueda
+ * @see addPersonalizable() - Principal usuario de esta función
+ * @see cargarPersonalizablesDesdeJSON() - Actualiza _siguienteIdWeb al cargar
+ * 
+ * @example
+ * @code
+ * // Uso interno típico
+ * uint8_t AlarmScheduler::addPersonalizable(...) {
+ *     // ... validaciones ...
+ *     
+ *     Alarm& alarma = _alarmas[_num];
+ *     alarma.idWeb = _generarNuevoIdWeb();  // Asignar ID único
+ *     
+ *     // ... resto de configuración ...
+ * }
+ * 
+ * // Ejemplo de secuencia de IDs generados:
+ * // Primera alarma: ID = 1
+ * // Segunda alarma: ID = 2  
+ * // Eliminar primera: maxId sigue siendo 2
+ * // Tercera alarma: ID = 3 (no reutiliza 1)
+ * @endcode
  * 
  * @since v2.1 - Sistema de alarmas personalizables vía web
+ * @author Julian Salas Bartolomé
  */
 int AlarmScheduler::_generarNuevoIdWeb() {
     // Buscar el ID más alto existente
@@ -1589,24 +1707,52 @@ String AlarmScheduler::_diaToString(int dia) {
  * @brief Crea alarmas personalizables predeterminadas del sistema
  * 
  * @details Función privada que configura un conjunto básico de alarmas
- *          personalizables cuando no existe archivo de persistencia. Crea las
- *          misas dominicales tradicionales como punto de partida para el usuario.
+ *          personalizables cuando no existe archivo de persistencia JSON.
+ *          En la implementación actual, intencionalmente NO crea alarmas
+ *          automáticas, delegando la creación completa a la interfaz web.
  *          
- *          **ALARMAS CREADAS POR DEFECTO:**
- *          - "Misa Domingo 11:05": Primera llamada misa dominical  
- *          - "Misa Domingo 11:25": Segunda llamada misa dominical
+ *          **FILOSOFÍA DE DISEÑO:**
+ *          - Sistema arranca "limpio" sin alarmas personalizables
+ *          - Usuario debe crear alarmas explícitamente via web
+ *          - Evita asumir necesidades específicas del usuario
+ *          - Garantiza que callbacks están configurados al crear
  *          
- *          Ambas configuradas como tipo "MISA" y habilitadas por defecto.
+ *          **IMPLEMENTACIÓN ACTUAL:**
+ *          La función está intencionalmente vacía (solo logging) porque:
+ *          1. Las alarmas personalizables requieren callbacks específicos
+ *          2. Los callbacks se configuran desde Servidor.cpp, no aquí
+ *          3. Crear alarmas sin callbacks causaría fallos de ejecución
+ *          4. Mejor UX: usuario ve sistema limpio al inicio
  * 
+ * @note **FUNCIÓN VACÍA:** Intencionalmente no crea alarmas por defecto
+ * @note **CALLBACKS:** Las alarmas requieren callbacks configurados externamente
  * @note **LLAMADA AUTOMÁTICA:** Solo se ejecuta si no existe archivo JSON
- * @note **PERSISTENCIA:** Las alarmas creadas se guardan automáticamente
- * @note **HORARIOS:** Basados en tradición católica española estándar
- * @note **MODIFICABLES:** Usuario puede editarlas posteriormente vía web
+ * @note **FILOSOFÍA:** Prefiere sistema limpio vs. asumir configuración
+ * @note **EXTENSIBLE:** Puede modificarse en futuro para crear alarmas básicas
  * 
- * @warning **CALLBACKS:** Requiere que los callbacks estén configurados previamente
+ * @warning **SIN CALLBACKS:** Crear alarmas aquí fallaría por falta de callbacks
+ * @warning **DEPENDENCIAS:** Requiere integración con sistema de callbacks externo
  * 
  * @see cargarPersonalizablesDesdeJSON() - Función que la llama
- * @see addPersonalizable() - Función utilizada para crear las alarmas
+ * @see addPersonalizable() - Función que se usaría para crear alarmas
+ * @see Servidor.cpp - Donde se configuran los callbacks apropiados
+ * 
+ * @example
+ * @code
+ * // Para habilitar alarmas por defecto en el futuro:
+ * void AlarmScheduler::_crearAlarmasPersonalizablesPorDefecto() {
+ *     // Solo si callbacks están disponibles
+ *     if (callbackMisa && callbackDifuntos) {
+ *         addPersonalizable("Misa Domingo 1", "Primera llamada", 
+ *                          DOW_DOMINGO, 11, 5, "MISA", 
+ *                          paramMisa, callbackMisa, true);
+ *         
+ *         addPersonalizable("Misa Domingo 2", "Segunda llamada",
+ *                          DOW_DOMINGO, 11, 25, "MISA", 
+ *                          paramMisa, callbackMisa, true);
+ *     }
+ * }
+ * @endcode
  * 
  * @since v2.1 - Sistema de alarmas personalizables vía web
  * @author Julian Salas Bartolomé
