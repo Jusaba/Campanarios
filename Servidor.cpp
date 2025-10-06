@@ -1,4 +1,4 @@
-    #include "Servidor.h"
+#include "Servidor.h"
 
     bool servidorIniciado = false;                               // Flag que indica si el servidor ha sido iniciado
     int  nToque = 0;                                             // Contador de toques del campanario
@@ -309,104 +309,230 @@
             DBG_SRV("Mensaje no reconocido, reseteando secuencia.");
         }
     }    
+    /**
+    * @brief Procesa comandos específicos de gestión de alarmas personalizables
+    * 
+    * @details Función especializada que maneja todos los comandos relacionados
+    *          con alarmas personalizables recibidos a través del WebSocket.
+    *          
+    *          **COMANDOS PROCESADOS:**
+    *          - ADD_ALARMA_WEB: Crea nueva alarma personalizable con callback automático
+    *          - EDIT_ALARMA_WEB: Modifica alarma existente manteniendo callback original
+    *          - DELETE_ALARMA_WEB: Elimina alarma personalizable del sistema
+    *          - TOGGLE_ALARMA_WEB: Habilita/deshabilita alarma específica
+    *          - GET_ALARMAS_WEB: Obtiene listado completo de alarmas personalizables
+    *          - GET_STATS_ALARMAS_WEB: Obtiene estadísticas del sistema de alarmas
+    *          
+    *          **TIPOS DE ACCIÓN SOPORTADOS:**
+    *          - MISA: Configura callback accionSecuencia con parámetro MISA
+    *          - DIFUNTOS: Configura callback accionSecuencia con parámetro DIFUNTOS  
+    *          - FIESTA: Configura callback accionSecuencia con parámetro personalizado
+    *          
+    *          **PROCESO DE CREACIÓN:**
+    *          1. Deserializa datos JSON del comando
+    *          2. Determina callback y parámetro según tipo de acción
+    *          3. Convierte día web (0-7) a máscara de días del sistema
+    *          4. Llama a Alarmas.addPersonalizable() con parámetros procesados
+    *          5. Envía confirmación o error a todos los clientes WebSocket
+    * 
+    * @param client Puntero al cliente WebSocket que envió el comando (puede ser nullptr)
+    * @param comando String con el comando a procesar (ADD_ALARMA_WEB, EDIT_ALARMA_WEB, etc.)
+    * @param datos String con datos JSON del comando a procesar
+    * 
+    * @note Llamada automáticamente por procesaMensajeWebSocket() para comandos de alarmas
+    * @note Utiliza deserializeJson() para procesar datos de entrada
+    * @note Configura callbacks automáticamente según el tipo de acción
+    * @note Envía respuestas a TODOS los clientes conectados vía ws.textAll()
+    * 
+    * @warning Valida todos los datos JSON antes de procesar comandos
+    * @warning Los callbacks son configurados automáticamente, no personalizables por comando
+    * @warning Comando EDIT no modifica callbacks existentes por seguridad
+    * 
+    * @see procesaMensajeWebSocket() - Función que delega comandos de alarmas
+    * @see AlarmScheduler::addPersonalizable() - Método para crear alarmas
+    * @see AlarmScheduler::modificarPersonalizable() - Método para modificar alarmas
+    * @see AlarmScheduler::eliminarPersonalizable() - Método para eliminar alarmas
+    * @see convertirDiaAMascara() - Función auxiliar para conversión de días
+    * @see accionSecuencia() - Callback configurado automáticamente
+    * 
+    * @since v2.1 - Sistema de alarmas personalizables vía web
+    * @author Julian Salas Bartolomé
+    */
     void procesarComandoAlarma(AsyncWebSocketClient *client, const String& comando, const String& datos) {
-        JsonDocument doc;
-        deserializeJson(doc, datos);
-        
-        if (comando == "ADD_ALARMA_WEB") {
-            // Determinar callback y parámetro según el tipo
-            String tipoAccion = doc["accion"] | "MISA";
-            void (*callback)(uint16_t) = nullptr;
-            uint16_t parametro = 0;
+           JsonDocument doc;
+           deserializeJson(doc, datos);
+           
+           if (comando == "ADD_ALARMA_WEB") {
+               // Determinar callback y parámetro según el tipo
+               String tipoAccion = doc["accion"] | "MISA";
+               void (*callback)(uint16_t) = nullptr;
+               uint16_t parametro = 0;
 
-            if (tipoAccion == "MISA") {
-                callback = &accionSecuencia;
-                parametro = Config::States::I2CState::MISA;
-            }
-            else if (tipoAccion == "DIFUNTOS") {
-                callback = &accionSecuencia;
-                parametro = Config::States::I2CState::DIFUNTOS;
-            }
-            else if (tipoAccion == "FIESTA") {
-                callback = &accionSecuencia;
-                parametro = 0; // O el valor que corresponda
-            }
+               if (tipoAccion == "MISA") {
+                   callback = accionSecuencia;
+                   parametro = Config::States::I2CState::MISA;
+               }
+               else if (tipoAccion == "DIFUNTOS") {
+                   callback = accionSecuencia;
+                   parametro = Config::States::I2CState::DIFUNTOS;
+               }
+               else if (tipoAccion == "FIESTA") {
+                   callback = accionSecuencia;
+                   parametro = 0; // O el valor que corresponda
+               }
 
-            if (callback) {
-                uint8_t idx = Alarmas.addPersonalizable(
-                    doc["nombre"] | "",
-                    doc["descripcion"] | "",
-                    convertirDiaAMascara(doc["dia"] | 0),
-                    doc["hora"] | 0,
-                    doc["minuto"] | 0,
-                    tipoAccion.c_str(),
-                    parametro,
-                    callback,
-                    doc["habilitada"] | true
-                );
+               if (callback) {
+                   uint8_t idx = Alarmas.addPersonalizable(
+                       doc["nombre"] | "",
+                       doc["descripcion"] | "",
+                       convertirDiaAMascara(doc["dia"] | 0),
+                       doc["hora"] | 0,
+                       doc["minuto"] | 0,
+                       tipoAccion.c_str(),
+                       parametro,
+                       callback,
+                       doc["habilitada"] | true
+                   );
 
-                if (idx < AlarmScheduler::MAX_ALARMAS) {
-                    ws.textAll("ALARMA_CREADA_WEB:" + String(Alarmas.get(idx)->idWeb));
-                } else {
-                    ws.textAll("ERROR_ALARMA_WEB:Máximo de alarmas alcanzado");
-                }
-            }
-        } else if (comando == "EDIT_ALARMA_WEB") {
-            // Para modificar NO necesitamos callback - se mantiene el existente
-            bool resultado = Alarmas.modificarPersonalizable(
-                doc["id"] | -1,
-                doc["nombre"] | "",
-                doc["descripcion"] | "",
-                convertirDiaAMascara(doc["dia"] | 0),
-                doc["hora"] | 0,
-                doc["minuto"] | 0,
-                doc["accion"] | "MISA",  // Solo actualiza el string
-                doc["habilitada"] | true
-            );
+                   if (idx < AlarmScheduler::MAX_ALARMAS) {
+                       ws.textAll("ALARMA_CREADA_WEB:" + String(Alarmas.get(idx)->idWeb));
+                   } else {
+                       ws.textAll("ERROR_ALARMA_WEB:Máximo de alarmas alcanzado");
+                   }
+               }
+           } else if (comando == "EDIT_ALARMA_WEB") {
+               // Para modificar NO necesitamos callback - se mantiene el existente
+               bool resultado = Alarmas.modificarPersonalizable(
+                   doc["id"] | -1,
+                   doc["nombre"] | "",
+                   doc["descripcion"] | "",
+                   convertirDiaAMascara(doc["dia"] | 0),
+                   doc["hora"] | 0,
+                   doc["minuto"] | 0,
+                   doc["accion"] | "MISA",  // Solo actualiza el string
+                   doc["habilitada"] | true
+               );
 
-            if (resultado) {
-                ws.textAll("ALARMA_MODIFICADA_WEB:" + String(doc["id"] | -1));
-            } else {
-                ws.textAll("ERROR_ALARMA_WEB:No se pudo modificar");
-            }
-        }
-        else if (comando == "DELETE_ALARMA_WEB") {
-            int id = doc["id"] | -1;
-            if (Alarmas.eliminarPersonalizable(id)) {
-                ws.textAll("ALARMA_ELIMINADA_WEB:" + String(id));
-            } else {
-                ws.textAll("ERROR_ALARMA_WEB:No se pudo eliminar");
-            }
-        }
-        else if (comando == "TOGGLE_ALARMA_WEB") {
-            int id = doc["id"] | -1;
-            bool estado = doc["habilitada"] | false;
-            if (Alarmas.habilitarPersonalizable(id, estado)) {
-                ws.textAll("ALARMA_TOGGLED_WEB:" + String(id) + ":" + (estado ? "true" : "false"));
-            }
-        }
-        else if (comando == "GET_ALARMAS_WEB") {
-            String jsonAlarmas = Alarmas.obtenerPersonalizablesJSON();
-            ws.textAll("ALARMAS_WEB:" + jsonAlarmas);
-        }
-        else if (comando == "GET_STATS_ALARMAS_WEB") {
-            String jsonStats = Alarmas.obtenerEstadisticasJSON();
-            ws.textAll("STATS_ALARMAS_WEB:" + jsonStats);
-        }
+               if (resultado) {
+                   ws.textAll("ALARMA_MODIFICADA_WEB:" + String(doc["id"] | -1));
+               } else {
+                   ws.textAll("ERROR_ALARMA_WEB:No se pudo modificar");
+               }
+           }
+           else if (comando == "DELETE_ALARMA_WEB") {
+               int id = doc["id"] | -1;
+               if (Alarmas.eliminarPersonalizable(id)) {
+                   ws.textAll("ALARMA_ELIMINADA_WEB:" + String(id));
+               } else {
+                   ws.textAll("ERROR_ALARMA_WEB:No se pudo eliminar");
+               }
+           }
+           else if (comando == "TOGGLE_ALARMA_WEB") {
+               int id = doc["id"] | -1;
+               bool estado = doc["habilitada"] | false;
+               if (Alarmas.habilitarPersonalizable(id, estado)) {
+                   ws.textAll("ALARMA_TOGGLED_WEB:" + String(id) + ":" + (estado ? "true" : "false"));
+               }
+           }
+           else if (comando == "GET_ALARMAS_WEB") {
+               String jsonAlarmas = Alarmas.obtenerPersonalizablesJSON();
+               ws.textAll("ALARMAS_WEB:" + jsonAlarmas);
+           }
+           else if (comando == "GET_STATS_ALARMAS_WEB") {
+               String jsonStats = Alarmas.obtenerEstadisticasJSON();
+               ws.textAll("STATS_ALARMAS_WEB:" + jsonStats);
+           }
+    }
+    /**
+     * @brief Convierte día web (0-7) a máscara de días del sistema de alarmas
+     * 
+     * @details Función auxiliar que traduce la numeración de días utilizada
+     *          en la interfaz web a las máscaras de bits utilizadas internamente
+     *          por el sistema de alarmas del campanario.
+     *          
+     *          **CONVERSIÓN DE DÍAS:**
+     *          - 0: Todos los días (DOW_TODOS = 0x7F)
+     *          - 1: Domingo (bit 0 = 0x01)
+     *          - 2: Lunes (bit 1 = 0x02)
+     *          - 3: Martes (bit 2 = 0x04)
+     *          - 4: Miércoles (bit 3 = 0x08)
+     *          - 5: Jueves (bit 4 = 0x10)
+     *          - 6: Viernes (bit 5 = 0x20)
+     *          - 7: Sábado (bit 6 = 0x40)
+     *          
+     *          **VALIDACIÓN:**
+     *          - Valores fuera del rango 0-7 se convierten a DOW_TODOS
+     *          - Garantiza compatibilidad con sistema interno de máscaras
+     * 
+     * @param dia Día en formato web (0=todos, 1=domingo, 2=lunes, ..., 7=sábado)
+     * 
+     * @retval uint8_t Máscara de bits compatible con sistema de alarmas
+     * @retval DOW_TODOS Si día está fuera del rango válido (0-7)
+     * 
+     * @note Utilizada internamente por procesarComandoAlarma()
+     * @note Compatible con constantes DOW_* definidas en el sistema
+     * @note Domingo se considera día 1 (no 0) en la numeración web
+     * 
+     * @warning Valores inválidos se convierten automáticamente a DOW_TODOS
+     * @warning La numeración web difiere del estándar ISO (lunes = día 1)
+     * 
+     * @see procesarComandoAlarma() - Función principal que utiliza esta conversión
+     * @see DOW_TODOS, DOW_DOMINGO, DOW_LUNES, etc. - Constantes del sistema
+     * @see AlarmScheduler::addPersonalizable() - Recibe máscara convertida
+     * 
+     * @since v2.1 - Sistema de alarmas personalizables vía web
+     * @author Julian Salas Bartolomé
+     */
+    int8_t convertirDiaAMascara(int dia) {
+       if (dia == 0) return DOW_TODOS;
+       return (dia >= 1 && dia <= 7) ? (1 << (dia - 1)) : DOW_TODOS;
     }
 
-uint8_t convertirDiaAMascara(int dia) {
-    if (dia == 0) return DOW_TODOS;
-    return (dia >= 1 && dia <= 7) ? (1 << (dia - 1)) : DOW_TODOS;
-}
-
-// ============================================================================
-// GESTIÓN DE IDIOMA PERSISTENTE
-// ============================================================================
+    // ============================================================================
+    // GESTIÓN DE IDIOMA PERSISTENTE
+    // ============================================================================
 
 /**
- * @brief Carga la configuración de idioma desde SPIFFS
- * @return String Código de idioma ('ca' o 'es')
+ * @brief Carga la configuración de idioma persistente desde SPIFFS
+ * 
+ * @details Función que recupera el idioma configurado por el usuario desde
+ *          el archivo de configuración almacenado en SPIFFS, garantizando
+ *          persistencia entre reinicios del dispositivo.
+ *          
+ *          **PROCESO DE CARGA:**
+ *          1. Verifica existencia del archivo /config.json en SPIFFS
+ *          2. Si no existe, crea configuración por defecto (catalán)
+ *          3. Lee y parsea contenido JSON del archivo de configuración
+ *          4. Extrae campo "idioma" con fallback a catalán si hay errores
+ *          5. Valida y retorna código de idioma configurado
+ *          
+ *          **IDIOMAS SOPORTADOS:**
+ *          - "ca": Catalán (idioma por defecto)
+ *          - "es": Español (castellano)
+ *          
+ *          **MANEJO DE ERRORES:**
+ *          - Archivo inexistente: Crea configuración por defecto
+ *          - Error de lectura: Retorna catalán por defecto
+ *          - JSON malformado: Retorna catalán por defecto
+ *          - Campo faltante: Utiliza catalán como fallback
+ * 
+ * @retval String Código de idioma configurado ("ca" o "es")
+ * @retval "ca" Si hay errores o no existe configuración previa
+ * 
+ * @note Llamada durante inicialización del servidor web
+ * @note Crea archivo de configuración automáticamente si no existe
+ * @note Utiliza logging de depuración si DEBUGSERVIDOR está definido
+ * @note Garantiza que siempre retorna un idioma válido
+ * 
+ * @warning Requiere SPIFFS montado correctamente antes de la llamada
+ * @warning Función síncrona, puede bloquear brevemente durante lectura de archivo
+ * 
+ * @see guardarIdiomaEnConfig() - Función complementaria para guardar idioma
+ * @see ServidorOn() - Función que utiliza idioma cargado durante inicialización
+ * @see obtenerConfiguracionJSON() - Función relacionada para configuración completa
+ * 
+ * @since v3.0 - Sistema de configuración persistente de idioma
+ * @author Julian Salas Bartolomé
  */
 String cargarIdiomaDesdeConfig() {
     DBG_SRV("📂 Cargando idioma desde configuración...");
@@ -441,9 +567,58 @@ String cargarIdiomaDesdeConfig() {
 }
 
 /**
- * @brief Guarda el idioma en la configuración SPIFFS
- * @param idioma Código de idioma a guardar
- * @return bool true si se guardó correctamente
+ * @brief Guarda la configuración de idioma de forma persistente en SPIFFS
+ * 
+ * @details Función que almacena el idioma seleccionado por el usuario en
+ *          el archivo de configuración SPIFFS, preservando configuración
+ *          existente y garantizando persistencia entre reinicios.
+ *          
+ *          **PROCESO DE GUARDADO:**
+ *          1. Carga configuración existente de /config.json si existe
+ *          2. Preserva campos de configuración no relacionados con idioma
+ *          3. Actualiza campo "idioma" con nuevo valor especificado
+ *          4. Añade metadatos de configuración completa (zona horaria, etc.)
+ *          5. Serializa y guarda JSON actualizado en SPIFFS
+ *          6. Valida operación de escritura antes de confirmar éxito
+ *          
+ *          **ESTRUCTURA DEL ARCHIVO CONFIG.JSON:**
+ *          ```json
+ *          {
+ *            "version": "1.0",
+ *            "idioma": "ca|es",
+ *            "configuracion": {
+ *              "idioma_defecto": "ca|es",
+ *              "zona_horaria": "Europe/Madrid",
+ *              "formato_hora": "24h"
+ *            }
+ *          }
+ *          ```
+ *          
+ *          **VALIDACIONES:**
+ *          - Preserva configuración existente no relacionada con idioma
+ *          - Crea estructura completa si archivo no existía previamente
+ *          - Verifica escritura exitosa antes de confirmar operación
+ * 
+ * @param idioma Código de idioma a guardar ("ca" para catalán, "es" para español)
+ * 
+ * @retval true Idioma guardado correctamente en SPIFFS
+ * @retval false Error durante escritura o creación del archivo
+ * 
+ * @note Llamada automáticamente cuando usuario cambia idioma vía web
+ * @note Preserva configuración existente no relacionada con idioma
+ * @note Utiliza logging de depuración si DEBUGSERVIDOR está definido
+ * @note Crea archivo completo con metadatos si no existía previamente
+ * 
+ * @warning Requiere SPIFFS montado y con espacio suficiente disponible
+ * @warning Función síncrona, puede bloquear brevemente durante escritura
+ * @warning No valida códigos de idioma, acepta cualquier string
+ * 
+ * @see cargarIdiomaDesdeConfig() - Función complementaria para cargar idioma
+ * @see procesaMensajeWebSocket() - Procesa comandos SET_IDIOMA que llaman esta función
+ * @see obtenerConfiguracionJSON() - Función relacionada para configuración completa
+ * 
+ * @since v3.0 - Sistema de configuración persistente de idioma
+ * @author Julian Salas Bartolomé
  */
 bool guardarIdiomaEnConfig(const String& idioma) {
     DBG_SRV_PRINTF("💾 Guardando idioma en configuración: %s", idioma.c_str());
@@ -482,9 +657,58 @@ bool guardarIdiomaEnConfig(const String& idioma) {
 }
 
 /**
- * @brief Obtiene la configuración completa como JSON
- * @return String JSON con la configuración
+ * @brief Obtiene la configuración completa del sistema en formato JSON
+ * 
+ * @details Función que retorna toda la configuración del sistema como
+ *          string JSON, incluyendo idioma, zona horaria y preferencias
+ *          de formato, para ser enviada a clientes web.
+ *          
+ *          **CONFIGURACIÓN INCLUIDA:**
+ *          - Versión del archivo de configuración
+ *          - Idioma actualmente configurado
+ *          - Idioma por defecto del sistema
+ *          - Zona horaria configurada
+ *          - Formato de hora preferido
+ *          
+ *          **PROCESO DE OBTENCIÓN:**
+ *          1. Verifica existencia de archivo /config.json
+ *          2. Si no existe, genera configuración por defecto
+ *          3. Lee contenido completo del archivo
+ *          4. Retorna JSON como string para envío a cliente
+ *          
+ *          **CONFIGURACIÓN POR DEFECTO:**
+ *          ```json
+ *          {
+ *            "version": "1.0",
+ *            "idioma": "ca",
+ *            "configuracion": {
+ *              "idioma_defecto": "ca",
+ *              "zona_horaria": "Europe/Madrid", 
+ *              "formato_hora": "24h"
+ *            }
+ *          }
+ *          ```
+ * 
+ * @retval String JSON completo con toda la configuración del sistema
+ * @retval "{}" Si hay error crítico leyendo el archivo
+ * 
+ * @note Llamada cuando cliente web solicita configuración vía GET_CONFIG
+ * @note Genera configuración por defecto si archivo no existe
+ * @note Retorna JSON como string listo para envío WebSocket
+ * @note No modifica archivos, solo lectura de configuración
+ * 
+ * @warning Requiere SPIFFS montado correctamente
+ * @warning Función síncrona, puede bloquear brevemente durante lectura
+ * @warning Retorna "{}" en caso de error crítico de lectura
+ * 
+ * @see cargarIdiomaDesdeConfig() - Función relacionada para solo idioma
+ * @see guardarIdiomaEnConfig() - Función relacionada para guardar configuración
+ * @see procesaMensajeWebSocket() - Procesa comandos GET_CONFIG que llaman esta función
+ * 
+ * @since v3.0 - Sistema de gestión de configuración completa
+ * @author Julian Salas Bartolomé
  */
+
 String obtenerConfiguracionJSON() {
     if (!SPIFFS.exists("/config.json")) {
         // Crear configuración por defecto

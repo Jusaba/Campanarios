@@ -184,6 +184,7 @@ public:
     bool    cargarPersonalizablesDesdeJSON();
     bool    guardarPersonalizablesEnJSON();
     
+     void imprimirTodasLasAlarmas();
 
 
 private:

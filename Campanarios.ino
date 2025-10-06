@@ -115,6 +115,8 @@
 //        Alarmas.addExternal(DOW_DOMINGO, 11, 05, 0, &accionSecuencia, Config::States::I2CState::MISA);                     // Toca misa los domingos a las 11:05
 //        Alarmas.addExternal(DOW_DOMINGO, 11, 25, 0, &accionSecuencia, Config::States::I2CState::MISA);                     // Toca misa los domingos a las 11:25
 
+ Alarmas.imprimirTodasLasAlarmas();
+
     }
   }
   void loop() {

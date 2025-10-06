@@ -44,7 +44,21 @@
  */
 bool AlarmScheduler::begin(bool cargarPorDefecto) {
     clear();
-    if (cargarPorDefecto) initDefaults();
+    
+    // ✅ CARGAR ALARMAS PERSONALIZABLES DESDE JSON ANTES DE LAS POR DEFECTO
+    DBG_ALM("[ALARM] Cargando alarmas personalizables desde SPIFFS...");
+    cargarPersonalizablesDesdeJSON();
+    
+    // ✅ SOLO CARGAR POR DEFECTO SI NO HAY NINGUNA ALARMA
+    if (cargarPorDefecto && _num == 0) {
+        DBG_ALM("[ALARM] No hay alarmas, cargando configuración por defecto...");
+        initDefaults();
+    } else if (cargarPorDefecto) {
+        // Si ya hay alarmas personalizables, solo añadir las de sistema
+        DBG_ALM("[ALARM] Añadiendo alarmas de sistema a las personalizables existentes...");
+        initDefaults();
+    }
+    
     DBG_ALM_PRINTF("[ALARM] Sistema inicializado con %u alarmas\n", _num);
     this->_siguienteIdWeb = 1;
     return true;
@@ -1508,15 +1522,29 @@ bool AlarmScheduler::guardarPersonalizablesEnJSON() {
         return false;
     }
     
+    // ✅ PARTE FALTANTE - ESCRIBIR Y CERRAR ARCHIVO
     size_t bytesEscritos = serializeJson(doc, file);
     file.close();
     
     if (bytesEscritos == 0) {
-        DBG_ALM("❌ Error escribiendo JSON");
+        DBG_ALM("❌ Error escribiendo JSON - 0 bytes escritos");
         return false;
     }
     
-    DBG_ALM_PRINTF("✅ Archivo guardado: %d alarmas, %d bytes", personalizables, bytesEscritos);
+    DBG_ALM_PRINTF("✅ JSON guardado exitosamente: %d alarmas, %d bytes", personalizables, bytesEscritos);
+    
+    // ✅ VERIFICACIÓN OPCIONAL - Comprobar que el archivo se escribió
+    if (SPIFFS.exists(archivo)) {
+        File verificacion = SPIFFS.open(archivo, "r");
+        if (verificacion) {
+            size_t tamanoArchivo = verificacion.size();
+            verificacion.close();
+            DBG_ALM_PRINTF("✅ Archivo verificado: %d bytes en disco", tamanoArchivo);
+        }
+    } else {
+        DBG_ALM("⚠️ Advertencia: Archivo no encontrado tras guardado");
+    }
+    
     return true;
 }
 
@@ -1587,4 +1615,121 @@ void AlarmScheduler::_crearAlarmasPersonalizablesPorDefecto() {
     DBG_ALM("🔄 No creando alarmas por defecto - se crearán desde web");
     // Las alarmas personalizables se crean desde la interfaz web
     // que tiene acceso a los callbacks apropiados
+}
+
+/**
+ * @brief Imprime información detallada de todas las alarmas registradas
+ * 
+ * @details Función de debug que muestra por Serial Monitor todos los campos
+ *          de todas las alarmas configuradas en el sistema, tanto de sistema
+ *          como personalizables, con formato legible y estructurado.
+ * 
+ * @note Útil para depuración y verificación del estado del sistema
+ * @note Incluye campos internos y de cache temporal
+ * 
+ * @since v2.1 - Función de debug añadida
+ * @author Julian Salas Bartolomé
+ */
+void AlarmScheduler::imprimirTodasLasAlarmas() {
+    Serial.println("\n🔔 ========== LISTADO COMPLETO DE ALARMAS ==========");
+    Serial.printf("📊 Total de alarmas registradas: %u/%u\n", _num, MAX_ALARMAS);
+    Serial.printf("🆔 Siguiente ID Web: %d\n", _siguienteIdWeb);
+    Serial.println();
+    
+    if (_num == 0) {
+        Serial.println("❌ No hay alarmas registradas");
+        return;
+    }
+    
+    for (uint8_t i = 0; i < _num; i++) {
+        const Alarm& alarma = _alarmas[i];
+        
+        Serial.printf("📋 ========== ALARMA ÍNDICE: %u ==========\n", i);
+        
+        // === IDENTIFICACIÓN ===
+        Serial.printf("🆔 ID Web: %d\n", alarma.idWeb);
+        Serial.printf("📛 Nombre: '%s'\n", alarma.nombre);
+        Serial.printf("📝 Descripción: '%s'\n", alarma.descripcion);
+        Serial.printf("🎯 Tipo String: '%s'\n", alarma.tipoString);
+        Serial.printf("⚙️ Es Personalizable: %s\n", alarma.esPersonalizable ? "SÍ" : "NO");
+        
+        // === HORARIO ===
+        Serial.printf("🕐 Hora: %u\n", alarma.hora);
+        Serial.printf("🕐 Minuto: %u\n", alarma.minuto);
+        Serial.printf("⏰ Intervalo (min): %u\n", alarma.intervaloMin);
+        
+        // === DÍAS DE LA SEMANA ===
+        Serial.printf("📅 Máscara Días: 0x%02X (", alarma.mascaraDias);
+        if (alarma.mascaraDias == DOW_TODOS) {
+            Serial.print("TODOS LOS DÍAS");
+        } else {
+            bool primero = true;
+            if (alarma.mascaraDias & DOW_DOMINGO) { 
+                if (!primero) Serial.print(", "); 
+                Serial.print("DOM"); 
+                primero = false; 
+            }
+            if (alarma.mascaraDias & DOW_LUNES) { 
+                if (!primero) Serial.print(", "); 
+                Serial.print("LUN"); 
+                primero = false; 
+            }
+            if (alarma.mascaraDias & DOW_MARTES) { 
+                if (!primero) Serial.print(", "); 
+                Serial.print("MAR"); 
+                primero = false; 
+            }
+            if (alarma.mascaraDias & DOW_MIERCOLES) { 
+                if (!primero) Serial.print(", "); 
+                Serial.print("MIÉ"); 
+                primero = false; 
+            }
+            if (alarma.mascaraDias & DOW_JUEVES) { 
+                if (!primero) Serial.print(", "); 
+                Serial.print("JUE"); 
+                primero = false; 
+            }
+            if (alarma.mascaraDias & DOW_VIERNES) { 
+                if (!primero) Serial.print(", "); 
+                Serial.print("VIE"); 
+                primero = false; 
+            }
+            if (alarma.mascaraDias & DOW_SABADO) { 
+                if (!primero) Serial.print(", "); 
+                Serial.print("SÁB"); 
+                primero = false; 
+            }
+        }
+        Serial.println(")");
+        
+        // === ESTADO ===
+        Serial.printf("✅ Habilitada: %s\n", alarma.habilitada ? "SÍ" : "NO");
+        Serial.printf("🔢 Parámetro: %u\n", alarma.parametro);
+        
+        // === CALLBACKS ===
+        Serial.printf("🔗 Acción (método): %s\n", alarma.accion ? "CONFIGURADO" : "NULL");
+        Serial.printf("🔗 Acción Externa (param): %s\n", alarma.accionExt ? "CONFIGURADO" : "NULL");
+        Serial.printf("🔗 Acción Externa 0: %s\n", alarma.accionExt0 ? "CONFIGURADO" : "NULL");
+        
+        // === CACHE TEMPORAL ===
+        Serial.printf("📅 Último Día Año: %d\n", alarma.ultimoDiaAno);
+        Serial.printf("🕐 Último Minuto: %u\n", alarma.ultimoMinuto);
+        Serial.printf("🕐 Última Hora: %u\n", alarma.ultimaHora);
+        Serial.printf("⏰ Última Ejecución: %lu\n", (unsigned long)alarma.ultimaEjecucion);
+        
+        // === HORARIO FORMATEADO ===
+        if (alarma.hora == ALARMA_WILDCARD && alarma.minuto == ALARMA_WILDCARD) {
+            Serial.println("🕒 Horario: WILDCARD:WILDCARD (cada minuto)");
+        } else if (alarma.hora == ALARMA_WILDCARD) {
+            Serial.printf("🕒 Horario: WILDCARD:%02u (cada hora a los %u min)\n", alarma.minuto, alarma.minuto);
+        } else if (alarma.minuto == ALARMA_WILDCARD) {
+            Serial.printf("🕒 Horario: %02u:WILDCARD (cada minuto de las %u:XX)\n", alarma.hora, alarma.hora);
+        } else {
+            Serial.printf("🕒 Horario: %02u:%02u (fijo)\n", alarma.hora, alarma.minuto);
+        }
+        
+        Serial.println();
+    }
+    
+    Serial.println("🔔 ========== FIN LISTADO DE ALARMAS ==========\n");
 }
