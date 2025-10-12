@@ -269,9 +269,10 @@ public:
                          const char* tipoString, uint16_t parametro,
                          void (*callback)(uint16_t), bool habilitada = true);
     
-    bool    modificarPersonalizable(int idWeb, const char* nombre, const char* descripcion,
-                                   uint8_t mascaraDias, uint8_t hora, uint8_t minuto,
-                                   const char* tipoAccion, bool habilitada);
+    bool modificarPersonalizable(int idWeb, const char* nombre, const char* descripcion,
+                           uint8_t mascaraDias, uint8_t hora, uint8_t minuto,
+                           const char* tipoString, bool habilitada,
+                           void (*callback)(uint16_t), uint16_t parametro); 
     
     bool    eliminarPersonalizable(int idWeb);
     bool    habilitarPersonalizable(int idWeb, bool estado);

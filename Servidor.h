@@ -176,7 +176,6 @@
     #include "Debug.h"
     
     #include "Campanario.h"
-    #include "AlarmasPersonalizadas.h"
     #include "Alarmas.h" 
     #include <ArduinoJson.h>
 

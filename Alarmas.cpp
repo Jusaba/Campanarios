@@ -863,7 +863,8 @@ uint8_t AlarmScheduler::addPersonalizable(const char* nombre, const char* descri
  */
 bool AlarmScheduler::modificarPersonalizable(int idWeb, const char* nombre, const char* descripcion,
                                            uint8_t mascaraDias, uint8_t hora, uint8_t minuto,
-                                           const char* tipoString, bool habilitada) {
+                                           const char* tipoString, bool habilitada,
+                                           void (*callback)(uint16_t), uint16_t parametro) {  // ✅ NUEVOS parámetros
     DBG_ALM_PRINTF("✏️ Modificando alarma personalizable ID Web: %d", idWeb);
     
     uint8_t idx = _buscarIndicePorIdWeb(idWeb);
@@ -874,18 +875,30 @@ bool AlarmScheduler::modificarPersonalizable(int idWeb, const char* nombre, cons
     
     Alarm& alarma = _alarmas[idx];
     
-    // Verificar que es personalizable
     if (!alarma.esPersonalizable) {
         DBG_ALM("❌ Error: Alarma no es personalizable");
         return false;
     }
     
-    // Actualizar campos (MANTENER callback existente)
+    // ✅ VERIFICAR que el callback no es NULL
+    if (callback == nullptr) {
+        DBG_ALM("❌ Error: Callback es NULL");
+        return false;
+    }
+    
+    // Actualizar TODOS los campos incluyendo callback
     alarma.habilitada = habilitada;
     alarma.mascaraDias = mascaraDias;
     alarma.hora = hora;
     alarma.minuto = minuto;
     
+    // ✅ ASIGNAR NUEVO CALLBACK Y PARÁMETRO (esto era lo que faltaba)
+    alarma.accionExt = callback;
+    alarma.parametro = parametro;
+    alarma.accion = nullptr;      // Limpiar otros callbacks
+    alarma.accionExt0 = nullptr;
+    
+    // Actualizar strings
     strncpy(alarma.nombre, nombre, sizeof(alarma.nombre) - 1);
     alarma.nombre[sizeof(alarma.nombre) - 1] = '\0';
     
@@ -895,13 +908,13 @@ bool AlarmScheduler::modificarPersonalizable(int idWeb, const char* nombre, cons
     strncpy(alarma.tipoString, tipoString, sizeof(alarma.tipoString) - 1);
     alarma.tipoString[sizeof(alarma.tipoString) - 1] = '\0';
     
-    // Reset cache para forzar reevaluación
+    // Reset cache
     alarma.ultimoDiaAno = -1;
     alarma.ultimoMinuto = 255;
     alarma.ultimaHora = 255;
     alarma.ultimaEjecucion = 0;
     
-    DBG_ALM("✅ Alarma personalizable modificada");
+    DBG_ALM_PRINTF("✅ Callback reasignado: %p, Parámetro: %d", alarma.accionExt, alarma.parametro);
     
     // Guardar en JSON
     guardarPersonalizablesEnJSON();

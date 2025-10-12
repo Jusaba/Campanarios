@@ -359,10 +359,10 @@
     * @author Julian Salas Bartolomé
     */
     void procesarComandoAlarma(AsyncWebSocketClient *client, const String& comando, const String& datos) {
-           JsonDocument doc;
-           deserializeJson(doc, datos);
+        JsonDocument doc;
+        deserializeJson(doc, datos);
            
-           if (comando == "ADD_ALARMA_WEB") {
+            if (comando == "ADD_ALARMA_WEB") {
                // Determinar callback y parámetro según el tipo
                String tipoAccion = doc["accion"] | "MISA";
                void (*callback)(uint16_t) = nullptr;
@@ -371,14 +371,12 @@
                if (tipoAccion == "MISA") {
                    callback = accionSecuencia;
                    parametro = Config::States::I2CState::MISA;
-               }
-               else if (tipoAccion == "DIFUNTOS") {
+               } else if (tipoAccion == "DIFUNTOS") {
                    callback = accionSecuencia;
                    parametro = Config::States::I2CState::DIFUNTOS;
-               }
-               else if (tipoAccion == "FIESTA") {
+               } else if (tipoAccion == "FIESTA") {
                    callback = accionSecuencia;
-                   parametro = 0; // O el valor que corresponda
+                   parametro = Config::States::I2CState::FIESTA;
                }
 
                if (callback) {
@@ -399,46 +397,71 @@
                    } else {
                        ws.textAll("ERROR_ALARMA_WEB:Máximo de alarmas alcanzado");
                    }
-               }
-           } else if (comando == "EDIT_ALARMA_WEB") {
-               // Para modificar NO necesitamos callback - se mantiene el existente
-               bool resultado = Alarmas.modificarPersonalizable(
-                   doc["id"] | -1,
-                   doc["nombre"] | "",
-                   doc["descripcion"] | "",
-                   convertirDiaAMascara(doc["dia"] | 0),
-                   doc["hora"] | 0,
-                   doc["minuto"] | 0,
-                   doc["accion"] | "MISA",  // Solo actualiza el string
-                   doc["habilitada"] | true
-               );
-
-               if (resultado) {
-                   ws.textAll("ALARMA_MODIFICADA_WEB:" + String(doc["id"] | -1));
-               } else {
-                   ws.textAll("ERROR_ALARMA_WEB:No se pudo modificar");
-               }
-           }
-           else if (comando == "DELETE_ALARMA_WEB") {
+               }   
+            } else if (comando == "EDIT_ALARMA_WEB") {
+                
+                String tipoAccion = doc["accion"] | "MISA";
+                void (*callback)(uint16_t) = nullptr;
+                uint16_t parametro = 0;
+            
+                if (tipoAccion == "MISA") {
+                    callback = accionSecuencia;
+                    parametro = Config::States::I2CState::MISA;
+                    DBG_SRV("🔧 Configurando callback MISA para edición");
+                } else if (tipoAccion == "DIFUNTOS") {
+                    callback = accionSecuencia;
+                    parametro = Config::States::I2CState::DIFUNTOS;
+                    DBG_SRV("🔧 Configurando callback DIFUNTOS para edición");
+                } else if (tipoAccion == "FIESTA") {
+                    callback = accionSecuencia;
+                    parametro = Config::States::I2CState::FIESTA;
+                    DBG_SRV("🔧 Configurando callback FIESTA para edición");
+                }
+            
+                // ✅ VERIFICAR callback válido
+                if (callback == nullptr) {
+                    DBG_SRV_PRINTF("❌ ERROR: Callback es NULL para tipo '%s'", tipoAccion.c_str());
+                    ws.textAll("ERROR_ALARMA_WEB:Tipo de acción no válido");
+                    return;
+                }
+            
+                // ✅ LLAMAR con callback y parámetro (igual que ADD_ALARMA_WEB)
+                bool resultado = Alarmas.modificarPersonalizable(
+                    doc["id"] | -1,
+                    doc["nombre"] | "",
+                    doc["descripcion"] | "",
+                    convertirDiaAMascara(doc["dia"] | 0),
+                    doc["hora"] | 0,
+                    doc["minuto"] | 0,
+                    tipoAccion.c_str(),
+                    doc["habilitada"] | true,
+                    callback,      // ✅ PASAR CALLBACK
+                    parametro      // ✅ PASAR PARÁMETRO
+                );
+            
+                if (resultado) {
+                    ws.textAll("ALARMA_MODIFICADA_WEB:" + String(doc["id"] | -1));
+                    DBG_SRV("✅ Alarma modificada con callback reasignado");
+                } else {
+                    ws.textAll("ERROR_ALARMA_WEB:No se pudo modificar");
+                }
+            } else if (comando == "DELETE_ALARMA_WEB") {
                int id = doc["id"] | -1;
                if (Alarmas.eliminarPersonalizable(id)) {
                    ws.textAll("ALARMA_ELIMINADA_WEB:" + String(id));
                } else {
                    ws.textAll("ERROR_ALARMA_WEB:No se pudo eliminar");
                }
-           }
-           else if (comando == "TOGGLE_ALARMA_WEB") {
+           } else if (comando == "TOGGLE_ALARMA_WEB") {
                int id = doc["id"] | -1;
                bool estado = doc["habilitada"] | false;
                if (Alarmas.habilitarPersonalizable(id, estado)) {
                    ws.textAll("ALARMA_TOGGLED_WEB:" + String(id) + ":" + (estado ? "true" : "false"));
                }
-           }
-           else if (comando == "GET_ALARMAS_WEB") {
+           } else if (comando == "GET_ALARMAS_WEB") {
                String jsonAlarmas = Alarmas.obtenerPersonalizablesJSON();
                ws.textAll("ALARMAS_WEB:" + jsonAlarmas);
-           }
-           else if (comando == "GET_STATS_ALARMAS_WEB") {
+           } else if (comando == "GET_STATS_ALARMAS_WEB") {
                String jsonStats = Alarmas.obtenerEstadisticasJSON();
                ws.textAll("STATS_ALARMAS_WEB:" + jsonStats);
            }
@@ -483,9 +506,20 @@
      * @since v2.1 - Sistema de alarmas personalizables vía web
      * @author Julian Salas Bartolomé
      */
-    int8_t convertirDiaAMascara(int dia) {
-       if (dia == 0) return DOW_TODOS;
-       return (dia >= 1 && dia <= 7) ? (1 << (dia - 1)) : DOW_TODOS;
+    uint8_t convertirDiaAMascara(int dia) {
+        if (dia == 0) {
+            DBG_SRV("🔄 Convertiendo día 0 (todos los días) a DOW_TODOS");
+            return DOW_TODOS;
+        }
+
+        if (dia >= 1 && dia <= 7) {
+            uint8_t mascara = 1 << (dia - 1);
+            DBG_SRV_PRINTF("🔄 Convertiendo día %d a máscara 0x%02X", dia, mascara);
+            return mascara;
+        }
+
+        DBG_SRV_PRINTF("⚠️ Día inválido %d, usando DOW_TODOS", dia);
+        return DOW_TODOS;
     }
 
     // ============================================================================
