@@ -52,7 +52,7 @@
 
         namespace Network {
             // Intervalos de verificación
-            constexpr unsigned long INTERNET_CHECK_INTERVAL_MS = 5UL * 60UL * 1000UL;  // 5 minutos
+            constexpr unsigned long INTERNET_CHECK_INTERVAL_MS = 1UL * 60UL * 1000UL;  // 1 minuto
 
             // Timeouts
             constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 10000;  // 10 segundos

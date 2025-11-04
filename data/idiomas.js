@@ -130,6 +130,93 @@ const IDIOMAS = {
         'secuencia_activa': 'Seqüència activa',
         'campana_1': 'Campana 1',
         'campana_2': 'Campana 2',
+        
+        // Adicionales para Alarmas.js
+        'actualizar': 'Actualitzar',
+        'estadisticas_sistema': 'Estadístiques del Sistema',
+        'total': 'Total',
+        'habilitadas': 'Habilitades',
+        'deshabilitadas': 'Deshabilitades',
+        'espacio_libre': 'Espai lliure',
+        'calculando': 'Calculant',
+        'no_alarmas': 'No hi ha alarmes configurades',
+        'deshabilitar': 'Desactivar',
+        'habilitar': 'Activar', 
+        'editar': 'Editar',
+        'eliminar': 'Esborrar',
+        'modificar_alarma': 'Modificar Alarma',
+        'crear_alarma': 'Crear Alarma',
+        'confirmar_eliminar_alarma': 'Estàs segur d\'eliminar l\'alarma',
+        'accion_no_deshacer': 'Aquesta acció no es pot desfer',
+        'conectando_servidor': 'Connectant al servidor',
+        'conectado_servidor': 'Connectat al servidor',
+        'conexion_perdida': 'Connexió perduda. Reintentant',
+        'error_conexion': 'Error de connexió',
+        'solicitando_datos': 'Sol·licitant dades',
+        'no_conexion_servidor': 'No hi ha connexió amb el servidor',
+        'alarmas_cargadas': 'alarmes carregades',
+        'error_procesando_alarmas': 'Error processant dades d\'alarmes',
+        'alarma_creada_id': 'Alarma creada amb ID',
+        'alarma_modificada_correctamente': 'modificada correctament',
+        'alarma_eliminada': 'Alarma eliminada',
+        'editando_alarma': 'Editant alarma',
+        'eliminando_alarma': 'Eliminant alarma',
+        'nombre_obligatorio': 'El nom és obligatori',
+        'hora_entre_0_23': 'L\'hora ha d\'estar entre 0 i 23',
+        'minutos_entre_0_59': 'Els minuts han d\'estar entre 0 i 59',
+        'cambiando_estado': 'Canviant estat',
+        'procesando': 'Processant',
+        'actualizando': 'Actualitzant',
+        'eliminacion_cancelada': 'Eliminació cancel·lada per l\'usuari',
+        
+        // Días de la semana
+        'Lunes': 'Dilluns',
+        'Martes': 'Dimarts', 
+        'Miércoles': 'Dimecres',
+        'Jueves': 'Dijous',
+        'Viernes': 'Divendres',
+        'Sábado': 'Dissabte',
+        'Domingo': 'Diumenge',
+        'Todos los días': 'Tots els dies',
+        
+        // Acciones
+        'Encender': 'Encendre',
+        'Apagar': 'Apagar',
+        'Subir': 'Pujar',
+        'Bajar': 'Baixar',
+        'Activar': 'Activar',
+        'Desactivar': 'Desactivar',
+        'Acción': 'Acció',
+        
+        // Valores específicos de acciones
+        'Misa': 'Missa',
+        'Difuntos': 'Difunts',
+        'Fiesta': 'Festa',
+        'Angelus': 'Àngelus',
+        'Cuartos': 'Quarts',
+        'Horas': 'Hores',
+        'Repique': 'Repic',
+        'Volteo': 'Volteig',
+        'Toque': 'Toc',
+        'Manual': 'Manual',
+        'Campana': 'Campana',
+        'Calefaccion': 'Calefacció',
+        'Auxiliar': 'Auxiliar',
+        
+        // Variantes posibles con diferentes formatos
+        'misa': 'missa',
+        'difuntos': 'difunts',
+        'fiesta': 'festa',
+        'angelus': 'àngelus',
+        'cuartos': 'quarts',
+        'horas': 'hores',
+        'repique': 'repic',
+        'volteo': 'volteig',
+        'toque': 'toc',
+        'manual': 'manual',
+        'campana': 'campana',
+        'calefaccion': 'calefacció',
+        'auxiliar': 'auxiliar',
     },
     
     'es': {
@@ -258,7 +345,94 @@ const IDIOMAS = {
         'repique_en_curso': 'Repique en Curso',
         'secuencia_activa': 'Secuencia activa',
         'campana_1': 'Campana 1',
-        'campana_2': 'Campana 2',         
+        'campana_2': 'Campana 2',
+        
+        // Adicionales para Alarmas.js
+        'actualizar': 'Actualizar',
+        'estadisticas_sistema': 'Estadísticas del Sistema',
+        'total': 'Total',
+        'habilitadas': 'Habilitadas',
+        'deshabilitadas': 'Deshabilitadas',
+        'espacio_libre': 'Espacio libre',
+        'calculando': 'Calculando',
+        'no_alarmas': 'No hay alarmas configuradas',
+        'deshabilitar': 'Deshabilitar',
+        'habilitar': 'Habilitar',
+        'editar': 'Editar',
+        'eliminar': 'Eliminar',
+        'modificar_alarma': 'Modificar Alarma',
+        'crear_alarma': 'Crear Alarma',
+        'confirmar_eliminar_alarma': '¿Estás seguro de eliminar la alarma',
+        'accion_no_deshacer': 'Esta acción no se puede deshacer',
+        'conectando_servidor': 'Conectando al servidor',
+        'conectado_servidor': 'Conectado al servidor',
+        'conexion_perdida': 'Conexión perdida. Reintentando',
+        'error_conexion': 'Error de conexión',
+        'solicitando_datos': 'Solicitando datos',
+        'no_conexion_servidor': 'No hay conexión con el servidor',
+        'alarmas_cargadas': 'alarmas cargadas',
+        'error_procesando_alarmas': 'Error procesando datos de alarmas',
+        'alarma_creada_id': 'Alarma creada con ID',
+        'alarma_modificada_correctamente': 'modificada correctamente',
+        'alarma_eliminada': 'Alarma eliminada',
+        'editando_alarma': 'Editando alarma',
+        'eliminando_alarma': 'Eliminando alarma',
+        'nombre_obligatorio': 'El nombre es obligatorio',
+        'hora_entre_0_23': 'La hora debe estar entre 0 y 23',
+        'minutos_entre_0_59': 'Los minutos deben estar entre 0 y 59',
+        'cambiando_estado': 'Cambiando estado',
+        'procesando': 'Procesando',
+        'actualizando': 'Actualizando',
+        'eliminacion_cancelada': 'Eliminación cancelada por el usuario',
+        
+        // Días de la semana
+        'Lunes': 'Lunes',
+        'Martes': 'Martes', 
+        'Miércoles': 'Miércoles',
+        'Jueves': 'Jueves',
+        'Viernes': 'Viernes',
+        'Sábado': 'Sábado',
+        'Domingo': 'Domingo',
+        'Todos los días': 'Todos los días',
+        
+        // Acciones
+        'Encender': 'Encender',
+        'Apagar': 'Apagar',
+        'Subir': 'Subir',
+        'Bajar': 'Bajar',
+        'Activar': 'Activar',
+        'Desactivar': 'Desactivar',
+        'Acción': 'Acción',
+        
+        // Valores específicos de acciones
+        'Misa': 'Misa',
+        'Difuntos': 'Difuntos',
+        'Fiesta': 'Fiesta',
+        'Angelus': 'Angelus',
+        'Cuartos': 'Cuartos',
+        'Horas': 'Horas',
+        'Repique': 'Repique',
+        'Volteo': 'Volteo',
+        'Toque': 'Toque',
+        'Manual': 'Manual',
+        'Campana': 'Campana',
+        'Calefaccion': 'Calefacción',
+        'Auxiliar': 'Auxiliar',
+        
+        // Variantes posibles con diferentes formatos
+        'misa': 'misa',
+        'difuntos': 'difuntos',
+        'fiesta': 'fiesta',
+        'angelus': 'angelus',
+        'cuartos': 'cuartos',
+        'horas': 'horas',
+        'repique': 'repique',
+        'volteo': 'volteo',
+        'toque': 'toque',
+        'manual': 'manual',
+        'campana': 'campana',
+        'calefaccion': 'calefacción',
+        'auxiliar': 'auxiliar',
     }
 };
 
@@ -347,6 +521,12 @@ function actualizarTextosInterfaz() {
             actualizarEstadoCalefaccion();
             console.log("🔥 Estado de calefacción actualizado después del cambio de idioma");
         }
+        
+        // Actualizar textos dinámicos de la página de alarmas
+        if (typeof actualizarTextosAlarmas === 'function') {
+            actualizarTextosAlarmas();
+            console.log("⏰ Textos de alarmas actualizados después del cambio de idioma");
+        }
     }, 100); // Pequeño delay para asegurar que los textos se han actualizado
 }
 
@@ -364,34 +544,77 @@ function inicializarIdiomas() {
     
     // 2. Solicitar idioma del servidor cuando la conexión esté lista
     document.addEventListener('DOMContentLoaded', function() {
-        // Esperar a que WebSocket esté conectado
-        setTimeout(function() {
-            solicitarIdiomaDelServidor();
-        }, 1000); // Dar tiempo a que se conecte el WebSocket
-        
-        // Actualizar interfaz con idioma temporal
+        // Actualizar interfaz con idioma temporal inmediatamente
         actualizarSelectorIdioma();
         actualizarTextosInterfaz();
+        
+        // Esperar a que WebSocket esté conectado con más paciencia
+        let intentos = 0;
+        const maxIntentos = 10;
+        
+        const intentarSolicitar = () => {
+            intentos++;
+            console.log(`🔄 Intento ${intentos} de solicitar idioma del servidor`);
+            
+            solicitarIdiomaDelServidor();
+            
+            if (intentos < maxIntentos) {
+                setTimeout(intentarSolicitar, 2000);
+            } else {
+                console.log("⚠️ Máximo de intentos alcanzado, usando idioma local");
+            }
+        };
+        
+        setTimeout(intentarSolicitar, 1000);
     });
     
     // Si ya está cargado, actualizar inmediatamente
     if (document.readyState !== 'loading') {
         actualizarSelectorIdioma();
         actualizarTextosInterfaz();
-        setTimeout(solicitarIdiomaDelServidor, 1000);
+        
+        // Intentar solicitar idioma del servidor
+        let intentos = 0;
+        const maxIntentos = 10;
+        
+        const intentarSolicitar = () => {
+            intentos++;
+            console.log(`🔄 Intento ${intentos} de solicitar idioma del servidor (fallback)`);
+            
+            solicitarIdiomaDelServidor();
+            
+            if (intentos < maxIntentos) {
+                setTimeout(intentarSolicitar, 2000);
+            } else {
+                console.log("⚠️ Máximo de intentos alcanzado, usando idioma local");
+            }
+        };
+        
+        setTimeout(intentarSolicitar, 1000);
     }
 }
 /**
  * Solicita el idioma configurado en el servidor
  */
 function solicitarIdiomaDelServidor() {
-    if (typeof websocket !== 'undefined' ) {
+    // Buscar WebSocket disponible en diferentes páginas
+    let ws = null;
+    
+    if (typeof websocket !== 'undefined' && websocket.readyState === WebSocket.OPEN) {
+        ws = websocket;
+    } else if (typeof window.alarmManager !== 'undefined' && window.alarmManager.ws && window.alarmManager.ws.readyState === WebSocket.OPEN) {
+        ws = window.alarmManager.ws;
+    } else if (typeof window.ws !== 'undefined' && window.ws.readyState === WebSocket.OPEN) {
+        ws = window.ws;
+    }
+    
+    if (ws) {
         console.log("📤 Solicitando idioma del servidor...");
-        websocket.send("GET_IDIOMA");
+        ws.send("GET_IDIOMA");
     } else {
         console.warn("⚠️ WebSocket no disponible, usando idioma local");
-        // Reintentar después
-        setTimeout(solicitarIdiomaDelServidor, 2000);
+        // Reintentar después con más paciencia
+        setTimeout(solicitarIdiomaDelServidor, 3000);
     }
 }
 /**
@@ -425,9 +648,52 @@ function cambiarIdioma(nuevoIdioma) {
     actualizarSelectorIdioma();
     actualizarTextosInterfaz();
 
-    websocket.send(`SET_IDIOMA:${nuevoIdioma}`);
-    console.log("📤 Idioma enviado al servidor para persistir");
+    // Buscar WebSocket disponible para enviar al servidor
+    let ws = null;
+    
+    if (typeof websocket !== 'undefined' && websocket.readyState === WebSocket.OPEN) {
+        ws = websocket;
+    } else if (typeof window.alarmManager !== 'undefined' && window.alarmManager.ws && window.alarmManager.ws.readyState === WebSocket.OPEN) {
+        ws = window.alarmManager.ws;
+    } else if (typeof window.ws !== 'undefined' && window.ws.readyState === WebSocket.OPEN) {
+        ws = window.ws;
+    }
+    
+    if (ws) {
+        ws.send(`SET_IDIOMA:${nuevoIdioma}`);
+        console.log("📤 Idioma enviado al servidor para persistir");
+    } else {
+        console.warn("⚠️ No se pudo enviar el idioma al servidor (WebSocket no disponible)");
+    }
 }
+
+/**
+ * Fuerza la recarga del idioma desde el servidor
+ */
+function forzarRecargaIdioma() {
+    console.log("🔄 Forzando recarga del idioma...");
+    
+    // Intentar con todos los WebSockets disponibles
+    let ws = null;
+    
+    if (typeof websocket !== 'undefined' && websocket.readyState === WebSocket.OPEN) {
+        ws = websocket;
+    } else if (typeof window.alarmManager !== 'undefined' && window.alarmManager.ws && window.alarmManager.ws.readyState === WebSocket.OPEN) {
+        ws = window.alarmManager.ws;
+    } else if (typeof window.ws !== 'undefined' && window.ws.readyState === WebSocket.OPEN) {
+        ws = window.ws;
+    }
+    
+    if (ws) {
+        ws.send("GET_IDIOMA");
+        console.log("📤 Solicitud de idioma enviada");
+    } else {
+        console.warn("⚠️ No hay WebSocket disponible para solicitar idioma");
+    }
+}
+
+// Hacer la función disponible globalmente
+window.forzarRecargaIdioma = forzarRecargaIdioma;
 
 // Inicializar automáticamente
 inicializarIdiomas();

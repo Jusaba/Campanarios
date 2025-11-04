@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⏰ Gestión de Alarmas - Campanarios</title>
+    <title data-i18n="alarmas_titulo">⏰ Gestión de Alarmas - Campanarios</title>
     <!--<link rel="stylesheet" href="/style.css">-->
     <style>
         .alarm-container {
@@ -223,11 +223,11 @@
 </head>
 <body>
     <div class="alarm-container">
-        <h1>⏰ Gestión de Alarmas del Campanario</h1>
+        <h1 data-i18n="alarmas_titulo">⏰ Gestión de Alarmas del Campanario</h1>
         
         <!-- Panel de estado -->
         <div class="stats-panel" id="statsPanel">
-            <p>Cargando estadísticas...</p>
+            <p><span data-i18n="conectando">Cargando estadísticas</span>...</p>
         </div>
         
         <!-- Mensajes de estado -->
@@ -235,49 +235,49 @@
         
         <!-- Lista de alarmas -->
         <div class="alarm-list">
-            <h2>📋 Alarmas Configuradas</h2>
+            <h2>📋 <span data-i18n="alarmas_personalizadas">Alarmas Personalizadas</span></h2>
             <div id="alarmList">
-                <p>Cargando alarmas...</p>
+                <p><span data-i18n="conectando">Cargando alarmas</span>...</p>
             </div>
         </div>
         
         <!-- Formulario para nueva alarma -->
         <div class="add-alarm-form">
-            <h3>➕ Crear Nueva Alarma</h3>
+            <h3 data-i18n="nueva_alarma">➕ Crear Nueva Alarma</h3>
             <form id="alarmForm">
                 <div class="form-row">
-                    <input type="text" id="nombre" placeholder="Nombre de la alarma" required>
-                    <input type="text" id="descripcion" placeholder="Descripción (opcional)">
+                    <input type="text" id="nombre" data-i18n-placeholder="nombre_alarma" placeholder="Nombre de la alarma" required>
+                    <input type="text" id="descripcion" data-i18n-placeholder="descripcion_alarma" placeholder="Descripción (opcional)">
                 </div>
                 
                 <div class="form-row">
                     <select id="dia" required>
-                        <option value="0">Todos los días</option>
-                        <option value="1">Domingo</option>
-                        <option value="2">Lunes</option>
-                        <option value="3">Martes</option>
-                        <option value="4">Miércoles</option>
-                        <option value="5">Jueves</option>
-                        <option value="6">Viernes</option>
-                        <option value="7">Sábado</option>
+                        <option value="0" data-i18n="todos_los_dias">Todos los días</option>
+                        <option value="1" data-i18n="domingo">Domingo</option>
+                        <option value="2" data-i18n="lunes">Lunes</option>
+                        <option value="3" data-i18n="martes">Martes</option>
+                        <option value="4" data-i18n="miercoles">Miércoles</option>
+                        <option value="5" data-i18n="jueves">Jueves</option>
+                        <option value="6" data-i18n="viernes">Viernes</option>
+                        <option value="7" data-i18n="sabado">Sábado</option>
                     </select>
                     
-                    <input type="number" id="hora" min="0" max="23" placeholder="Hora (0-23)" required>
-                    <input type="number" id="minuto" min="0" max="59" placeholder="Minuto (0-59)" required>
+                    <input type="number" id="hora" min="0" max="23" data-i18n-placeholder="hora" placeholder="Hora (0-23)" required>
+                    <input type="number" id="minuto" min="0" max="59" data-i18n-placeholder="minuto" placeholder="Minuto (0-59)" required>
                 </div>
                 
                 <div class="form-row">
                     <select id="accion" required>
-                        <option value="MISA">Campanadas de Misa</option>
-                        <option value="DIFUNTOS">Campanadas de Difuntos</option>
-                        <option value="FIESTA">Campanadas de Fiesta</option>
+                        <option value="MISA" data-i18n="tipo_misa">Campanadas de Misa</option>
+                        <option value="DIFUNTOS" data-i18n="tipo_difuntos">Campanadas de Difuntos</option>
+                        <option value="FIESTA" data-i18n="tipo_fiesta">Campanadas de Fiesta</option>
                     </select>
                     
                 </div>
                 
                 <div class="form-row">
-                    <button type="submit">🔔 Crear Alarma</button>
-                    <button type="button" onclick="limpiarFormulario()">🧹 Limpiar</button>
+                    <button type="submit">🔔 <span data-i18n="crear">Crear</span> <span data-i18n="nueva_alarma">Alarma</span></button>
+                    <button type="button" onclick="limpiarFormulario()">🧹 <span data-i18n="cancelar">Limpiar</span></button>
                 </div>
             </form>
         </div>
@@ -285,15 +285,17 @@
         <!-- Navegación -->
         <div class="navigation">
             <a href="/index.html">🏠 Inicio</a>
-            <a href="/Campanas.html">🔔 Control Manual</a>
+            <a href="/Campanas.html">🔔 <span data-i18n="seccion_toques">Control Manual</span></a>
             <a href="javascript:void(0)" onclick="actualizarAlarmasManual()" class="btn-actualizar">
                 <span class="icono-actualizar">🔄</span>
-                <span>Actualizar</span>
+                <span data-i18n="actualizar">Actualizar</span>
             </a>
         </div>
     </div>
-<script src="/Alarmas.js"></script>
 
+<!-- Scripts del sistema de idiomas -->
+<script src="/idiomas.js"></script>
+<script src="/Alarmas.js"></script>
 
 </body>
 </html>

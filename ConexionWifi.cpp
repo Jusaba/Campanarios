@@ -137,7 +137,7 @@ bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms 
     }
 
   if (WiFi.status() == WL_CONNECTED) {                                                              // Si la conexión fue exitosa
-      DBG_WIFI();
+      DBG_WIFI("==========================================");
       DBG_WIFI("🎉 ¡Conexión Wi-Fi establecida exitosamente!");
       DBG_WIFI_PRINT("📡 Dirección IP asignada: ");
       DBG_WIFI(WiFi.localIP());

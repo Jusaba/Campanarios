@@ -6,6 +6,13 @@
 
 console.log('🔔 Alarmas.js cargado correctamente');
 
+// Verificar disponibilidad del sistema de idiomas
+console.log('🌍 Estado del sistema de idiomas:', {
+    t_disponible: typeof t,
+    idiomaActual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'no definido',
+    IDIOMAS_disponible: typeof IDIOMAS !== 'undefined'
+});
+
 
 
 class AlarmManager {
@@ -15,13 +22,57 @@ class AlarmManager {
         this.alarmas = [];
         this.editingId = null;
         
-        this.init();
+        // Esperar a que el sistema de idiomas esté disponible
+        this.esperarSistemaIdiomas().then(() => {
+            this.init();
+        });
+    }
+    
+    async esperarSistemaIdiomas() {
+        console.log('⏳ Esperando sistema de idiomas...');
+        let intentos = 0;
+        const maxIntentos = 100; // 10 segundos máximo
+        
+        while (intentos < maxIntentos) {
+            if (typeof t === 'function' && typeof idiomaActual !== 'undefined' && typeof IDIOMAS !== 'undefined') {
+                console.log('✅ Sistema de idiomas disponible, idioma actual:', idiomaActual);
+                // Esperar un poco más para asegurar que todo está cargado
+                await new Promise(resolve => setTimeout(resolve, 300));
+                return;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            intentos++;
+        }
+        
+        console.warn('⚠️ Sistema de idiomas no disponible después de 10 segundos, continuando...');
+    }
+    
+    // Función helper para obtener traducciones de forma segura
+    tr(clave, fallback = clave) {
+        if (typeof t === 'function' && typeof idiomaActual !== 'undefined') {
+            try {
+                const traduccion = t(clave);
+                console.log(`🔤 Traduciendo '${clave}': '${traduccion}' (idioma: ${idiomaActual})`);
+                return traduccion !== clave ? traduccion : fallback;
+            } catch (e) {
+                console.warn(`⚠️ Error traduciendo '${clave}':`, e);
+                return fallback;
+            }
+        }
+        console.log(`🔤 Sistema de idiomas no disponible, usando fallback para '${clave}': '${fallback}'`);
+        return fallback;
     }
     
     init() {
         this.setupWebSocket();
         this.setupEventListeners();
-        this.showStatus("Conectando al servidor...", "info");
+        this.showStatus(`${this.tr('conectando_servidor', 'Conectando al servidor')}...`, "info");
+        
+        // Registrar para actualizaciones de idioma
+        if (window.actualizarTextosAlarmas) {
+            delete window.actualizarTextosAlarmas;
+        }
+        window.actualizarTextosAlarmas = () => this.actualizarTextosIdioma();
     }
     
     setupWebSocket() {
@@ -29,7 +80,14 @@ class AlarmManager {
         this.ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
         
         this.ws.onopen = () => {
-            this.showStatus("🔗 Conectado al servidor", "success");
+            this.showStatus(`🔗 ${this.tr('conectado_servidor', 'Conectado al servidor')}`, "success");
+            
+            // Solicitar idioma del servidor
+            setTimeout(() => {
+                console.log("🌍 Solicitando idioma del servidor desde Alarmas.js");
+                this.ws.send("GET_IDIOMA");
+            }, 500);
+            
             this.requestData();
         };
         
@@ -38,13 +96,13 @@ class AlarmManager {
         };
         
         this.ws.onclose = () => {
-            this.showStatus("❌ Conexión perdida. Reintentando...", "error");
+            this.showStatus(`❌ ${this.tr('conexion_perdida', 'Conexión perdida')}...`, "error");
             this.scheduleReconnect();
         };
         
         this.ws.onerror = (error) => {
             console.error('WebSocket error:', error);
-            this.showStatus("❌ Error de conexión", "error");
+            this.showStatus(`❌ ${this.tr('error_conexion', 'Error de conexión')}`, "error");
         };
     }
     
@@ -75,10 +133,10 @@ class AlarmManager {
             console.log("📤 Enviando GET_STATS_ALARMAS_WEB");
             this.ws.send('GET_STATS_ALARMAS_WEB');
             
-            this.showStatus("🔄 Solicitando datos...", "info");
+            this.showStatus(`🔄 ${this.tr('solicitando_datos', 'Solicitando datos')}...`, "info");
         } else {
             console.error("❌ WebSocket no disponible. Estado:", this.ws?.readyState);
-            this.showStatus("❌ No hay conexión con el servidor", "error");
+            this.showStatus(`❌ ${this.tr('no_conexion_servidor', 'No hay conexión con el servidor')}`, "error");
             
             // ✅ INTENTAR RECONECTAR
             console.log("🔄 Intentando reconectar WebSocket...");
@@ -96,11 +154,16 @@ class AlarmManager {
                 const data = JSON.parse(jsonData);
                 this.alarmas = data.alarmas || [];
                 console.log(`✅ ${this.alarmas.length} alarmas cargadas`);
-                this.renderAlarms();
-                this.showStatus(`✅ ${this.alarmas.length} alarmas cargadas`, "success");
+                
+                // Esperar un poco para asegurar que el sistema de idiomas esté listo
+                setTimeout(() => {
+                    this.renderAlarms();
+                }, 200);
+                
+                this.showStatus(`✅ ${this.alarmas.length} ${this.tr('alarmas_cargadas', 'alarmas cargadas')}`, "success");
             } catch (e) {
                 console.error('❌ Error parsing alarm data:', e);
-                this.showStatus("❌ Error procesando datos de alarmas", "error");
+                this.showStatus(`❌ ${this.tr('error_procesando_alarmas', 'Error procesando datos de alarmas')}`, "error");
             }
         }
         else if (message.startsWith('STATS_ALARMAS_WEB:')) {
@@ -109,22 +172,28 @@ class AlarmManager {
             try {
                 const stats = JSON.parse(jsonData);
                 console.log("✅ Stats procesado:", stats);
-                this.renderStats({
-                    totalAlarmas: stats.totalAlarmas,
-                    habilitadas: stats.habilitadas,
-                    deshabilitadas: stats.deshabilitadas,
-                    espacioLibre: stats.espacioLibre
-                });
+                
+                // Esperar un poco para asegurar que el sistema de idiomas esté listo
+                setTimeout(() => {
+                    this.renderStats({
+                        totalAlarmas: stats.totalAlarmas,
+                        habilitadas: stats.habilitadas,
+                        deshabilitadas: stats.deshabilitadas,
+                        espacioLibre: stats.espacioLibre
+                    });
+                }, 200);
             } catch (e) {
                 console.error('❌ Error parsing stats:', e);
-                this.renderStatsBasico();
+                setTimeout(() => {
+                    this.renderStatsBasico();
+                }, 200);
             }
         }
         // ✅ CORREGIR: Usar el formato correcto que envía el servidor
         else if (message.startsWith('ALARMA_CREADA_WEB:')) {
             const id = message.substring(18); // 18 caracteres en "ALARMA_CREADA_WEB:"
             console.log(`✅ ALARMA_CREADA_WEB recibido: ${id}`);
-            this.showStatus(`✅ Alarma creada con ID: ${id}`, "success");
+            this.showStatus(`✅ ${this.tr('alarma_creada_id', 'Alarma creada con ID')}: ${id}`, "success");
             this.limpiarFormulario();
             
             // ✅ AUTO-REFRESH CON DEBUG
@@ -136,7 +205,7 @@ class AlarmManager {
         else if (message.startsWith('ALARMA_MODIFICADA_WEB:')) {
             const id = message.substring(21); // 21 caracteres en "ALARMA_MODIFICADA_WEB:"
             console.log(`✅ ALARMA_MODIFICADA_WEB recibido: ${id}`);
-            this.showStatus(`✅ Alarma ${id} modificada correctamente`, "success");
+            this.showStatus(`✅ Alarma ${id} ${this.tr('alarma_modificada_correctamente', 'modificada correctamente')}`, "success");
             this.editingId = null;
             this.limpiarFormulario();
             
@@ -149,7 +218,7 @@ class AlarmManager {
         else if (message.startsWith('ALARMA_ELIMINADA_WEB:')) {
             const id = message.substring(20); // 20 caracteres en "ALARMA_ELIMINADA_WEB:"
             console.log(`✅ ALARMA_ELIMINADA_WEB recibido: ${id}`);
-            this.showStatus(`🗑️ Alarma ${id} eliminada`, "success");
+            this.showStatus(`🗑️ ${this.tr('alarma_eliminada', 'Alarma eliminada')} ${id}`, "success");
             
             // ✅ AUTO-REFRESH CON DEBUG
             console.log("🔄 Auto-refrescando después de eliminar...");
@@ -162,7 +231,20 @@ class AlarmManager {
             const id = parts[1];
             const state = parts[2];
             console.log(`✅ ALARMA_TOGGLE_WEB recibido: ${id} = ${state}`);
-            this.showStatus(`🔄 Alarma ${id} ${state === 'ON' ? 'habilitada' : 'deshabilitada'}`, "success");
+            this.showStatus(`🔄 Alarma ${id} ${state === 'ON' ? this.tr('habilitadas', 'habilitada') : this.tr('deshabilitadas', 'deshabilitada')}`, "success");
+            
+            // Actualizar el atributo del botón específico
+            const btn = document.querySelector(`button[data-alarm-id="${id}"]`);
+            if (btn) {
+                btn.setAttribute('data-alarm-enabled', state === 'ON' ? 'true' : 'false');
+                if (state === 'ON') {
+                    btn.className = 'disable-btn';
+                    btn.innerHTML = `⏸️ <span data-i18n="deshabilitar">${this.tr('deshabilitar', 'Deshabilitar')}</span>`;
+                } else {
+                    btn.className = 'enable-btn';
+                    btn.innerHTML = `▶️ <span data-i18n="habilitar">${this.tr('habilitar', 'Habilitar')}</span>`;
+                }
+            }
             
             // ✅ AUTO-REFRESH CON DEBUG
             console.log("🔄 Auto-refrescando después de toggle...");
@@ -175,6 +257,38 @@ class AlarmManager {
             console.error("❌ ERROR_ALARMA_WEB recibido:", error);
             this.showStatus(`❌ Error: ${error}`, "error");
         }
+        else if (message.startsWith('IDIOMA_CAMBIADO:')) {
+            const nuevoIdioma = message.substring(16);
+            console.log(`🌍 Idioma cambiado en servidor: ${nuevoIdioma}`);
+            if (typeof idiomaActual !== 'undefined' && idiomaActual !== nuevoIdioma) {
+                idiomaActual = nuevoIdioma;
+                localStorage.setItem('idioma_campanario', nuevoIdioma);
+                
+                // Actualizar interfaz después de un pequeño delay
+                setTimeout(() => {
+                    if (typeof actualizarTextosInterfaz === 'function') {
+                        actualizarTextosInterfaz();
+                    }
+                    this.actualizarTextosIdioma();
+                }, 100);
+            }
+        }
+        else if (message.startsWith('IDIOMA_SERVIDOR:')) {
+            const idiomaServidor = message.substring(16);
+            console.log(`🌍 Idioma del servidor recibido: ${idiomaServidor}`);
+            if (typeof idiomaActual !== 'undefined' && idiomaActual !== idiomaServidor) {
+                idiomaActual = idiomaServidor;
+                localStorage.setItem('idioma_campanario', idiomaServidor);
+                
+                // Actualizar interfaz
+                setTimeout(() => {
+                    if (typeof actualizarTextosInterfaz === 'function') {
+                        actualizarTextosInterfaz();
+                    }
+                    this.actualizarTextosIdioma();
+                }, 100);
+            }
+        }
         else {
             console.log("🤷 Mensaje no reconocido:", message);
         }
@@ -182,11 +296,32 @@ class AlarmManager {
     
     renderStats(stats) {
         const statsPanel = document.getElementById('statsPanel');
+        
+        console.log('📊 Renderizando estadísticas completas...');
+        console.log('🌍 Estado del sistema de idiomas:', {
+            t_disponible: typeof t,
+            idiomaActual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'no definido'
+        });
+        
+        const textoEstadisticas = this.tr('estadisticas_sistema', 'Estadísticas del Sistema');
+        const textoTotal = this.tr('total', 'Total');
+        const textoHabilitadas = this.tr('habilitadas', 'Habilitadas');
+        const textoDeshabilitadas = this.tr('deshabilitadas', 'Deshabilitadas');
+        const textoEspacioLibre = this.tr('espacio_libre', 'Espacio libre');
+        
         statsPanel.innerHTML = `
-            <strong>📊 Estadísticas del Sistema</strong><br>
-            Total: ${stats.totalAlarmas} | Habilitadas: ${stats.habilitadas} | 
-            Deshabilitadas: ${stats.deshabilitadas} | Espacio libre: ${stats.espacioLibre}
+            <strong>📊 ${textoEstadisticas}</strong><br>
+            ${textoTotal}: ${stats.totalAlarmas} | ${textoHabilitadas}: ${stats.habilitadas} | 
+            ${textoDeshabilitadas}: ${stats.deshabilitadas} | ${textoEspacioLibre}: ${stats.espacioLibre}
         `;
+        
+        console.log('✅ Estadísticas renderizadas con textos:', {
+            estadisticas: textoEstadisticas,
+            total: textoTotal,
+            habilitadas: textoHabilitadas,
+            deshabilitadas: textoDeshabilitadas,
+            espacioLibre: textoEspacioLibre
+        });
     }
 renderStatsBasico() {
         const habilitadas = this.alarmas.filter(a => a.habilitada).length;
@@ -194,21 +329,51 @@ renderStatsBasico() {
         
         const statsPanel = document.getElementById('statsPanel');
         if (statsPanel) {
+            console.log('📊 Renderizando estadísticas básicas...');
+            console.log('🌍 Estado del sistema de idiomas:', {
+                t_disponible: typeof t,
+                idiomaActual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'no definido'
+            });
+            
+            const textoEstadisticas = this.tr('estadisticas_sistema', 'Estadísticas del Sistema');
+            const textoTotal = this.tr('total', 'Total');
+            const textoHabilitadas = this.tr('habilitadas', 'Habilitadas');
+            const textoDeshabilitadas = this.tr('deshabilitadas', 'Deshabilitadas');
+            const textoEspacioLibre = this.tr('espacio_libre', 'Espacio libre');
+            const textoCalculando = this.tr('calculando', 'Calculando');
+            
             statsPanel.innerHTML = `
-                <strong>📊 Estadísticas del Sistema</strong><br>
-                Total: ${this.alarmas.length} | 
-                Habilitadas: ${habilitadas} | 
-                Deshabilitadas: ${deshabilitadas} | 
-                Espacio libre: Calculando...
+                <strong>📊 ${textoEstadisticas}</strong><br>
+                ${textoTotal}: ${this.alarmas.length} | 
+                ${textoHabilitadas}: ${habilitadas} | 
+                ${textoDeshabilitadas}: ${deshabilitadas} | 
+                ${textoEspacioLibre}: ${textoCalculando}...
             `;
+            
+            console.log('✅ Estadísticas básicas renderizadas con textos:', {
+                estadisticas: textoEstadisticas,
+                total: textoTotal,
+                habilitadas: textoHabilitadas,
+                deshabilitadas: textoDeshabilitadas,
+                espacioLibre: textoEspacioLibre,
+                calculando: textoCalculando
+            });
         }
     }
     
     renderAlarms() {
         const container = document.getElementById('alarmList');
         
+        console.log('📋 Renderizando lista de alarmas...');
+        console.log('🌍 Estado del sistema de idiomas:', {
+            t_disponible: typeof t,
+            idiomaActual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'no definido'
+        });
+        
         if (this.alarmas.length === 0) {
-            container.innerHTML = '<p>📭 No hay alarmas configuradas</p>';
+            const textoNoAlarmas = this.tr('no_alarmas', 'No hay alarmas configuradas');
+            console.log('📭 Texto para "no alarmas":', textoNoAlarmas);
+            container.innerHTML = `<p>📭 ${textoNoAlarmas}</p>`;
             return;
         }
         
@@ -218,29 +383,102 @@ renderStatsBasico() {
             const alarmDiv = this.createAlarmElement(alarm);
             container.appendChild(alarmDiv);
         });
+        
+        console.log('✅ Lista de alarmas renderizada');
     }
     
     createAlarmElement(alarm) {
         const div = document.createElement('div');
         div.className = `alarm-item ${alarm.habilitada ? 'enabled' : 'disabled'}`;
         
+        console.log(`🔘 Creando elemento para alarma ${alarm.id}`);
+        console.log('🌍 Estado del sistema de idiomas:', {
+            t_disponible: typeof t,
+            idiomaActual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'no definido'
+        });
+        
+        const textoHabilitar = this.tr('habilitar', 'Habilitar');
+        const textoDeshabilitar = this.tr('deshabilitar', 'Deshabilitar');
+        const textoEditar = this.tr('editar', 'Editar');
+        const textoEliminar = this.tr('eliminar', 'Eliminar');
+        
+        console.log('🔤 Textos de botones:', {
+            habilitar: textoHabilitar,
+            deshabilitar: textoDeshabilitar,
+            editar: textoEditar,
+            eliminar: textoEliminar
+        });
+        
+        // Traducir día y acción
+        const diaTraducido = this.tr(alarm.diaNombre, alarm.diaNombre);
+        
+        // Normalizar y traducir acción - probar diferentes variantes
+        let accionTraducida = this.tr(alarm.accion, alarm.accion);
+        
+        // Si no se tradujo, probar con variantes comunes
+        if (accionTraducida === alarm.accion) {
+            const accionLimpia = alarm.accion.trim();
+            accionTraducida = this.tr(accionLimpia, accionLimpia);
+            
+            // Probar con capitalización diferente
+            if (accionTraducida === accionLimpia) {
+                const accionCapitalizada = accionLimpia.charAt(0).toUpperCase() + accionLimpia.slice(1).toLowerCase();
+                accionTraducida = this.tr(accionCapitalizada, accionCapitalizada);
+            }
+        }
+        
+        const textoAccion = this.tr('Acción', 'Acción');
+        
+        console.log(`🎯 Procesando alarma: día="${alarm.diaNombre}" → "${diaTraducido}", acción="${alarm.accion}" → "${accionTraducida}"`);
+        console.log(`🔍 Detalles de la acción:`, {
+            valor_original: alarm.accion,
+            tipo: typeof alarm.accion,
+            longitud: alarm.accion?.length,
+            codigo_ascii: alarm.accion?.split('').map(c => c.charCodeAt(0)),
+            traduccion: accionTraducida,
+            idioma_actual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'undefined'
+        });
+        
+        // Si la traducción no cambió, loggear para debugging
+        if (accionTraducida === alarm.accion && typeof IDIOMAS !== 'undefined' && idiomaActual === 'ca') {
+            console.log(`⚠️ ATENCIÓN: La acción "${alarm.accion}" no se tradujo al catalán.`);
+            console.log(`🔍 Claves disponibles que contienen la palabra:`, Object.keys(IDIOMAS.ca).filter(k => k.toLowerCase().includes(alarm.accion.toLowerCase())));
+            console.log(`🔍 Todas las claves de acciones:`, Object.keys(IDIOMAS.ca).filter(k => ['Misa', 'Difuntos', 'Fiesta', 'Angelus', 'Cuartos', 'Horas', 'Repique', 'Volteo', 'Toque', 'Manual', 'Campana', 'Calefaccion', 'Auxiliar'].includes(k)));
+        }
+        
+        // Determinar la clave correcta para data-i18n
+        let claveAccion = alarm.accion;
+        if (accionTraducida !== alarm.accion) {
+            // Si se tradujo usando una variante, usar esa clave
+            const accionLimpia = alarm.accion.trim();
+            const accionCapitalizada = accionLimpia.charAt(0).toUpperCase() + accionLimpia.slice(1).toLowerCase();
+            if (this.tr(accionCapitalizada, accionCapitalizada) !== accionCapitalizada) {
+                claveAccion = accionCapitalizada;
+            } else if (this.tr(accionLimpia, accionLimpia) !== accionLimpia) {
+                claveAccion = accionLimpia;
+            }
+        }
+        
         div.innerHTML = `
             <div class="alarm-info">
                 <h4>${alarm.nombre}</h4>
-                <p><strong>${alarm.diaNombre}</strong> a las <strong>${alarm.horaTexto}</strong></p>
-                <p>Acción: <strong>${alarm.accion}</strong></p>
+                <p><strong><span data-i18n="${alarm.diaNombre}">${diaTraducido}</span></strong> a las <strong>${alarm.horaTexto}</strong></p>
+                <p><span data-i18n="Acción">${textoAccion}</span>: <strong><span data-i18n="${claveAccion}" data-valor-original="${alarm.accion}">${accionTraducida}</span></strong></p>
                 ${alarm.descripcion ? `<p><em>${alarm.descripcion}</em></p>` : ''}
             </div>
             <div class="alarm-controls">
                 <button onclick="alarmManager.toggleAlarm(${alarm.id})" 
-                        class="${alarm.habilitada ? 'disable-btn' : 'enable-btn'}">
-                    ${alarm.habilitada ? '⏸️ Deshabilitar' : '▶️ Habilitar'}
+                        class="${alarm.habilitada ? 'disable-btn' : 'enable-btn'}"
+                        data-alarm-id="${alarm.id}" data-alarm-enabled="${alarm.habilitada}">
+                    ${alarm.habilitada ? 
+                        `⏸️ <span data-i18n="deshabilitar">${textoDeshabilitar}</span>` : 
+                        `▶️ <span data-i18n="habilitar">${textoHabilitar}</span>`}
                 </button>
                 <button onclick="alarmManager.editAlarm(${alarm.id})" class="edit-btn">
-                    ✏️ Editar
+                    ✏️ <span data-i18n="editar">${textoEditar}</span>
                 </button>
                 <button onclick="alarmManager.deleteAlarm(${alarm.id})" class="delete-btn">
-                    🗑️ Eliminar
+                    🗑️ <span data-i18n="eliminar">${textoEliminar}</span>
                 </button>
             </div>
         `;
@@ -275,10 +513,10 @@ renderStatsBasico() {
 
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(command + JSON.stringify(formData));
-            this.showStatus("⏳ Procesando...", "info");
+            this.showStatus(`⏳ ${this.tr('procesando', 'Procesando')}...`, "info");
         } else {
             console.log('❌ WebSocket no conectado. Estado:', this.ws?.readyState);
-            this.showStatus("❌ No hay conexión con el servidor", "error");
+            this.showStatus(`❌ ${this.tr('no_conexion_servidor', 'No hay conexión con el servidor')}`, "error");
         }
     }
     
@@ -298,17 +536,17 @@ renderStatsBasico() {
     
     validateForm(data) {
         if (!data.nombre) {
-            this.showStatus("❌ El nombre es obligatorio", "error");
+            this.showStatus(`❌ ${this.tr('nombre_obligatorio', 'El nombre es obligatorio')}`, "error");
             return false;
         }
         
         if (data.hora < 0 || data.hora > 23) {
-            this.showStatus("❌ La hora debe estar entre 0 y 23", "error");
+            this.showStatus(`❌ ${this.tr('hora_entre_0_23', 'La hora debe estar entre 0 y 23')}`, "error");
             return false;
         }
         
         if (data.minuto < 0 || data.minuto > 59) {
-            this.showStatus("❌ Los minutos deben estar entre 0 y 59", "error");
+            this.showStatus(`❌ ${this.tr('minutos_entre_0_59', 'Los minutos deben estar entre 0 y 59')}`, "error");
             return false;
         }
         
@@ -331,10 +569,10 @@ renderStatsBasico() {
             
             console.log(`📤 Enviando comando: ${command}`);
             this.ws.send(command);
-            this.showStatus("⏳ Cambiando estado...", "info");
+            this.showStatus(`⏳ ${this.tr('cambiando_estado', 'Cambiando estado')}...`, "info");
         } else {
             console.error("❌ WebSocket no conectado");
-            this.showStatus("❌ No hay conexión con el servidor", "error");
+            this.showStatus(`❌ ${this.tr('no_conexion_servidor', 'No hay conexión con el servidor')}`, "error");
         }
     }
     
@@ -357,14 +595,14 @@ renderStatsBasico() {
             // Cambiar texto del botón
             const submitBtn = document.querySelector('#alarmForm button[type="submit"]');
             if (submitBtn) {
-                submitBtn.textContent = '✏️ Modificar Alarma';
+                submitBtn.innerHTML = `✏️ ${this.tr('modificar_alarma', 'Modificar Alarma')}`;
                 submitBtn.style.backgroundColor = '#ff9800';
             }
             
             // Scroll al formulario
             document.querySelector('.add-alarm-form').scrollIntoView({ behavior: 'smooth' });
             
-            this.showStatus(`✏️ Editando alarma: ${alarm.nombre}`, "info");
+            this.showStatus(`✏️ ${this.tr('editando_alarma', 'Editando alarma')}: ${alarm.nombre}`, "info");
         }, 100);
     }
     
@@ -375,7 +613,7 @@ renderStatsBasico() {
             return;
         }
         
-        const confirmed = confirm(`¿Estás seguro de eliminar la alarma "${alarm.nombre}"?\n\nEsta acción no se puede deshacer.`);
+        const confirmed = confirm(`${this.tr('confirmar_eliminar_alarma', '¿Estás seguro de eliminar la alarma')} "${alarm.nombre}"?\n\n${this.tr('accion_no_deshacer', 'Esta acción no se puede deshacer')}.`);
         
         if (confirmed) {
             console.log(`🗑️ Eliminando alarma ID: ${id}`);
@@ -387,14 +625,14 @@ renderStatsBasico() {
                 
                 console.log(`📤 Enviando comando: ${command}`);
                 this.ws.send(command);
-                this.showStatus("⏳ Eliminando alarma...", "info");
+                this.showStatus(`⏳ ${this.tr('eliminando_alarma', 'Eliminando alarma')}...`, "info");
                 
             } else {
                 console.error("❌ WebSocket no conectado. Estado:", this.ws?.readyState);
-                this.showStatus("❌ No hay conexión con el servidor", "error");
+                this.showStatus(`❌ ${this.tr('no_conexion_servidor', 'No hay conexión con el servidor')}`, "error");
             }
         } else {
-            console.log("❌ Eliminación cancelada por el usuario");
+            console.log(`❌ ${this.tr('eliminacion_cancelada', 'Eliminación cancelada por el usuario')}`);
         }
     }
     
@@ -417,7 +655,7 @@ renderStatsBasico() {
         // ✅ RESTAURAR BOTÓN A ESTADO ORIGINAL
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn && this.editingId === null) {
-            submitBtn.textContent = '➕ Crear Alarma';
+            submitBtn.innerHTML = `🔔 <span>${this.tr('crear', 'Crear')}</span> <span>${this.tr('nueva_alarma', 'Alarma')}</span>`;
             submitBtn.style.backgroundColor = '#4CAF50';
             console.log("✅ Botón restaurado");
         }
@@ -433,7 +671,7 @@ renderStatsBasico() {
                 
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {
-                    submitBtn.textContent = '➕ Crear Alarma';
+                    submitBtn.innerHTML = `🔔 <span>${this.tr('crear', 'Crear')}</span> <span>${this.tr('nueva_alarma', 'Alarma')}</span>`;
                     submitBtn.style.backgroundColor = '#4CAF50';
                 }
                 
@@ -442,6 +680,106 @@ renderStatsBasico() {
         }
     }
     
+    /**
+     * Actualiza los botones de las alarmas con el idioma actual
+     */
+    actualizarBotonesAlarmas() {
+        console.log("🔘 Actualizando botones de alarmas...");
+        
+        // Buscar todos los botones de toggle (habilitar/deshabilitar)
+        document.querySelectorAll('button[data-alarm-id]').forEach(btn => {
+            const alarmId = btn.getAttribute('data-alarm-id');
+            const isEnabled = btn.getAttribute('data-alarm-enabled') === 'true';
+            
+            if (isEnabled) {
+                btn.innerHTML = `⏸️ <span data-i18n="deshabilitar">${this.tr('deshabilitar', 'Deshabilitar')}</span>`;
+            } else {
+                btn.innerHTML = `▶️ <span data-i18n="habilitar">${this.tr('habilitar', 'Habilitar')}</span>`;
+            }
+        });
+        
+        // Actualizar botones de editar
+        document.querySelectorAll('.edit-btn span[data-i18n="editar"]').forEach(span => {
+            span.textContent = this.tr('editar', 'Editar');
+        });
+        
+        // Actualizar botones de eliminar
+        document.querySelectorAll('.delete-btn span[data-i18n="eliminar"]').forEach(span => {
+            span.textContent = this.tr('eliminar', 'Eliminar');
+        });
+        
+        console.log("✅ Botones de alarmas actualizados");
+    }
+
+    /**
+     * Actualiza todos los textos dinámicos cuando cambia el idioma
+     */
+    actualizarTextosIdioma() {
+        console.log("🌍 Actualizando textos de Alarmas.js al idioma:", typeof idiomaActual !== 'undefined' ? idiomaActual : 'no definido');
+        console.log("🔍 Estado completo del sistema:", {
+            t_function: typeof t,
+            idiomaActual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'undefined',
+            IDIOMAS_object: typeof IDIOMAS !== 'undefined',
+            alarmas_length: this.alarmas ? this.alarmas.length : 'undefined'
+        });
+        
+        // Esperar un poco para asegurar que el cambio de idioma se ha procesado
+        setTimeout(() => {
+            // Re-renderizar estadísticas
+            const statsPanel = document.getElementById('statsPanel');
+            if (statsPanel) {
+                console.log("🔄 Forzando actualización del panel de estadísticas");
+                this.renderStatsBasico();
+            }
+            
+            // Re-renderizar lista de alarmas
+            if (this.alarmas !== undefined) {
+                console.log("🔄 Forzando actualización de la lista de alarmas");
+                this.renderAlarms();
+            }
+            
+            // Actualizar botones de alarmas específicamente
+            this.actualizarBotonesAlarmas();
+            
+            // Actualizar días y acciones de alarmas
+            this.actualizarDiasYAccionesAlarmas();
+            
+            // Actualizar botón del formulario
+            const submitBtn = document.querySelector('#alarmForm button[type="submit"]');
+            if (submitBtn) {
+                if (this.editingId !== null) {
+                    submitBtn.innerHTML = `✏️ ${this.tr('modificar_alarma', 'Modificar Alarma')}`;
+                } else {
+                    submitBtn.innerHTML = `🔔 <span>${this.tr('crear', 'Crear')}</span> <span>${this.tr('nueva_alarma', 'Alarma')}</span>`;
+                }
+                console.log("🔄 Botón de formulario actualizado");
+            }
+            
+            console.log("✅ Textos de Alarmas.js actualizados completamente");
+        }, 100);
+    }
+
+    actualizarDiasYAccionesAlarmas() {
+        console.log("🌍 Actualizando días y acciones de alarmas...");
+        
+        // Actualizar elementos con data-i18n que sean días o acciones
+        document.querySelectorAll('[data-i18n]').forEach(element => {
+            const key = element.getAttribute('data-i18n');
+            
+            // Solo actualizar si es un día de la semana o una acción
+            const isDia = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Todos los días'].includes(key);
+            const isAccion = ['Encender', 'Apagar', 'Subir', 'Bajar', 'Activar', 'Desactivar', 'Acción'].includes(key);
+            const valoresAccion = ['Misa', 'Difuntos', 'Fiesta', 'Angelus', 'Cuartos', 'Horas', 'Repique', 'Volteo', 'Toque', 'Manual', 'Campana', 'Calefaccion', 'Auxiliar', 'misa', 'difuntos', 'fiesta', 'angelus', 'cuartos', 'horas', 'repique', 'volteo', 'toque', 'manual', 'campana', 'calefaccion', 'auxiliar'];
+            const isValorAccion = valoresAccion.includes(key);
+            
+            if (isDia || isAccion || isValorAccion) {
+                const traduccion = this.tr(key, key);
+                element.textContent = traduccion;
+                console.log(`🔄 Actualizado "${key}" → "${traduccion}"`);
+            }
+        });
+    }
+
     showStatus(message, type) {
         const container = document.getElementById('statusMessages');
         const div = document.createElement('div');
@@ -487,7 +825,8 @@ function actualizarAlarmasManual() {
             const textoOriginal = botonActualizar.innerHTML;
             
             // ✅ AÑADIR ANIMACIÓN CSS
-            botonActualizar.innerHTML = '<span style="display: inline-block; animation: rotar 1s linear infinite;">🔄</span> Actualizando...';
+            const textoActualizando = (typeof t === 'function') ? t('actualizando') : 'Actualizando';
+            botonActualizar.innerHTML = `<span style="display: inline-block; animation: rotar 1s linear infinite;">🔄</span> ${textoActualizando}...`;
             botonActualizar.style.pointerEvents = 'none';
             botonActualizar.style.opacity = '0.7';
             
@@ -505,6 +844,37 @@ function actualizarAlarmasManual() {
     }
 }
 
-// Inicializar cuando se carga la página
-const alarmManager = new AlarmManager();
-window.alarmManager = alarmManager; 
+// Esperar a que el DOM esté listo antes de inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM cargado, inicializando AlarmManager...');
+    
+    // Esperar más tiempo para asegurar que idiomas.js se ha cargado completamente
+    setTimeout(() => {
+        console.log('🔍 Verificando disponibilidad del sistema de idiomas antes de inicializar...');
+        console.log('Estado:', {
+            t_function: typeof t,
+            idiomaActual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'undefined',
+            IDIOMAS_object: typeof IDIOMAS !== 'undefined'
+        });
+        
+        const alarmManager = new AlarmManager();
+        window.alarmManager = alarmManager;
+        console.log('✅ AlarmManager inicializado y disponible globalmente');
+    }, 500); // Aumentado de 200ms a 500ms
+});
+
+// Fallback para navegadores que ya tienen el DOM cargado
+if (document.readyState !== 'loading') {
+    setTimeout(() => {
+        console.log('🔍 Verificando disponibilidad del sistema de idiomas (fallback)...');
+        console.log('Estado:', {
+            t_function: typeof t,
+            idiomaActual: typeof idiomaActual !== 'undefined' ? idiomaActual : 'undefined',
+            IDIOMAS_object: typeof IDIOMAS !== 'undefined'
+        });
+        
+        const alarmManager = new AlarmManager();
+        window.alarmManager = alarmManager;
+        console.log('✅ AlarmManager inicializado (fallback)');
+    }, 500); // Aumentado de 200ms a 500ms
+} 
