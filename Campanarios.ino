@@ -98,11 +98,12 @@
             ServidorOn(configWiFi.usuario, configWiFi.clave);                         // Llama a la función para iniciar el servidor
             Campanario.SetInternetConectado();                                        // Notifica al campanario que hay conexión a Internet
             DBG_INO("Conexión Wi-Fi exitosa.");
-        } else {
+            Alarmas.begin(false);                                                      // Inicializa el sistema de alarmas sin cargar configuración por defecto
+          } else {
           Campanario.ClearInternetConectado();                                        // Notifica al campanario que no hay conexión a Internet
           DBG_INO("Error al conectar a la red Wi-Fi.");
         }
-        Alarmas.begin(false);                                                         // Inicializa el sistema de alarmas sin cargar configuración por defecto
+                                                              
 
         //Alarmas.add(DOW_TODOS, 8, 30, 300); // añadir más
         //Alarmas.add(DOW_TODOS, 8, 0, 0, &AlarmScheduler::accionTocaHora); // cada día a las 08:00

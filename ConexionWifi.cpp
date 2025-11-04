@@ -138,11 +138,11 @@ bool ConectarWifi(const ConfigWiFi& ConfiguracionWiFi, unsigned long timeout_ms 
 
   if (WiFi.status() == WL_CONNECTED) {                                                              // Si la conexión fue exitosa
       DBG_WIFI("==========================================");
-      DBG_WIFI("🎉 ¡Conexión Wi-Fi establecida exitosamente!");
+      DBG_WIFI("🎉 ¡Conexion Wi-Fi establecida exitosamente!");
       DBG_WIFI_PRINT("📡 Dirección IP asignada: ");
-      DBG_WIFI(WiFi.localIP());
+      DBG_WIFI(WiFi.localIP().toString());
       DBG_WIFI_PRINT("🌐 Gateway: ");
-      DBG_WIFI(WiFi.gatewayIP());
+      DBG_WIFI(WiFi.gatewayIP().toString());
       DBG_WIFI_PRINT("📶 Intensidad señal (RSSI): ");
       DBG_WIFI(WiFi.RSSI());
       DBG_WIFI_PRINT(" dBm");

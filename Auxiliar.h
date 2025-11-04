@@ -60,6 +60,7 @@
 #include "Debug.h"
 #include "Campanario.h"   // Para CAMPANARIO
 #include <time.h>
+#include "Alarmas.h"
 
 // Variables globales 
 

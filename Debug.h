@@ -9,7 +9,7 @@
 // ============================================================================
 
 // Debug general del sistema
-//-#define DEBUG                       // Debug general del sistema
+#define DEBUG                       // Debug general del sistema
 
 // Debug específico por módulos
 //#define DEBUGI2C                    // Debug general del módulo I2C
@@ -21,16 +21,16 @@
 //#define DEBUGAUXILIAR             // Debug del módulo Auxiliar
 //#define DEBUGPROTECCION             // Debug de protección de campanadas
 //#define DEBUGACCIONES             // Debug de las acciones de alarmas
- //-#define DEBUGSERVIDOR              // Debug del servidor web
+ #define DEBUGSERVIDOR              // Debug del servidor web
 // #define DEBUGDNS                 // Debug del servicio DNS
- //-#define DEBUGWIFI                // Debug de conexión WiFi
- //-#define DEBUGALARMAS               // Debug del sistema de alarmas
-// #define DEBUGCAMPANARIO          // Debug del campanario
+ #define DEBUGWIFI                // Debug de conexión WiFi
+ #define DEBUGALARMAS               // Debug del sistema de alarmas
+ #define DEBUGCAMPANARIO          // Debug del campanario
 // #define DEBUGRTC                 // Debug del RTC
 // #define DEBUGAP                  // Debug del modo AP
 // #define DEBUGCALEFACCION         // Debug del sistema de calefacción
 // #define DEBUGCAMPANA             // Debug del sistema de campanas
-//-#define DBG_ALARMS_ENABLED          // Habilita macros de debug para alarmas personalizadas
+#define DBG_ALARMS_ENABLED          // Habilita macros de debug para alarmas personalizadas
 
 // ============================================================================
 // MACROS DE DEBUG - Simplifica el uso de debug condicional

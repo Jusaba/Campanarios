@@ -248,10 +248,12 @@ double nSegundosTemporizacion = 0;                                      // Tempo
               }
           }
         }else{
-            lConexionInternet = true; // Asegura que la variable esté actualizada
+            //lConexionInternet = true; // Asegura que la variable esté actualizada
             if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
+                lConexionInternet = ConectarWifi(configWiFi);                
                 ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
                 Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
+                Alarmas.begin(false); // Inicializa el sistema de alarmas sin cargar configuración por defecto
             }
             DBG_AUX("TestInternet -> Conexión a internet activa.");
         }
