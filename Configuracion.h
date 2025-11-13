@@ -63,7 +63,8 @@
             const String BOT_TOKEN = "7031269795:AAFJZVP9isGip5eICQNh_BuJ8WzHCxtOGNE";      // Token del bot de Telegram
             const String CHAT_ID = "106299125";                                             // ID del chat autorizado
             
-            #define MANOLIS_CAMPANARIO
+            //#define MANOLIS_CAMPANARIO
+            #define MAGARU_CAMPANARIO
 
             // ID único de ESTE campanario específico
             #ifdef MANOLIS_CAMPANARIO

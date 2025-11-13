@@ -130,34 +130,36 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 Campanario.TocaDifuntos();
                 ws.textAll("REDIRECT:/Campanas.html");      
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de difuntos");
-/*
                 if (telegramBot.isEnabled()) {
-                    telegramBot.sendStatusNotification("Campanas", "Tocando Difuntos", "Secuencia iniciada automáticamente");
+                    telegramBot.sendSequenceNotification("Difuntos");
                 }
-*/
                 break;
 
             case Config::States::MISA:
                 Campanario.TocaMisa();
                 ws.textAll("REDIRECT:/Campanas.html");
-                DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de misa");
-/*                
+                DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de misa");               
                 if (telegramBot.isEnabled()) {
-                    telegramBot.sendStatusNotification("Campanas", "Tocando Misa", "Secuencia iniciada automáticamente");
+                    telegramBot.sendSequenceNotification("Misa");
                 }
-*/
                 break;
 
             case Config::States::FIESTA:
                 Campanario.TocaFiesta();
                 ws.textAll("REDIRECT:/Campanas.html");
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de fiesta");
+                if (telegramBot.isEnabled()) {
+                    telegramBot.sendSequenceNotification("Fiesta");
+                }
                 break;
 
             case Config::States::STOP:
                 Campanario.ParaSecuencia();
                 ws.textAll("REDIRECT:/index.html");
                 DBG_AUX("EjecutaSecuencia -> Parando todas las secuencias");
+                if (telegramBot.isEnabled()) {
+                    telegramBot.sendStopNotification();
+                }
                 break;
 
             case Config::States::CALEFACCION_ON:
@@ -165,12 +167,18 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                     Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion);
                     ws.textAll("CALEFACCION:ON");
                     DBG_AUX_PRINTF("EjecutaSecuencia -> Encendiendo calefacción (%d min desde WebSocket)", nTemporizacionCalefaccion);
+                    if (telegramBot.isEnabled()) {
+                        telegramBot.sendMsgNotification("Calefacción ON");
+                    }
                     break;
 
             case Config::States::CALEFACCION_OFF:
                 Campanario.ApagaCalefaccion();
                 ws.textAll("CALEFACCION:OFF");
                 DBG_AUX("EjecutaSecuencia -> Apagando calefacción");
+                if (telegramBot.isEnabled()) {
+                    telegramBot.sendMsgNotification("Calefacción OFF");
+                }
                 break;
 
             case Config::States::PROTECCION_CAMPANADAS:
@@ -190,6 +198,9 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 Campanario.EnciendeCalefaccion(nTemporizacionCalefaccion);
                 ws.textAll("CALEFACCION:ON:" + String(nTemporizacionCalefaccion));
                 DBG_AUX_PRINTF("EjecutaSecuencia -> Temporizador de calefacción fijado a %d minutos", nTemporizacionCalefaccion);
+               if (telegramBot.isEnabled()) {
+                    telegramBot.sendMsgNotification("Calefacción ON");
+                }
                 break;
 
             default:
@@ -252,11 +263,9 @@ double nSegundosTemporizacion = 0;                                      // Tempo
               if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
                   Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
                   // Notificar reconexion via Telegram si está habilitado
-/*
-                  if (telegramBot.isEnabled()) {
-                      telegramBot.sendStatusNotification("Red", "Reconectado", "Internet disponible nuevamente");
-                  }
-*/
+                   if (telegramBot.isEnabled()) {
+                        telegramBot.sendMsgNotification("Internet Reconectado");
+                    }
               }
           } else {
               DBG_AUX("TestInternet -> Sin conexión a internet. Funcionando en modo local.");
@@ -272,11 +281,11 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
                 IniciaAlarmas; // Inicializa el sistema de alarmas sin cargar configuración por defecto
                 // Notificar conexión inicial via Telegram si está habilitado
-/*
+
                 if (telegramBot.isEnabled()) {
-                    telegramBot.sendStatusNotification("Red", "Conectado", "Conexión a internet establecida");
+                    telegramBot.sendMsgNotification("Conexión a internet establecida");
                 }
-*/
+
             }
             DBG_AUX("TestInternet -> Conexión a internet activa.");
         }
@@ -436,3 +445,5 @@ void IniciaAlarmas (void)
     Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 10, 0, ActualizaDNSSiNecesario, true);                             // Actualiza DNS si es necesario cada hora en el minuto 10
 
 }
+
+// HabilitarTelegramTemporal eliminada - solo notificaciones automáticas
