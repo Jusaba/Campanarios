@@ -126,7 +126,7 @@
         {Config::States::I2CState::INICIO,              MensajeInicio,          false},
         {Config::States::I2CState::DIFUNTOS,            MensajeDifuntos,        true},     
         {Config::States::I2CState::MISA,                MensajeMisa,            true},    
-        {Config::States::I2CState::FIESTA,              MensajeFiesta,          true},     // Acción especial (temporizador) 
+        {Config::States::I2CState::FIESTA,              MensajeFiesta,          true},     
         {Config::States::I2CState::STOP,                MensajeStop,            true},     
         {Config::States::I2CState::CALEFACCION_ON,      MensajeCalefaccionOn,   false},    // Acción especial (temporizador)
         {Config::States::I2CState::CALEFACCION_OFF,     MensajeCalefaccionOff,  true},     
@@ -243,21 +243,17 @@
                     display.contadorCiclosSleep = 0;                                                                                        // Reiniciamos el contador de ciclos de sleep
                     display.estaEnModoSleep = true;                                                                                         // Indicamos que estamos en modo sleep
                 }
-            } else {                                                                                                                        // Si no hay brillo o estamos en modo sleep
-                if (!lBrillo) {
-                    if (campanarioEstado.estadoActual & Config::States::BIT_CALEFACCION ) {                                                 // Si el bit 4 está activo (calefacción temporizada)                                                                       
-                        MostrarCalefaccionTemporizada(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, true); // Mostramos la información de calefacción temporizada
-                    }else{                                                                                                                  // Si el bit 4 no está activo (hora normal)                 
-                        MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno); // Mostramos la fecha y hora normal
-                    }
-                    SubeBrillo(40);                                                                                                         // Subimos el brillo de la pantalla                    
-                } else {                                                                                                                    // Si hay brillo y estamos en modo sleep            
-                    if (campanarioEstado.estadoActual & Config::States::BIT_CALEFACCION ) {                                                 // Si el bit 4 está activo (calefacción temporizada)         
-                        MostrarCalefaccionTemporizada(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, false);// Mostramos la información de calefacción temporizada
-                    }else{                                                                                                                  // Si el bit 4 no está activo (hora normal)       
-                        MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno); // Mostramos la fecha y hora normal
-                    }
+            } else {    
+                if (campanarioEstado.estadoActual & Config::States::BIT_CALEFACCION ) {                                                 // Si el bit 4 está activo (calefacción temporizada)                                                                       
+                    MostrarCalefaccionTemporizada(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, true); // Mostramos la información de calefacción temporizada
+                }else{                                                                                                                  // Si el bit 4 no está activo (hora normal)                 
+                    MensajeFechaHora(campanarioEstado.nHora, campanarioEstado.nMinutos, campanarioEstado.nSegundos, campanarioEstado.nDia, campanarioEstado.nMes, campanarioEstado.nAno, campanarioEstado.estadoActual & Config::States::BIT_SIN_INTERNET ); // Mostramos la fecha y hora normal
                 }
+                                                                                                                       // Si no hay brillo o estamos en modo sleep
+                if (!lBrillo) {
+                    SubeBrillo(40);                                                                                                         // Subimos el brillo de la pantalla                    
+                } 
+
             }
         }
     // ============================================================================

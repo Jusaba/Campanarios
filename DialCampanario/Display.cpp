@@ -504,6 +504,7 @@
          * @param nDia Día del mes (1-31)
          * @param nMes Mes (1-12)
          * @param nAno Año (formato 2 dígitos, ej: 24 para 2024)
+         * @param Internet Indica si hay conexión a Internet (true/false)
          * 
          * @note Equivale a MostrarFechaHora(..., true)
          * @note Útil para inicialización o cambios de pantalla completos
@@ -516,9 +517,9 @@
          * @author Julian Salas Bartolomé
          * @date 2025-06-15
          */        
-        void MensajeFechaHora (int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno)
+        void MensajeFechaHora (int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno, bool Internet)
         {
-            MostrarFechaHora(nHora, nMinutos, nSegundos, nDia, nMes, nAno, true); 
+            MostrarFechaHora(nHora, nMinutos, nSegundos, nDia, nMes, nAno, true, Internet); 
             DBG_DISPLAY_PRINTF("Fecha y Hora mostrada: %02d/%02d/%02d %02d:%02d:%02d", nDia, nMes, nAno, nHora, nMinutos, nSegundos);
         }   
         /**
@@ -589,6 +590,7 @@
          * @param nDia Día del mes (1-31)
          * @param nMes Mes (1-12)
          * @param nAno Año (formato 2 dígitos, ej: 24 para 2024)
+         * @param Internet Indica si hay conexión a Internet (true/false)
          * 
          * @note Equivale a MostrarFechaHora(..., true)
          * @note Útil para inicialización o cambios de pantalla completos
@@ -601,7 +603,7 @@
          * @author Julian Salas Bartolomé
          * @date 2025-06-15
          */
-        void MostrarFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno, bool limpiar) 
+        void MostrarFechaHora(int nHora, int nMinutos, int nSegundos, int nDia, int nMes, int nAno, bool limpiar, bool Internet ) 
         {
             if (limpiar) ClearPantalla();
             int x = M5Dial.Display.width() / 2;
@@ -617,7 +619,11 @@
                     M5Dial.Display.fillRect(x - 60, y - 40 - 10, 120, 20, Config::Display::COLOR_FONDO); // Borra la Fecha dibujando un rectángulo del color de fondo
                 }               
                 M5Dial.Display.setTextDatum(middle_center);
-                M5Dial.Display.setTextColor(Config::Display::COLOR_INFO, Config::Display::COLOR_FONDO);
+                if (Internet) {                                                                          // Si hay Internet           
+                    M5Dial.Display.setTextColor(Config::Display::COLOR_NOINTERNET, Config::Display::COLOR_FONDO); //Color de texto normal
+                }else{
+                    M5Dial.Display.setTextColor(Config::Display::COLOR_INFO, Config::Display::COLOR_FONDO); //Color de texto de no Internet
+                }
                 M5Dial.Display.setTextFont(&fonts::FreeSans9pt7b);
                 M5Dial.Display.setTextSize(2);
                 char buffer[13];                

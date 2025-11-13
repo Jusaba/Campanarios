@@ -56,6 +56,7 @@
   #include "Alarmas.h"
   #include "Acciones.h"
   #include "I2CServicio.h"
+  #include "TelegramServicio.h"
   #include "Debug.h"
 
   //#include "Acciones.h"
@@ -99,7 +100,11 @@
             Campanario.SetInternetConectado();                                        // Notifica al campanario que hay conexión a Internet
             DBG_INO("Conexión Wi-Fi exitosa.");
             Alarmas.begin(false);                                                      // Inicializa el sistema de alarmas sin cargar configuración por defecto
-          } else {
+            
+            // Inicializar servicio Telegram si está configurado
+            telegramBot.begin(Config::Telegram::BOT_TOKEN, Config::Telegram::CHAT_ID);
+            DBG_INO("Servicio Telegram inicializado.");
+        } else {
           Campanario.ClearInternetConectado();                                        // Notifica al campanario que no hay conexión a Internet
           DBG_INO("Error al conectar a la red Wi-Fi.");
         }
@@ -131,6 +136,11 @@
       if (millis() - ultimoCheckInternet > Config::Network::INTERNET_CHECK_INTERVAL_MS) {      // Comprueba si ha pasado el intervalo de tiempo para verificar la conexión a Internet
           ultimoCheckInternet = millis();
           TestInternet();                                                   // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
+      }
+      
+      // Verificar mensajes de Telegram
+      if (telegramBot.isEnabled()) {
+          telegramBot.checkMessages();
       }
     }  
   

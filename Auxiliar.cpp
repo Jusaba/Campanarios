@@ -2,6 +2,7 @@
 #include "Auxiliar.h"
 #include "ConexionWifi.h"
 #include "DNSServicio.h"  // Para ActualizaDNS
+#include "TelegramServicio.h"  // Para notificaciones Telegram
 
 
 
@@ -129,12 +130,18 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 Campanario.TocaDifuntos();
                 ws.textAll("REDIRECT:/Campanas.html");      
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de difuntos");
+                if (telegramBot.isEnabled()) {
+                    telegramBot.sendStatusNotification("Campanas", "Tocando Difuntos", "Secuencia iniciada automáticamente");
+                }
                 break;
 
             case Config::States::MISA:
                 Campanario.TocaMisa();
                 ws.textAll("REDIRECT:/Campanas.html");
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de misa");
+                if (telegramBot.isEnabled()) {
+                    telegramBot.sendStatusNotification("Campanas", "Tocando Misa", "Secuencia iniciada automáticamente");
+                }
                 break;
 
             case Config::States::FIESTA:

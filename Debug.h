@@ -30,6 +30,7 @@
 // #define DEBUGAP                  // Debug del modo AP
 // #define DEBUGCALEFACCION         // Debug del sistema de calefacción
 // #define DEBUGCAMPANA             // Debug del sistema de campanas
+ #define DEBUGTELEGRAM            // Debug del servicio Telegram
 #define DBG_ALARMS_ENABLED          // Habilita macros de debug para alarmas personalizadas
 
 // ============================================================================
@@ -203,6 +204,16 @@
     #define DBG_CAMPANA(msg)
     #define DBG_CAMPANA_PRINT(msg)
     #define DBG_CAMPANA_PRINTF(fmt, ...)
+#endif
+
+#ifdef DEBUGTELEGRAM
+    #define DBG_TELEGRAM(msg) Serial.println(String("[TELEGRAM] ") + msg)
+    #define DBG_TELEGRAM_PRINT(msg) Serial.print(String("[TELEGRAM] ") + msg)
+    #define DBG_TELEGRAM_PRINTF(fmt, ...) Serial.printf("[TELEGRAM] " fmt "\n", ##__VA_ARGS__)
+#else
+    #define DBG_TELEGRAM(msg)
+    #define DBG_TELEGRAM_PRINT(msg)
+    #define DBG_TELEGRAM_PRINTF(fmt, ...)
 #endif
 
 #ifdef DBG_ALARMS_ENABLED

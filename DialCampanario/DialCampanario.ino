@@ -40,7 +40,7 @@
         {
             ManejarEncoder();                                                                   // Manejar el encoder
         }
-
+/*
         if (campanarioEstado.estadoActual != Config::States::I2CState::SET_TEMPORIZADOR) {
             if (millis() - nMilisegundoTemporal > Config::Timing::I2C_REQUEST_INTERVAL_MS) { // Cada 500 ms
                 nMilisegundoTemporal = millis();
@@ -48,7 +48,7 @@
                 ActualizarDisplaySleep();                                                       // Actualizar el estado del display
             }
         }
-
+*/
         if (campanarioEstado.estadoActual != Config::States::I2CState::SET_TEMPORIZADOR) {      // Si no estamos en modo configuración de temporizador
             if (!lComandoRecienEnviado) {                                                       //Si no se ha enviado un comando recientemente
                 // Comportamiento normal: peticiones cada 500ms

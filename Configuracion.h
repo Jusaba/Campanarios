@@ -58,6 +58,20 @@
             constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 10000;  // 10 segundos
         }
 
+        namespace Telegram {
+            // Configuración del bot (debes configurar estos valores)
+            const String BOT_TOKEN = "7031269795:AAFJZVP9isGip5eICQNh_BuJ8WzHCxtOGNE";      // Token del bot de Telegram
+            const String CHAT_ID = "106299125";                                             // ID del chat autorizado
+            
+            // Intervalos de verificación
+            constexpr unsigned long CHECK_MESSAGES_INTERVAL_MS = 2000;      // Verificar cada 2 segundos
+            constexpr unsigned long NOTIFICATION_COOLDOWN_MS = 30000;       // Cooldown entre notificaciones
+            
+            // Configuración de mensajes
+            constexpr int MAX_MESSAGE_LENGTH = 4096;                        // Longitud máxima mensaje Telegram
+            constexpr bool ENABLE_SILENT_NOTIFICATIONS = true;              // Notificaciones silenciosas por defecto
+        }
+
         // ==================== ESTADOS I2C ====================
         namespace States {
             enum I2CState : uint8_t {

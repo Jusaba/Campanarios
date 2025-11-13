@@ -71,6 +71,7 @@ namespace Config {
         constexpr uint16_t COLOR_VOLTIOS = 0xFFFF;      // Blanco
         constexpr uint16_t COLOR_SELECCION = 0xFD20;    // Naranja (TFT_ORANGE)
         constexpr uint16_t COLOR_TRANSPARENTE = 0x0002; // Transparente
+        constexpr uint16_t COLOR_NOINTERNET = 0xF800;   // Rojo (TFT_RED)
         
         // Brillo
         constexpr uint8_t BRILLO_MAXIMO = 127;          // Brillo máximo pantalla
