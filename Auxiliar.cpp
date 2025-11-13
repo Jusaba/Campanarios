@@ -130,18 +130,22 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 Campanario.TocaDifuntos();
                 ws.textAll("REDIRECT:/Campanas.html");      
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de difuntos");
+/*
                 if (telegramBot.isEnabled()) {
                     telegramBot.sendStatusNotification("Campanas", "Tocando Difuntos", "Secuencia iniciada automáticamente");
                 }
+*/
                 break;
 
             case Config::States::MISA:
                 Campanario.TocaMisa();
                 ws.textAll("REDIRECT:/Campanas.html");
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de misa");
+/*                
                 if (telegramBot.isEnabled()) {
                     telegramBot.sendStatusNotification("Campanas", "Tocando Misa", "Secuencia iniciada automáticamente");
                 }
+*/
                 break;
 
             case Config::States::FIESTA:
@@ -247,6 +251,12 @@ double nSegundosTemporizacion = 0;                                      // Tempo
               ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
               if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
                   Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
+                  // Notificar reconexion via Telegram si está habilitado
+/*
+                  if (telegramBot.isEnabled()) {
+                      telegramBot.sendStatusNotification("Red", "Reconectado", "Internet disponible nuevamente");
+                  }
+*/
               }
           } else {
               DBG_AUX("TestInternet -> Sin conexión a internet. Funcionando en modo local.");
@@ -261,6 +271,12 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
                 Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
                 IniciaAlarmas; // Inicializa el sistema de alarmas sin cargar configuración por defecto
+                // Notificar conexión inicial via Telegram si está habilitado
+/*
+                if (telegramBot.isEnabled()) {
+                    telegramBot.sendStatusNotification("Red", "Conectado", "Conexión a internet establecida");
+                }
+*/
             }
             DBG_AUX("TestInternet -> Conexión a internet activa.");
         }

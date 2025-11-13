@@ -102,8 +102,10 @@
             //Alarmas.begin(false);                                                      // Inicializa el sistema de alarmas sin cargar configuración por defecto
             IniciaAlarmas();                                                            // Llama a la función para iniciar las alarmas
             // Inicializar servicio Telegram si está configurado
+          /*
             telegramBot.begin(Config::Telegram::BOT_TOKEN, Config::Telegram::CHAT_ID);
             DBG_INO("Servicio Telegram inicializado.");
+          */
         } else {
           Campanario.ClearInternetConectado();                                        // Notifica al campanario que no hay conexión a Internet
           DBG_INO("Error al conectar a la red Wi-Fi.");
@@ -139,9 +141,11 @@
       }
       
       // Verificar mensajes de Telegram
+/*      
       if (telegramBot.isEnabled()) {
           telegramBot.checkMessages();
       }
+*/
     }  
   
     if (secuenciaI2C > 0) {                                                 // Si se ha recibido orden por I2C

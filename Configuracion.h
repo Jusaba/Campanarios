@@ -63,6 +63,25 @@
             const String BOT_TOKEN = "7031269795:AAFJZVP9isGip5eICQNh_BuJ8WzHCxtOGNE";      // Token del bot de Telegram
             const String CHAT_ID = "106299125";                                             // ID del chat autorizado
             
+            #define MANOLIS_CAMPANARIO
+
+            // ID único de ESTE campanario específico
+            #ifdef MANOLIS_CAMPANARIO
+                const String CAMPANARIO_ID = "manolis";     
+                const String CAMPANARIO_NOMBRE = "manolis";   
+                const String CAMPANARIO_UBICACION = "Lleida"; 
+            #endif
+            #ifdef RAIMAT_CAMPANARIO
+                const String CAMPANARIO_ID = "raimat";       
+                const String CAMPANARIO_NOMBRE = "raimat";     
+                const String CAMPANARIO_UBICACION = "Lleida"; 
+            #endif
+            #ifdef MAGARU_CAMPANARIO
+                const String CAMPANARIO_ID = "magaru";     
+                const String CAMPANARIO_NOMBRE = "magaru";   
+                const String CAMPANARIO_UBICACION = "Tremp";
+            #endif  
+            
             // Intervalos de verificación
             constexpr unsigned long CHECK_MESSAGES_INTERVAL_MS = 2000;      // Verificar cada 2 segundos
             constexpr unsigned long NOTIFICATION_COOLDOWN_MS = 30000;       // Cooldown entre notificaciones
