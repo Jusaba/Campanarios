@@ -51,12 +51,12 @@ bool AlarmScheduler::begin(bool cargarPorDefecto) {
     
     // ✅ SOLO CARGAR POR DEFECTO SI NO HAY NINGUNA ALARMA
     if (cargarPorDefecto && _num == 0) {
-        DBG_ALM("[ALARM] No hay alarmas, cargando configuración por defecto...");
-        initDefaults();
+        DBG_ALM("[ALARM] No hay alarmas...");
+        //initDefaults();
     } else if (cargarPorDefecto) {
         // Si ya hay alarmas personalizables, solo añadir las de sistema
         DBG_ALM("[ALARM] Añadiendo alarmas de sistema a las personalizables existentes...");
-        initDefaults();
+        //initDefaults();
     }
     
     DBG_ALM_PRINTF("[ALARM] Sistema inicializado con %u alarmas\n", _num);

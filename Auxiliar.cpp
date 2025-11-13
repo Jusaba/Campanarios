@@ -260,7 +260,7 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 lConexionInternet = ConectarWifi(configWiFi);                
                 ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
                 Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
-                Alarmas.begin(false); // Inicializa el sistema de alarmas sin cargar configuración por defecto
+                IniciaAlarmas; // Inicializa el sistema de alarmas sin cargar configuración por defecto
             }
             DBG_AUX("TestInternet -> Conexión a internet activa.");
         }
@@ -407,5 +407,16 @@ void ActualizaEstadoProteccionCampanadas(void) {
                        lProteccionCampanadas ? "ACTIVA" : "INACTIVA");
     }
     
+
+}
+
+void IniciaAlarmas (void)
+{
+    Alarmas.begin(true); // Inicializa el sistema de alarmas con configuración por defecto
+
+    Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 0, 0, accionTocaHora, true);                                      // Toca cada hora en punto con accionTocaHora()
+    Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 30, 0, accionTocaMedia, true);                                    // Toca cada media hora con accionTocaMedia()  
+    Alarmas.addExternal0(DOW_TODOS, 12, 2, 0, SincronizaNTP, true);                                                    // Sincroniza NTP al mediodía
+    Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 10, 0, ActualizaDNSSiNecesario, true);                             // Actualiza DNS si es necesario cada hora en el minuto 10
 
 }

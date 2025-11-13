@@ -88,5 +88,6 @@ void TestInternet(void);                                // Prototipo de la funci
 bool EsPeriodoToqueCampanas(void);                      // Prototipo de la función para comprobar si estamos en el período de toque de campanas
 void ActualizaEstadoProteccionCampanadas(void);         // Prototipo de la función para actualizar el estado de protección de campanadas
 
+void IniciaAlarmas (void);                             // Prototipo de la función para iniciar las alarmas
 
 #endif
