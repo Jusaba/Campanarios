@@ -256,12 +256,7 @@ double nSegundosTemporizacion = 0;                                      // Tempo
     void TestInternet(void) {
         bool estadoAnteriorInternet = lConexionInternet; // Guarda el estado anterior de la conexión
         if (!hayInternet()) { // hayInternet() debe comprobar acceso real a internet
-          lConexionInternet = ConectarWifi(configWiFi); // Intenta reconectar
-Serial.println("#######################");
-Serial.println(lConexionInternet);
-Serial.println(estadoAnteriorInternet);
-Serial.println(telegramBot.isEnabled());
-Serial.println("#######################");          
+          lConexionInternet = ConectarWifi(configWiFi); // Intenta reconectar  
           if (lConexionInternet) {
               DBG_AUX("TestInternet -> Reconectado a internet correctamente.");
               ServidorOn(configWiFi.usuario, configWiFi.clave); // Reinicia el servidor si es necesario
@@ -281,12 +276,6 @@ Serial.println("#######################");
           }
         }else{
             //lConexionInternet = true; // Asegura que la variable esté actualizada
-            
-Serial.println("00000000000000000000000000000000");
-Serial.println(lConexionInternet);
-Serial.println(estadoAnteriorInternet);
-Serial.println(telegramBot.isEnabled());
-Serial.println("00000000000000000000000000000000");
             
             if (!estadoAnteriorInternet) { // Si el estado cambió de desconectado a conectado
                 lConexionInternet = ConectarWifi(configWiFi);                
