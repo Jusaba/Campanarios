@@ -61,7 +61,8 @@
         namespace Telegram {
             // Configuración del bot (debes configurar estos valores)
             const String BOT_TOKEN = "7031269795:AAFJZVP9isGip5eICQNh_BuJ8WzHCxtOGNE";      // Token del bot de Telegram
-            const String CHAT_ID = "106299125";                                             // ID del chat autorizado
+            //const String CHAT_ID = "106299125";      
+            const String CHAT_ID = "-4948304348"  ;                                        // ID del chat autorizado
             
             constexpr int METODO_ACTIVACION_MANUAL = 0;                                     
             constexpr int METODO_ACTIVACION_WEB = 1;
