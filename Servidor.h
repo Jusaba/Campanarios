@@ -174,6 +174,7 @@
     #include <HTTPClient.h>
     #include "Configuracion.h"
     #include "Debug.h"
+    #include "TelegramServicio.h"
     
     #include "Campanario.h"
     #include "Alarmas.h" 
@@ -200,6 +201,9 @@
     String obtenerConfiguracionJSON(void);
     
     bool guardarIdiomaEnConfig(const String& idioma);
+    bool guardarConfigTelegramEnSPIFFS(const String& jsonConfig);
+    String cargarConfigTelegramDesdeSPIFFS();
+    bool verificarPinAcceso(const String& pin);
 
     bool hayInternet(void);                                                                                                         // Comprueba si hay conexión a Internet
 

@@ -6,6 +6,7 @@
 #include "DNSServicio.h"  // Para ActualizaDNS
 #include "ConexionWifi.h" // Para configWiFi
 #include "Configuracion.h"// Para los parámetros de configuración
+#include "TelegramServicio.h" // Para telegramBot
 
 
     /**
@@ -55,8 +56,37 @@
             DBG_ACCIONES_PRINTF("Secuencia %u bloqueada - campanario ocupado", seqId);
             return;                                                                     // Salir sin ejecutar
         }
+        
+        // ✅ NOTIFICACIONES DE TELEGRAM según configuración
+        if (telegramBot.isEnabled()) {
+            // Identificar la secuencia y enviar notificación si está habilitada
+            switch(seqId) {
+                case Config::States::MISA:
+                    if (Config::Telegram::NOTIFICACION_MISA) {
+                        telegramBot.sendSequenceNotification("Misa", Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA);
+                    }
+                    break;
+                    
+                case Config::States::DIFUNTOS:
+                    if (Config::Telegram::NOTIFICACION_DIFUNTOS) {
+                        telegramBot.sendSequenceNotification("Difuntos", Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA);
+                    }
+                    break;
+                    
+                case Config::States::FIESTA:
+                    if (Config::Telegram::NOTIFICACION_FIESTA) {
+                        telegramBot.sendSequenceNotification("Fiesta", Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA);
+                    }
+                    break;
+                    
+                default:
+                    
+                    break;
+            }
+        }
         EjecutaSecuencia(seqId);
         DBG_ACCIONES_PRINTF("Secuencia %u ejecutada", seqId);
+
     }
 
     /**
@@ -116,6 +146,11 @@
             DBG_ACCIONES_PRINTF("Toque de hora ejecutado a las %02d:00", hora);
             ws.textAll("REDIRECT:/Campanas.html");
 
+            // ✅ NOTIFICACIÓN TELEGRAM toque de hora
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_HORA) {
+                telegramBot.sendHoraNotification( String(hora % 12 == 0 ? 12 : hora % 12));
+            }
+
             // Actualizar DNS si hay internet
             if (hayInternet()) {
                 ActualizaDNSSiNecesario();
@@ -171,6 +206,11 @@
             Campanario.TocaMediaHora();
             DBG_ACCIONES_PRINTF("Toque de media ejecutado a las %02d:30", hora);
             ws.textAll("REDIRECT:/Campanas.html");
+
+            // ✅ NOTIFICACIÓN TELEGRAM toque de media hora
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_MEDIAHORA) {
+                telegramBot.sendMediaHoraNotification( String(hora) + ":30");
+            }
 
             if (hayInternet()) {
                 ActualizaDNSSiNecesario();

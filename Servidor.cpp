@@ -52,6 +52,12 @@
             DBG_SRV("✅ SPIFFS montado correctamente");
             String idiomaServidor = cargarIdiomaDesdeConfig();
             DBG_SRV_PRINTF("🌍 Idioma del servidor: %s", idiomaServidor.c_str());
+            
+            // ✅ CARGAR CONFIGURACIÓN DE TELEGRAM AL INICIO
+            cargarConfigTelegramDesdeSPIFFS();
+            DBG_SRV_PRINTF("📱 Configuración de Telegram cargada: %s (%s)", 
+                          Config::Telegram::CAMPANARIO_NOMBRE.c_str(),
+                          Config::Telegram::CAMPANARIO_UBICACION.c_str());
         }        
         if (!servidorIniciado) {                                                                  // Si el servidor no ha sido iniciado
             ws.onEvent(onEvent);                                                                    // Configura el manejador de eventos del WebSocket          
@@ -228,19 +234,31 @@
             nToque = Config::States::DIFUNTOS;                              // Establece la secuencia a EstadoDifuntos para tocar difuntos
             ws.textAll("REDIRECT:/Campanas.html");                          // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             DBG_SRV("Procesando mensaje: TocaDifuntos");
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_DIFUNTOS) {
+                telegramBot.sendSequenceNotification("Difuntos", Config::Telegram::METODO_ACTIVACION_WEB);
+            }
         } else if (mensaje == "Misa") {                                     // Si el mensaje es "Misa"
             nToque = Config::States::MISA;                                  // Establece la secuencia a Misa para tocar misa
             ws.textAll("REDIRECT:/Campanas.html");                          // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             DBG_SRV("Procesando mensaje: TocaMisa");
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_MISA) {
+                telegramBot.sendSequenceNotification("Misa", Config::Telegram::METODO_ACTIVACION_WEB);
+            }   
         } else if (mensaje == "Fiesta") {                                   // Si el mensaje es "Fiesta"
             nToque = Config::States::FIESTA;                                // Establece la secuencia a Fiesta para tocar fiesta
             ws.textAll("REDIRECT:/Campanas.html");                          // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             DBG_SRV("Procesando mensaje: TocaFiesta");
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_FIESTA) {
+                telegramBot.sendSequenceNotification("Fiesta", Config::Telegram::METODO_ACTIVACION_WEB);
+            }
         } else if (mensaje == "PARAR") {                                    // Si el mensaje es "PARAR"  
             nToque = 0;                                                     // Parada la secuencia de toques
             Campanario.ParaSecuencia();                                     // Detiene la secuencia de campanadas
             ws.textAll("REDIRECT:/index.html");                             // Indica a los clientes que deben redirigir
             DBG_SRV("Procesando mensaje: Parar");
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_STOP) {
+                telegramBot.sendStopNotification(Config::Telegram::METODO_ACTIVACION_WEB);
+            }
         } else if (mensaje.startsWith("CALEFACCION_ON:")) {                 // Si el mensaje comienza con "CALEFACCION_ON:"
             String minutosStr = mensaje.substring(15);                      // Extrae los minutos después de "CALEFACCION_ON:"
             int minutos = minutosStr.toInt();                               // Convierte la cadena de minutos a entero
@@ -251,10 +269,18 @@
             Campanario.EnciendeCalefaccion(minutos);                        // Enciende la calefacción
             ws.textAll("CALEFACCION:ON:" + String(minutos));                // Envía el estado con los minutos programados
             DBG_SRV_PRINTF("Procesando mensaje: Calefacción ON por %d minutos\n", minutos);
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_CALEFACCION_ON) {
+                telegramBot.sendCalefaccionOnNotification(Config::Telegram::METODO_ACTIVACION_WEB);
+            }
+
+            
         } else if (mensaje == "CALEFACCION_OFF") {                          // Si el mensaje es "CALEFACCION_OFF"
             Campanario.ApagaCalefaccion();                                  // Apaga la calefacción
             ws.textAll("CALEFACCION:OFF");                                  // Envía el estado de la calefacción a todos los clientes conectados
             DBG_SRV("Procesando mensaje: Calefacción OFF");
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_CALEFACCION_OFF) {
+                telegramBot.sendCalefaccionOffNotification(Config::Telegram::METODO_ACTIVACION_WEB);
+            }
         } else if (mensaje == "GET_CALEFACCION") {                          // Si el mensaje es "GET_CALEFACCION"
             String estadoCalefaccion = Campanario.GetEstadoCalefaccion() ? "ON" : "OFF"; // Enviar el estado de la calefacción a todos los clientes conectados
             ws.textAll("ESTADO_CALEFACCION:" + estadoCalefaccion);          // Envía el estado de la calefacción a todos los clientes conectados
@@ -304,6 +330,36 @@
             String idioma = cargarIdiomaDesdeConfig();
             ws.textAll("IDIOMA_ACTUAL:" + idioma);
             DBG_SRV_PRINTF("📤 Enviando idioma actual: %s", idioma.c_str());
+        
+        } else if (mensaje.startsWith("SAVE_CONFIG_TELEGRAM:")) {
+            String jsonConfig = mensaje.substring(21); // Extraer JSON después de "SAVE_CONFIG_TELEGRAM:"
+            DBG_SRV_PRINTF("📱 Guardando configuración de Telegram: %s", jsonConfig.c_str());
+            
+            if (guardarConfigTelegramEnSPIFFS(jsonConfig)) {
+                ws.textAll("CONFIG_TELEGRAM_OK");
+                DBG_SRV("✅ Configuración de Telegram guardada correctamente");
+            } else {
+                ws.textAll("CONFIG_TELEGRAM_ERROR");
+                DBG_SRV("❌ Error al guardar configuración de Telegram");
+            }
+        
+        } else if (mensaje == "GET_CONFIG_TELEGRAM") {
+            String config = cargarConfigTelegramDesdeSPIFFS();
+            ws.textAll("CONFIG_TELEGRAM:" + config);
+            DBG_SRV_PRINTF("📤 Enviando configuración de Telegram: %s", config.c_str());
+        
+        } else if (mensaje.startsWith("VERIFY_PIN:")) {
+            String pin = mensaje.substring(11); // Extraer PIN después de "VERIFY_PIN:"
+            DBG_SRV_PRINTF("🔐 Verificando PIN recibido: %s", pin.c_str());
+            
+            if (verificarPinAcceso(pin)) {
+                ws.textAll("PIN_OK");
+                DBG_SRV("✅ PIN correcto");
+            } else {
+                ws.textAll("PIN_ERROR");
+                DBG_SRV("❌ PIN incorrecto");
+            }
+        
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             DBG_SRV("Mensaje no reconocido, reseteando secuencia.");
@@ -854,3 +910,287 @@ String obtenerConfiguracionJSON() {
      }
      file.close(); // Cerrar el archivo
    }
+
+/**
+ * @brief Guarda la configuración de Telegram en SPIFFS
+ * 
+ * @details Almacena la configuración de notificaciones de Telegram en formato JSON
+ *          en el archivo /telegram_config.json en SPIFFS. Incluye:
+ *          - Nombre del dispositivo (identificador del campanario)
+ *          - Ubicación física del campanario
+ *          - Preferencias de notificaciones (qué eventos notificar)
+ * 
+ * @param jsonConfig String con configuración en formato JSON desde el cliente web
+ * 
+ * @retval true Configuración guardada correctamente en SPIFFS
+ * @retval false Error al guardar (problema de escritura o JSON inválido)
+ * 
+ * @note El archivo se crea/sobrescribe completamente en cada guardado
+ * @note Formato JSON esperado:
+ *       {
+ *         "nombre": "manolis",
+ *         "ubicacion": "Lleida",
+ *         "notificaciones": {
+ *           "inicio": true,
+ *           "misa": true,
+ *           "difuntos": true,
+ *           "fiesta": true,
+ *           "calefaccion": true,
+ *           "alarma": true
+ *         }
+ *       }
+ * 
+ * @warning Requiere SPIFFS montado y con espacio disponible
+ * @warning No valida el contenido del JSON (responsabilidad del cliente)
+ * 
+ * @see cargarConfigTelegramDesdeSPIFFS() - Función complementaria para cargar
+ * @see procesaMensajeWebSocket() - Procesa comando SAVE_CONFIG_TELEGRAM
+ * 
+ * @since v3.1 - Sistema de configuración dinámica de Telegram
+ * @author Julian Salas Bartolomé
+ */
+bool guardarConfigTelegramEnSPIFFS(const String& jsonConfig) {
+    DBG_SRV("💾 Guardando configuración de Telegram en SPIFFS...");
+    
+    // Validar que el JSON no esté vacío
+    if (jsonConfig.length() == 0) {
+        DBG_SRV("❌ JSON vacío, abortando guardado");
+        return false;
+    }
+    
+    // Guardar directamente el JSON recibido
+    File file = SPIFFS.open("/telegram_config.json", "w");
+    if (!file) {
+        DBG_SRV("❌ Error al crear telegram_config.json");
+        return false;
+    }
+    
+    file.print(jsonConfig);
+    file.close();
+    
+    // ✅ ACTUALIZAR VARIABLES GLOBALES inmediatamente después de guardar
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, jsonConfig);
+    
+    if (!error) {
+        // Actualizar nombre y ubicación
+        Config::Telegram::CAMPANARIO_NOMBRE = doc["nombre"] | "";
+        Config::Telegram::CAMPANARIO_UBICACION = doc["ubicacion"] | "";
+        
+        // Actualizar preferencias de notificaciones
+        if (doc.containsKey("notificaciones")) {
+            JsonObject notif = doc["notificaciones"];
+            Config::Telegram::NOTIFICACION_START = notif["inicio"] | true;
+            Config::Telegram::NOTIFICACION_MISA = notif["misa"] | true;
+            Config::Telegram::NOTIFICACION_DIFUNTOS = notif["difuntos"] | true;
+            Config::Telegram::NOTIFICACION_FIESTA = notif["fiesta"] | true;
+            Config::Telegram::NOTIFICACION_STOP = notif["stop"] | false;
+            Config::Telegram::NOTIFICACION_CALEFACCION_ON = notif["calefaccion"] | true;
+            Config::Telegram::NOTIFICACION_CALEFACCION_OFF = notif["calefaccion_off"] | false;
+            Config::Telegram::NOTIFICACION_ALARMAS = notif["alarma"] | true;
+            Config::Telegram::NOTIFICACION_ERRORES = notif["errores"] | false;
+            Config::Telegram::NOTIFICACION_INTERNET_RECONEXION = notif["internet"] | false;
+            Config::Telegram::NOTIFICACION_HORA = notif["hora"] | false;
+            Config::Telegram::NOTIFICACION_MEDIAHORA = notif["mediahora"] | false;
+        }
+        
+        DBG_SRV("✅ Variables globales actualizadas con nueva configuración");
+    }
+    
+    DBG_SRV("✅ Configuración de Telegram guardada correctamente");
+    DBG_SRV_PRINTF("   Tamaño: %d bytes", jsonConfig.length());
+    
+    return true;
+}
+
+/**
+ * @brief Carga la configuración de Telegram desde SPIFFS
+ * 
+ * @details Lee el archivo /telegram_config.json de SPIFFS y retorna
+ *          su contenido como string JSON. Si no existe, retorna
+ *          configuración por defecto para el campanario.
+ *          
+ *          **CONFIGURACIÓN POR DEFECTO:**
+ *          - nombre: Valor de CAMPANARIO_ID (de Configuracion.h)
+ *          - ubicacion: "España"
+ *          - Todas las notificaciones habilitadas
+ * 
+ * @retval String JSON con la configuración cargada
+ * @retval String JSON con configuración por defecto si no existe archivo
+ * 
+ * @note Llamada al cargar la página de configuración de Telegram
+ * @note Genera configuración por defecto si es primera ejecución
+ * @note Utiliza CAMPANARIO_ID definido en Configuracion.h
+ * 
+ * @warning Requiere SPIFFS montado correctamente
+ * @warning Requiere CAMPANARIO_ID definido en Configuracion.h
+ * 
+ * @see guardarConfigTelegramEnSPIFFS() - Función complementaria para guardar
+ * @see procesaMensajeWebSocket() - Procesa comando GET_CONFIG_TELEGRAM
+ * 
+ * @since v3.1 - Sistema de configuración dinámica de Telegram
+ * @author Julian Salas Bartolomé
+ */
+String cargarConfigTelegramDesdeSPIFFS() {
+    DBG_SRV("📂 Cargando configuración de Telegram desde SPIFFS...");
+    
+    if (!SPIFFS.exists("/telegram_config.json")) {
+        DBG_SRV("⚠️ Archivo telegram_config.json no existe, creando configuración por defecto");
+        
+        // Configuración por defecto CON CAMPOS VACÍOS hasta primera configuración
+        String configDefault = "{";
+        configDefault += "\"nombre\":\"\",";  // Vacío hasta primera configuración
+        configDefault += "\"ubicacion\":\"\",";  // Vacío hasta primera configuración
+        configDefault += "\"notificaciones\":{";
+        configDefault += "\"inicio\":true,";
+        configDefault += "\"misa\":true,";
+        configDefault += "\"difuntos\":true,";
+        configDefault += "\"fiesta\":true,";
+        configDefault += "\"stop\":false,";
+        configDefault += "\"calefaccion\":true,";
+        configDefault += "\"calefaccion_off\":false,";
+        configDefault += "\"alarma\":true,";
+        configDefault += "\"errores\":false,";
+        configDefault += "\"internet\":false,";
+        configDefault += "\"hora\":false,";
+        configDefault += "\"mediahora\":false";
+        configDefault += "}}";
+        
+        // Guardar configuración por defecto
+        guardarConfigTelegramEnSPIFFS(configDefault);
+        
+        return configDefault;
+    }
+    
+    // Leer archivo existente
+    File file = SPIFFS.open("/telegram_config.json", "r");
+    if (!file) {
+        DBG_SRV("❌ Error al abrir telegram_config.json");
+        return "{}";
+    }
+    
+    String contenido = file.readString();
+    file.close();
+    
+    // ✅ PARSEAR Y CARGAR EN VARIABLES GLOBALES DE Configuracion.h
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, contenido);
+    
+    if (!error) {
+        // Cargar nombre y ubicación
+        Config::Telegram::CAMPANARIO_NOMBRE = doc["nombre"] | "";
+        Config::Telegram::CAMPANARIO_UBICACION = doc["ubicacion"] | "";
+        
+        // Si nombre está vacío, usar CAMPANARIO_ID como fallback
+        if (Config::Telegram::CAMPANARIO_NOMBRE.isEmpty() && !String(Config::Telegram::CAMPANARIO_ID).isEmpty()) {
+            Config::Telegram::CAMPANARIO_NOMBRE = String(Config::Telegram::CAMPANARIO_ID);
+        }
+        
+        // Cargar preferencias de notificaciones
+        if (doc.containsKey("notificaciones")) {
+            JsonObject notif = doc["notificaciones"];
+            Config::Telegram::NOTIFICACION_START = notif["inicio"] | true;
+            Config::Telegram::NOTIFICACION_MISA = notif["misa"] | true;
+            Config::Telegram::NOTIFICACION_DIFUNTOS = notif["difuntos"] | true;
+            Config::Telegram::NOTIFICACION_FIESTA = notif["fiesta"] | true;
+            Config::Telegram::NOTIFICACION_STOP = notif["stop"] | false;
+            Config::Telegram::NOTIFICACION_CALEFACCION_ON = notif["calefaccion"] | true;
+            Config::Telegram::NOTIFICACION_CALEFACCION_OFF = notif["calefaccion_off"] | false;
+            Config::Telegram::NOTIFICACION_ALARMAS = notif["alarma"] | true;
+            Config::Telegram::NOTIFICACION_ERRORES = notif["errores"] | false;
+            Config::Telegram::NOTIFICACION_INTERNET_RECONEXION = notif["internet"] | false;
+            Config::Telegram::NOTIFICACION_HORA = notif["hora"] | false;
+            Config::Telegram::NOTIFICACION_MEDIAHORA = notif["mediahora"] | false;
+        }
+        
+        DBG_SRV("✅ Configuración de Telegram cargada en variables globales:");
+        DBG_SRV_PRINTF("   Nombre: %s", Config::Telegram::CAMPANARIO_NOMBRE.c_str());
+        DBG_SRV_PRINTF("   Ubicación: %s", Config::Telegram::CAMPANARIO_UBICACION.c_str());
+        DBG_SRV_PRINTF("   Notif. Inicio: %s", Config::Telegram::NOTIFICACION_START ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Misa: %s", Config::Telegram::NOTIFICACION_MISA ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Difuntos: %s", Config::Telegram::NOTIFICACION_DIFUNTOS ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Fiesta: %s", Config::Telegram::NOTIFICACION_FIESTA ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Stop: %s", Config::Telegram::NOTIFICACION_STOP ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Calef.ON: %s", Config::Telegram::NOTIFICACION_CALEFACCION_ON ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Calef.OFF: %s", Config::Telegram::NOTIFICACION_CALEFACCION_OFF ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Alarmas: %s", Config::Telegram::NOTIFICACION_ALARMAS ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Errores: %s", Config::Telegram::NOTIFICACION_ERRORES ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Internet Reconexión: %s", Config::Telegram::NOTIFICACION_INTERNET_RECONEXION ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Hora: %s", Config::Telegram::NOTIFICACION_HORA ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Mediahora: %s", Config::Telegram::NOTIFICACION_MEDIAHORA ? "SÍ" : "NO");  
+    } else {
+        DBG_SRV_PRINTF("❌ Error al parsear telegram_config.json: %s", error.c_str());
+    }
+    
+    DBG_SRV_PRINTF("   Tamaño JSON: %d bytes", contenido.length());
+    
+    return contenido;
+}
+
+/**
+ * @brief Verifica el PIN de acceso a configuración
+ * 
+ * @details Valida el PIN introducido por el usuario para acceder a la
+ *          configuración avanzada del sistema. El PIN se almacena en
+ *          /pin_config.json en SPIFFS. Si no existe, se crea con PIN
+ *          por defecto "1234".
+ *          
+ *          **SEGURIDAD:**
+ *          - PIN almacenado en SPIFFS (no hardcoded)
+ *          - PIN por defecto: "1234" (debe cambiarse en producción)
+ *          - Persistencia entre reinicios
+ *          - Modificable desde interfaz web (futuro)
+ * 
+ * @param pin String con el PIN a verificar (4 dígitos)
+ * 
+ * @retval true PIN correcto
+ * @retval false PIN incorrecto
+ * 
+ * @note El PIN por defecto es "1234" si no existe archivo
+ * @note Se recomienda cambiar el PIN después de primera configuración
+ * 
+ * @warning En producción, implementar límite de intentos fallidos
+ * @warning Considerar hash del PIN en lugar de texto plano
+ * 
+ * @see procesaMensajeWebSocket() - Procesa comando VERIFY_PIN
+ * 
+ * @since v3.1 - Sistema de configuración con PIN
+ * @author Julian Salas Bartolomé
+ */
+bool verificarPinAcceso(const String& pin) {
+    DBG_SRV_PRINTF("🔐 Verificando PIN: %s", pin.c_str());
+    
+    String pinCorrecto = "1234"; // PIN por defecto
+    
+    // Cargar PIN desde SPIFFS si existe
+    if (SPIFFS.exists("/pin_config.json")) {
+        File file = SPIFFS.open("/pin_config.json", "r");
+        if (file) {
+            JsonDocument doc;
+            DeserializationError error = deserializeJson(doc, file);
+            file.close();
+            
+            if (!error && doc.containsKey("pin")) {
+                pinCorrecto = doc["pin"].as<String>();
+                DBG_SRV("📂 PIN cargado desde SPIFFS");
+            }
+        }
+    } else {
+        // Crear archivo con PIN por defecto
+        DBG_SRV("⚠️ Archivo pin_config.json no existe, creando con PIN por defecto");
+        
+        File file = SPIFFS.open("/pin_config.json", "w");
+        if (file) {
+            JsonDocument doc;
+            doc["pin"] = "1234";
+            doc["info"] = "Cambiar PIN desde interfaz web";
+            serializeJson(doc, file);
+            file.close();
+            DBG_SRV("✅ Archivo pin_config.json creado con PIN por defecto");
+        }
+    }
+    
+    return (pin == pinCorrecto);
+}
+
+

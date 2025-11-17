@@ -7,9 +7,11 @@
     <script src="idiomas.js"></script>
     <script src="Calefaccion.js"></script>
     <script src="Campanas.js"></script>
+    <script src="configuracion.js"></script>
     <!--<link rel="stylesheet" type="text/css" href="style.css">-->
     <link rel="stylesheet" type="text/css" href="campanas.css">
     <link rel="stylesheet" type="text/css" href="Calefaccion.css">
+    <link rel="stylesheet" type="text/css" href="configuracion.css">
 </head>
 <body>
     <div class="container">
@@ -114,8 +116,8 @@
                     </div>
                 </div>
                 
-                <!-- ✅ CONFIGURACIÓN DESHABILITADA - Estilo original pero gris -->
-                <div class="boton-config boton-deshabilitado">
+                <!-- ✅ CONFIGURACIÓN HABILITADA CON PIN -->
+                <div class="boton-config" onclick="abrirModalPin()">
                     <div class="icono-config">🔧</div>
                     <div class="texto-config">
                         <strong data-i18n="configuracion">Configuració</strong>
@@ -241,6 +243,174 @@
         </div>
     </div>
 
+    <!-- ✅ MODAL DE PIN PARA ACCEDER A CONFIGURACIÓN -->
+    <div id="modalPin" class="modal">
+        <div class="modal-content modal-pin">
+            <div class="modal-header">
+                <h2 data-i18n="pin_acceso">Accés a Configuració</h2>
+                <span class="close" onclick="cerrarModalPin()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="pin-container">
+                    <p data-i18n="introducir_pin">Introdueix el PIN d'accés:</p>
+                    <input type="password" id="inputPin" maxlength="4" placeholder="****" autocomplete="off">
+                    <div id="errorPin" class="error-pin" style="display: none;">
+                        ❌ <span data-i18n="pin_incorrecto">PIN incorrecte</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancelar" onclick="cerrarModalPin()" data-i18n="cancelar">Cancel·lar</button>
+                <button class="btn-aceptar" onclick="verificarPin()" data-i18n="aceptar">Acceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ MODAL DE CONFIGURACIÓN PRINCIPAL -->
+    <div id="modalConfiguracion" class="modal">
+        <div class="modal-content modal-config">
+            <div class="modal-header">
+                <h2 data-i18n="configuracion">Configuració</h2>
+                <span class="close" onclick="cerrarModalConfiguracion()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="config-opciones">
+                    <div class="config-opcion" onclick="abrirConfigTelegram()">
+                        <div class="icono-config-grande">📱</div>
+                        <div class="texto-config-opcion">
+                            <strong data-i18n="config_telegram">Telegram</strong>
+                            <small data-i18n="config_telegram_desc">Configurar notificacions</small>
+                        </div>
+                        <div class="flecha-config">›</div>
+                    </div>
+                    
+                    <div class="config-opcion" onclick="abrirConfigWifi()">
+                        <div class="icono-config-grande">📡</div>
+                        <div class="texto-config-opcion">
+                            <strong data-i18n="config_wifi">WiFi</strong>
+                            <small data-i18n="config_wifi_desc">Xarxa i connexió</small>
+                        </div>
+                        <div class="flecha-config">›</div>
+                    </div>
+                    
+                    <div class="config-opcion" onclick="abrirConfigSistema()">
+                        <div class="icono-config-grande">⚙️</div>
+                        <div class="texto-config-opcion">
+                            <strong data-i18n="config_sistema">Sistema</strong>
+                            <small data-i18n="config_sistema_desc">Ajustos generals</small>
+                        </div>
+                        <div class="flecha-config">›</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-aceptar btn-solo" onclick="cerrarModalConfiguracion()" data-i18n="cerrar">Tancar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ MODAL DE CONFIGURACIÓN TELEGRAM -->
+    <div id="modalConfigTelegram" class="modal">
+        <div class="modal-content modal-config-telegram">
+            <div class="modal-header">
+                <h2>📱 <span data-i18n="config_telegram">Telegram</span></h2>
+                <span class="close" onclick="cerrarModalConfigTelegram()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label data-i18n="nombre_dispositivo">Nom del dispositiu:</label>
+                    <input type="text" id="nombreDispositivo" placeholder="nombre" maxlength="20">
+                    <small data-i18n="nombre_dispositivo_ayuda">Aquest nom s'utilitzarà per identificar el campanari</small>
+                </div>
+                
+                <div class="form-group">
+                    <label data-i18n="ubicacion_dispositivo">Ubicació:</label>
+                    <input type="text" id="ubicacionDispositivo" placeholder="Localidad" maxlength="30">
+                </div>
+                
+                <hr class="separador-config">
+                
+                <div class="form-group">
+                    <label data-i18n="notificaciones_activar">Notificacions a enviar:</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifInicio" checked>
+                            <span data-i18n="notif_inicio">🔔 Inici del sistema</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifMisa" checked>
+                            <span data-i18n="notif_misa">⛪ Toc de Missa</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifDifuntos" checked>
+                            <span data-i18n="notif_difuntos">🕊️ Toc de Difunts</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifFiesta" checked>
+                            <span data-i18n="notif_fiesta">🎉 Toc de Festa</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifStop">
+                            <span data-i18n="notif_stop">🛑 Parada de seqüències</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifCalefaccion" checked>
+                            <span data-i18n="notif_calefaccion">🔥 Calefacció activada</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifCalefaccionOff">
+                            <span data-i18n="notif_calefaccion_off">❄️ Calefacció desactivada</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifAlarma" checked>
+                            <span data-i18n="notif_alarma">⏰ Execució d'alarmes</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifErrores">
+                            <span data-i18n="notif_errores">⚠️ Errors crítics</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifInternet">
+                            <span data-i18n="notif_internet">🌐 Reconnexió a Internet</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifHora">
+                            <span data-i18n="notif_hora">🕐 Tocs d'hora</span>
+                        </label>
+                        
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="notifMediahora">
+                            <span data-i18n="notif_mediahora">🕜 Tocs de mitges hores</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="mensajeGuardado" class="mensaje-guardado" style="display: none;">
+                    ✅ <span data-i18n="configuracion_guardada">Configuració guardada correctament</span>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancelar" onclick="cerrarModalConfigTelegram()" data-i18n="cancelar">Cancel·lar</button>
+                <button class="btn-aceptar" onclick="guardarConfigTelegram()" data-i18n="guardar">Guardar</button>
+            </div>
+        </div>
+    </div>
     
 </body>
 </html>

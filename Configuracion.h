@@ -63,25 +63,10 @@
             const String BOT_TOKEN = "7031269795:AAFJZVP9isGip5eICQNh_BuJ8WzHCxtOGNE";      // Token del bot de Telegram
             const String CHAT_ID = "106299125";                                             // ID del chat autorizado
             
-            //#define MANOLIS_CAMPANARIO
-            #define MAGARU_CAMPANARIO
+            constexpr int METODO_ACTIVACION_MANUAL = 0;                                     
+            constexpr int METODO_ACTIVACION_WEB = 1;
+            constexpr int METODO_ACTIVACION_ALARMA_PROGRAMADA = 2;
 
-            // ID único de ESTE campanario específico
-            #ifdef MANOLIS_CAMPANARIO
-                const String CAMPANARIO_ID = "manolis";     
-                const String CAMPANARIO_NOMBRE = "manolis";   
-                const String CAMPANARIO_UBICACION = "Lleida"; 
-            #endif
-            #ifdef RAIMAT_CAMPANARIO
-                const String CAMPANARIO_ID = "raimat";       
-                const String CAMPANARIO_NOMBRE = "raimat";     
-                const String CAMPANARIO_UBICACION = "Lleida"; 
-            #endif
-            #ifdef MAGARU_CAMPANARIO
-                const String CAMPANARIO_ID = "magaru";     
-                const String CAMPANARIO_NOMBRE = "magaru";   
-                const String CAMPANARIO_UBICACION = "Tremp";
-            #endif  
             
             // Intervalos de verificación
             constexpr unsigned long CHECK_MESSAGES_INTERVAL_MS = 2000;      // Verificar cada 2 segundos
@@ -90,6 +75,25 @@
             // Configuración de mensajes
             constexpr int MAX_MESSAGE_LENGTH = 4096;                        // Longitud máxima mensaje Telegram
             constexpr bool ENABLE_SILENT_NOTIFICATIONS = true;              // Notificaciones silenciosas por defecto
+
+            // ✅ Variables de configuración dinámica (cargadas desde SPIFFS)
+            inline String CAMPANARIO_NOMBRE = "";              // Nombre del campanario (configurable vía web)
+            inline String CAMPANARIO_ID = "";                 // ID del campanario (configurable vía web)
+            inline String CAMPANARIO_UBICACION = "";           // Ubicación del campanario (configurable vía web)
+ 
+            // ✅ Flags de notificaciones (configurables vía web)
+            inline bool NOTIFICACION_START = false;                          // Notificar al iniciar el sistema
+            inline bool NOTIFICACION_ERRORES = false;                       // Notificar errores críticos
+            inline bool NOTIFICACION_ALARMAS = false;                        // Notificar creacion de alarmas de campanario
+            inline bool NOTIFICACION_CALEFACCION_ON = false;                 // Notificar activación de calefacción On
+            inline bool NOTIFICACION_CALEFACCION_OFF = false;               // Notificar desactivación de calefacción Off
+            inline bool NOTIFICACION_MISA = false;                           // Notificar ejecución de secuencias Misa
+            inline bool NOTIFICACION_DIFUNTOS = false;                       // Notificar ejecución de secuencias Difuntos
+            inline bool NOTIFICACION_FIESTA = false;                         // Notificar ejecución de secuencias Fiesta
+            inline bool NOTIFICACION_STOP = false;                           // Notificar parada de secuencias
+            inline bool NOTIFICACION_INTERNET_RECONEXION = false;           // Notificar reconexión a Internet
+            inline bool NOTIFICACION_HORA = false;                          // Notificar toques de hora
+            inline bool NOTIFICACION_MEDIAHORA = false;                     // Notificar toques de cuartos
         }
 
         // ==================== ESTADOS I2C ====================

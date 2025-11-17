@@ -78,6 +78,15 @@ function onMessageDatos(event) {
         }
     }
     
+    // ✅ DELEGAR MENSAJES DE CONFIGURACIÓN (PIN, CONFIG_TELEGRAM)
+    if (event.data === "PIN_OK" || event.data === "PIN_ERROR" || event.data.startsWith("CONFIG_TELEGRAM:")) {
+        if (typeof procesarMensajeConfiguracion === 'function') {
+            procesarMensajeConfiguracion(event.data);
+        } else {
+            console.warn("⚠️ Función procesarMensajeConfiguracion no disponible");
+        }
+    }
+    
     if (event.data.startsWith("PROTECCION:ON")) {
         console.log("Actualizando la protección de campanadas horarias: " + event.data);
         habilitarBotonesCampanadas(false);

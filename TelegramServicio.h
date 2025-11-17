@@ -32,8 +32,13 @@ public:
     bool begin(const String& token, const String& chatId, const String& campanarioId);
     void sendNotification(const String& message);  // Habilita, envía y deshabilita automáticamente
     void sendStartupNotification();
-    void sendSequenceNotification(const String& sequenceName);
-    void sendStopNotification();
+    void SendReconexionNotification();
+    void sendStopNotification(int nMetodo);
+    void sendCalefaccionOnNotification(int nMetodo);
+    void sendCalefaccionOffNotification(int nMetodo);
+    void sendHoraNotification(const String& horaStr);
+    void sendMediaHoraNotification(const String& horaStr);
+    void sendSequenceNotification(const String& sequenceName, int nMetodo);
     void sendMsgNotification(const String& message);  // Habilita, envía y deshabilita automáticamente
     bool isEnabled() const { return serviceEnabled; }
 };

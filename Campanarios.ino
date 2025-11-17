@@ -102,9 +102,12 @@
             //Alarmas.begin(false);                                                      // Inicializa el sistema de alarmas sin cargar configuración por defecto
             IniciaAlarmas();                                                            // Llama a la función para iniciar las alarmas
             // Inicializar servicio Telegram (solo notificaciones)
-            telegramBot.begin(Config::Telegram::BOT_TOKEN, Config::Telegram::CHAT_ID, Config::Telegram::CAMPANARIO_ID);
-            telegramBot.sendStartupNotification();
+            telegramBot.begin(Config::Telegram::BOT_TOKEN, Config::Telegram::CHAT_ID, Config::Telegram::CAMPANARIO_NOMBRE);
             DBG_INO("Servicio Telegram inicializado (solo notificaciones).");
+            if (Config::Telegram::NOTIFICACION_START)
+            {
+              telegramBot.sendStartupNotification();
+            }
         } else {
           Campanario.ClearInternetConectado();                                        // Notifica al campanario que no hay conexión a Internet
           DBG_INO("Error al conectar a la red Wi-Fi.");

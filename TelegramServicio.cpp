@@ -104,27 +104,117 @@ void TelegramServicio::sendStartupNotification() {
     campanarioUpper.toUpperCase();
     String msg = "🔔 *" + campanarioUpper + " INICIADO*\n\n";
     msg += "✅ Sistema operativo\n";
-    msg += "📡 IP: " + WiFi.localIP().toString();
     sendNotification(msg);
 }
 
-void TelegramServicio::sendSequenceNotification(const String& sequenceName) {
+void TelegramServicio::SendReconexionNotification() {
     if (!serviceEnabled) return;
     String campanarioUpper = campanarioId;
     campanarioUpper.toUpperCase();
-    String msg = "🔔 *" + campanarioUpper + "*\n";
-    msg += "🎵 Tocando: " + sequenceName;
+    String msg = "🌐 *" + campanarioUpper + "*\n";
+    msg += "🔄 Internet reconectado";
     sendNotification(msg);
 }
 
-void TelegramServicio::sendStopNotification() {
+void TelegramServicio::sendCalefaccionOnNotification(int nMetodo) {
+    if (!serviceEnabled) return;
+    String campanarioUpper = campanarioId;
+    campanarioUpper.toUpperCase();
+    String msg = "🔥 *" + campanarioUpper + "*\n";
+    msg += "♨️ Calefacción ACTIVADA";
+    msg += "\n";
+    switch (nMetodo) {
+        case Config::Telegram::METODO_ACTIVACION_MANUAL:
+            msg += " (Manual)";
+            break;
+        case Config::Telegram::METODO_ACTIVACION_WEB:
+            msg += " (WEB)";
+            break;
+        case Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA:
+            msg += " (ALARMA PROGRAMADA)";
+            break;
+    }
+
+    sendNotification(msg);
+}
+
+void TelegramServicio::sendCalefaccionOffNotification(int nMetodo) {
+    if (!serviceEnabled) return;
+    String campanarioUpper = campanarioId;
+    campanarioUpper.toUpperCase();
+    String msg = "🔥 *" + campanarioUpper + "*\n";
+    msg += "♨️ Calefacción DESACTIVADA";
+    msg += "\n";
+    switch (nMetodo) {
+        case Config::Telegram::METODO_ACTIVACION_MANUAL:
+            msg += " (Manual)";
+            break;
+        case Config::Telegram::METODO_ACTIVACION_WEB:
+            msg += " (WEB)";
+            break;
+         case Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA:
+            msg += " (ALARMA PROGRAMADA)";
+            break;
+    }
+    sendNotification(msg);
+}
+
+void TelegramServicio::sendStopNotification(int nMetodo) {
     if (!serviceEnabled) return;
     String campanarioUpper = campanarioId;
     campanarioUpper.toUpperCase();
     String msg = "🛑 *" + campanarioUpper + "*\n";
     msg += "⏹️ Secuencia detenida";
+    msg += "\n";
+    switch (nMetodo) {
+        case Config::Telegram::METODO_ACTIVACION_MANUAL:
+            msg += " (Manual)";
+            break;
+        case Config::Telegram::METODO_ACTIVACION_WEB:
+            msg += " (WEB)";
+            break;
+         case Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA:
+            msg += " (ALARMA PROGRAMADA)";
+            break;
+    }    
     sendNotification(msg);
 }
+void TelegramServicio::sendHoraNotification(const String& horaStr) {
+    if (!serviceEnabled) return;
+    String campanarioUpper = campanarioId;
+    campanarioUpper.toUpperCase();
+    String msg = "🕰️ *" + campanarioUpper + "*\n";
+    msg += "⏰ Hora completa: " + horaStr;
+    sendNotification(msg);
+}
+void TelegramServicio::sendMediaHoraNotification(const String& horaStr) {
+    if (!serviceEnabled) return;
+    String campanarioUpper = campanarioId;
+    campanarioUpper.toUpperCase();
+    String msg = "🕰️ *" + campanarioUpper + "*\n";
+    msg += "⏰ Media hora: " + horaStr;
+    sendNotification(msg);
+}
+void TelegramServicio::sendSequenceNotification(const String& sequenceName, int nMetodo) {
+    if (!serviceEnabled) return;
+    String campanarioUpper = campanarioId;
+    campanarioUpper.toUpperCase();
+    String msg = "🔔 *" + campanarioUpper + "*\n";
+    msg += "🎵 Tocando: " + sequenceName;
+    msg += "\n";
+    switch (nMetodo) {
+        case Config::Telegram::METODO_ACTIVACION_MANUAL:
+            msg += " (Manual)";
+            break;
+        case Config::Telegram::METODO_ACTIVACION_WEB:
+            msg += " (WEB)";
+            break;
+         case Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA:
+            msg += " (ALARMA PROGRAMADA)";
+            break;
+    }    
+    sendNotification(msg);
+}   
 void TelegramServicio::sendMsgNotification(const String& message) {
     if (!serviceEnabled) return;
     String campanarioUpper = campanarioId;
