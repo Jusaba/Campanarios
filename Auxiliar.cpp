@@ -61,12 +61,14 @@ double nSegundosTemporizacion = 0;                                      // Tempo
      * 
      * Esta función ejecuta la secuencia indicada por el parámetro nSecuencia.
      * Llama internamente a la sobrecarga de EjecutaSecuencia con el segundo parámetro en cero.
+     * Recibe el motodo que ejecuta la secuencia (web, manual, programado )
      * 
      * @param nSecuencia Número identificador de la secuencia a ejecutar.
+     * @param nMetodo Método de activación (Manual, web, programado, sistema).
      */
-    void EjecutaSecuencia (int nSecuencia)
+    void EjecutaSecuencia (int nSecuencia, int nMetodo)
     {
-        EjecutaSecuencia(nSecuencia, 0);
+        EjecutaSecuencia(nSecuencia, 0, nMetodo);
     }
 
     /**
@@ -74,7 +76,8 @@ double nSegundosTemporizacion = 0;                                      // Tempo
      * 
      * @details Version sobrecargada Función principal que mapea IDs numéricos a acciones específicas
      *          de campananario. Actúa como dispatcher central para todas las
-     *          acciones disponibles en el sistema.
+     *          acciones disponibles en el sistema y notifica a Telegram si está habilitado.
+     *          Para las notificaciones Telegram tiene en cuenta el método de activación.
      *          
      *          **MAPEO DE SECUENCIAS:**
      *          - ID Config::States::DIFUNTOS: Secuencia de Difuntos (tradicional, solemne)
@@ -94,6 +97,7 @@ double nSegundosTemporizacion = 0;                                      // Tempo
      * 
      * @param nSecuencia Identificador numérico de la secuencia (1-255)
      * @param nParametro Parámetro adicional requerido por algunas secuencias (ej. temporizador)
+     * @param nMetodo Método de activación (Manual, web, programado).
      * 
      * @note **EXTENSIBLE:** Fácil añadir nuevas secuencias modificando el switch
      * @note **CENTRALIZADO:** Punto único de control para todas las secuencias
@@ -121,17 +125,18 @@ double nSegundosTemporizacion = 0;                                      // Tempo
      * @since v1.0
      * @author Julian Salas Bartolomé
      */    
-    void EjecutaSecuencia(int nSecuencia, int nParametro) {
+    void EjecutaSecuencia(int nSecuencia, int nParametro, int nMetodo) {
         
-        DBG_AUX_PRINTF("EjecutaSecuencia -> Secuencia: %d, Parámetro: %d", nSecuencia, nParametro);
+        DBG_AUX_PRINTF("EjecutaSecuencia -> Secuencia: %d, Parámetro: %d, Método: %d", nSecuencia, nParametro, nMetodo);
+
 
         switch (nSecuencia) {
             case Config::States::DIFUNTOS:
                 Campanario.TocaDifuntos();
                 ws.textAll("REDIRECT:/Campanas.html");      
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de difuntos");
-                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_DIFUNTOS) {
-                    telegramBot.sendSequenceNotification("Difuntos", Config::Telegram::METODO_ACTIVACION_MANUAL);
+                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_DIFUNTOS && nMetodo != Config::Telegram::METODO_ACTIVACION_OFF) {
+                    telegramBot.sendSequenceNotification("Difuntos", nMetodo);
                 }
                 break;
 
@@ -139,8 +144,8 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 Campanario.TocaMisa();
                 ws.textAll("REDIRECT:/Campanas.html");
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de misa");               
-                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_MISA) {
-                    telegramBot.sendSequenceNotification("Misa", Config::Telegram::METODO_ACTIVACION_MANUAL);
+                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_MISA && nMetodo != Config::Telegram::METODO_ACTIVACION_OFF) {
+                    telegramBot.sendSequenceNotification("Misa", nMetodo);
                 }
                 break;
 
@@ -148,8 +153,8 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 Campanario.TocaFiesta();
                 ws.textAll("REDIRECT:/Campanas.html");
                 DBG_AUX("EjecutaSecuencia -> Iniciando secuencia de fiesta");
-                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_FIESTA) {
-                    telegramBot.sendSequenceNotification("Fiesta", Config::Telegram::METODO_ACTIVACION_MANUAL   );
+                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_FIESTA && nMetodo != Config::Telegram::METODO_ACTIVACION_OFF) {
+                    telegramBot.sendSequenceNotification("Fiesta", nMetodo);
                 }
                 break;
 
@@ -157,8 +162,8 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 Campanario.ParaSecuencia();
                 ws.textAll("REDIRECT:/index.html");
                 DBG_AUX("EjecutaSecuencia -> Parando todas las secuencias");
-                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_STOP) {
-                    telegramBot.sendStopNotification(Config::Telegram::METODO_ACTIVACION_MANUAL);
+                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_STOP && nMetodo != Config::Telegram::METODO_ACTIVACION_OFF) {
+                    telegramBot.sendStopNotification(nMetodo);
                 }
                 break;
 
@@ -168,7 +173,7 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                     ws.textAll("CALEFACCION:ON");
                     DBG_AUX_PRINTF("EjecutaSecuencia -> Encendiendo calefacción (%d min desde WebSocket)", nTemporizacionCalefaccion);
                     if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_CALEFACCION_ON) {
-                        telegramBot.sendCalefaccionOnNotification(Config::Telegram::METODO_ACTIVACION_MANUAL);
+                        telegramBot.sendCalefaccionOnNotification(nMetodo);
                     }
                     break;
 
@@ -177,7 +182,7 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 ws.textAll("CALEFACCION:OFF");
                 DBG_AUX("EjecutaSecuencia -> Apagando calefacción");
                 if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_CALEFACCION_OFF) {
-                    telegramBot.sendCalefaccionOffNotification(Config::Telegram::METODO_ACTIVACION_MANUAL);
+                    telegramBot.sendCalefaccionOffNotification(nMetodo);
                 }
                 break;
 
@@ -199,7 +204,7 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                 ws.textAll("CALEFACCION:ON:" + String(nTemporizacionCalefaccion));
                 DBG_AUX_PRINTF("EjecutaSecuencia -> Temporizador de calefacción fijado a %d minutos", nTemporizacionCalefaccion);
                if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_CALEFACCION_ON) {
-                    telegramBot.sendCalefaccionOnNotification(Config::Telegram::METODO_ACTIVACION_MANUAL);
+                    telegramBot.sendCalefaccionOnNotification(nMetodo);
                 }
                 break;
 
@@ -429,7 +434,7 @@ void ActualizaEstadoProteccionCampanadas(void) {
         lProteccionCampanadasAnterior = lProteccionCampanadas;
         lProteccionCampanadas = nuevoEstadoProteccion;
         
-        EjecutaSecuencia(Config::States::PROTECCION_CAMPANADAS);                        // Notificar cambio por WebSocket (UNA SOLA VEZ)
+        EjecutaSecuencia(Config::States::PROTECCION_CAMPANADAS, Config::Telegram::METODO_ACTIVACION_SISTEMA);     // Notificar cambio por WebSocket (UNA SOLA VEZ)
 
         DBG_AUX_PRINTF("ActualizaEstadoProteccionCampanadas -> Cambio: %s -> %s",       // Log del cambio
                        lProteccionCampanadasAnterior ? "ACTIVA" : "INACTIVA",

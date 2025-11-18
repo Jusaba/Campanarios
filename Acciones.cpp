@@ -56,35 +56,8 @@
             DBG_ACCIONES_PRINTF("Secuencia %u bloqueada - campanario ocupado", seqId);
             return;                                                                     // Salir sin ejecutar
         }
-        
-        // ✅ NOTIFICACIONES DE TELEGRAM según configuración
-        if (telegramBot.isEnabled()) {
-            // Identificar la secuencia y enviar notificación si está habilitada
-            switch(seqId) {
-                case Config::States::MISA:
-                    if (Config::Telegram::NOTIFICACION_MISA) {
-                        telegramBot.sendSequenceNotification("Misa", Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA);
-                    }
-                    break;
-                    
-                case Config::States::DIFUNTOS:
-                    if (Config::Telegram::NOTIFICACION_DIFUNTOS) {
-                        telegramBot.sendSequenceNotification("Difuntos", Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA);
-                    }
-                    break;
-                    
-                case Config::States::FIESTA:
-                    if (Config::Telegram::NOTIFICACION_FIESTA) {
-                        telegramBot.sendSequenceNotification("Fiesta", Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA);
-                    }
-                    break;
-                    
-                default:
-                    
-                    break;
-            }
-        }
-        EjecutaSecuencia(seqId);
+        EjecutaSecuencia(seqId, Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA); // Ejecutar secuencia con método de activación alarma
+       
         DBG_ACCIONES_PRINTF("Secuencia %u ejecutada", seqId);
 
     }
@@ -262,7 +235,11 @@
             RTC::begin();  // ← Reutiliza tu lógica existente
 
             DBG_ACCIONES("SincronizaNTP -> Re-sincronización completada");
-
+            
+            // Notificar sincronización NTP si está habilitada
+            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_NTP_SYNC) {
+                telegramBot.sendNtpSyncNotification();
+            }
         }
     }
 

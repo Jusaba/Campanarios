@@ -80,14 +80,14 @@ extern ConfigWiFi configWiFi;                           // Estructura de configu
 
 // SOLO prototipos (sin implementaciones)
 
-void TestCampanadas(void);                              // Prototipo de la función para probar las campanadas
-void EjecutaSecuencia(int nSecuencia);                  // Prototipo de la función para ejecutar una secuencia
-void EjecutaSecuencia(int nSecuencia, int nParametro);  // Prototipo de la función para ejecutar una secuencia con parámetro
-void TestInternet(void);                                // Prototipo de la función para probar la conexión a Internet
+void TestCampanadas(void);                                           // Prototipo de la función para probar las campanadas
+void EjecutaSecuencia(int nSecuencia, int nMetodo);                  // Prototipo de la función para ejecutar una secuencia
+void EjecutaSecuencia(int nSecuencia, int nParametro, int nMetodo);  // Prototipo de la función para ejecutar una secuencia con parámetro
+void TestInternet(void);                                             // Prototipo de la función para probar la conexión a Internet
 
-bool EsPeriodoToqueCampanas(void);                      // Prototipo de la función para comprobar si estamos en el período de toque de campanas
-void ActualizaEstadoProteccionCampanadas(void);         // Prototipo de la función para actualizar el estado de protección de campanadas
+bool EsPeriodoToqueCampanas(void);                                   // Prototipo de la función para comprobar si estamos en el período de toque de campanas
+void ActualizaEstadoProteccionCampanadas(void);                      // Prototipo de la función para actualizar el estado de protección de campanadas
 
-void IniciaAlarmas (void);                             // Prototipo de la función para iniciar las alarmas
+void IniciaAlarmas (void);                                           // Prototipo de la función para iniciar las alarmas
 
 #endif

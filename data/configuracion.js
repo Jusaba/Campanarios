@@ -17,7 +17,10 @@ let configuracionTelegram = {
         errores: false,
         internet: false,
         hora: false,
-        mediahora: false
+        mediahora: false,
+        ntp: false,
+        dns: false,
+        alarma_programada: false
     }
 };
 
@@ -134,6 +137,9 @@ function aplicarConfigTelegramEnFormulario() {
     document.getElementById('notifInternet').checked = configuracionTelegram.notificaciones.internet || false;
     document.getElementById('notifHora').checked = configuracionTelegram.notificaciones.hora || false;
     document.getElementById('notifMediahora').checked = configuracionTelegram.notificaciones.mediahora || false;
+    document.getElementById('notifNtp').checked = configuracionTelegram.notificaciones.ntp || false;
+    document.getElementById('notifDns').checked = configuracionTelegram.notificaciones.dns || false;
+    document.getElementById('notifAlarmaProgramada').checked = configuracionTelegram.notificaciones.alarma_programada || false;
 }
 
 function guardarConfigTelegram() {
@@ -155,7 +161,10 @@ function guardarConfigTelegram() {
             errores: document.getElementById('notifErrores').checked,
             internet: document.getElementById('notifInternet').checked,
             hora: document.getElementById('notifHora').checked,
-            mediahora: document.getElementById('notifMediahora').checked
+            mediahora: document.getElementById('notifMediahora').checked,
+            ntp: document.getElementById('notifNtp').checked,
+            dns: document.getElementById('notifDns').checked,
+            alarma_programada: document.getElementById('notifAlarmaProgramada').checked
         }
     };
     

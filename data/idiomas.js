@@ -244,6 +244,9 @@ const IDIOMAS = {
         'notif_internet': '🌐 Reconnexíó a Internet',
         'notif_hora': '🕐 Tocs d\'hora',
         'notif_mediahora': '🕜 Tocs de mitges hores',
+        'notif_ntp': '⏱️ Sincronització NTP',
+        'notif_dns': '🌐 Actualització DNS',
+        'notif_alarma_programada': '⏰ Alarma programada executada',
         'configuracion_guardada': 'Configuració guardada correctament',
     },
     
@@ -488,6 +491,9 @@ const IDIOMAS = {
         'notif_internet': '🌐 Reconexión a Internet',
         'notif_hora': '🕐 Toques de hora',
         'notif_mediahora': '🕜 Toques de medias horas',
+        'notif_ntp': '⏱️ Sincronización NTP',
+        'notif_dns': '🌐 Actualización DNS',
+        'notif_alarma_programada': '⏰ Alarma programada ejecutada',
         'configuracion_guardada': 'Configuración guardada correctamente',
     }
 };

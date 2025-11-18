@@ -234,23 +234,29 @@
             nToque = Config::States::DIFUNTOS;                              // Establece la secuencia a EstadoDifuntos para tocar difuntos
             ws.textAll("REDIRECT:/Campanas.html");                          // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             DBG_SRV("Procesando mensaje: TocaDifuntos");
+/*
             if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_DIFUNTOS) {
                 telegramBot.sendSequenceNotification("Difuntos", Config::Telegram::METODO_ACTIVACION_WEB);
             }
+*/
         } else if (mensaje == "Misa") {                                     // Si el mensaje es "Misa"
             nToque = Config::States::MISA;                                  // Establece la secuencia a Misa para tocar misa
             ws.textAll("REDIRECT:/Campanas.html");                          // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             DBG_SRV("Procesando mensaje: TocaMisa");
+/*
             if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_MISA) {
                 telegramBot.sendSequenceNotification("Misa", Config::Telegram::METODO_ACTIVACION_WEB);
             }   
+*/
         } else if (mensaje == "Fiesta") {                                   // Si el mensaje es "Fiesta"
             nToque = Config::States::FIESTA;                                // Establece la secuencia a Fiesta para tocar fiesta
             ws.textAll("REDIRECT:/Campanas.html");                          // Indica a los clientes que deben redirigir a la pantalla de presentacion de las campanas
             DBG_SRV("Procesando mensaje: TocaFiesta");
-            if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_FIESTA) {
+/*
+
                 telegramBot.sendSequenceNotification("Fiesta", Config::Telegram::METODO_ACTIVACION_WEB);
             }
+*/
         } else if (mensaje == "PARAR") {                                    // Si el mensaje es "PARAR"  
             nToque = 0;                                                     // Parada la secuencia de toques
             Campanario.ParaSecuencia();                                     // Detiene la secuencia de campanadas
@@ -992,6 +998,9 @@ bool guardarConfigTelegramEnSPIFFS(const String& jsonConfig) {
             Config::Telegram::NOTIFICACION_INTERNET_RECONEXION = notif["internet"] | false;
             Config::Telegram::NOTIFICACION_HORA = notif["hora"] | false;
             Config::Telegram::NOTIFICACION_MEDIAHORA = notif["mediahora"] | false;
+            Config::Telegram::NOTIFICACION_NTP_SYNC = notif["ntp"] | false;
+            Config::Telegram::NOTIFICACION_DNS_UPDATE = notif["dns"] | false;
+            Config::Telegram::NOTIFICACION_ALARMA_PROGRAMADA = notif["alarma_programada"] | false;
         }
         
         DBG_SRV("✅ Variables globales actualizadas con nueva configuración");
@@ -1053,7 +1062,10 @@ String cargarConfigTelegramDesdeSPIFFS() {
         configDefault += "\"errores\":false,";
         configDefault += "\"internet\":false,";
         configDefault += "\"hora\":false,";
-        configDefault += "\"mediahora\":false";
+        configDefault += "\"mediahora\":false,";
+        configDefault += "\"ntp\":false,";
+        configDefault += "\"dns\":false,";
+        configDefault += "\"alarma_programada\":false";
         configDefault += "}}";
         
         // Guardar configuración por defecto
@@ -1101,6 +1113,9 @@ String cargarConfigTelegramDesdeSPIFFS() {
             Config::Telegram::NOTIFICACION_INTERNET_RECONEXION = notif["internet"] | false;
             Config::Telegram::NOTIFICACION_HORA = notif["hora"] | false;
             Config::Telegram::NOTIFICACION_MEDIAHORA = notif["mediahora"] | false;
+            Config::Telegram::NOTIFICACION_NTP_SYNC = notif["ntp"] | false;
+            Config::Telegram::NOTIFICACION_DNS_UPDATE = notif["dns"] | false;
+            Config::Telegram::NOTIFICACION_ALARMA_PROGRAMADA = notif["alarma_programada"] | false;
         }
         
         DBG_SRV("✅ Configuración de Telegram cargada en variables globales:");
@@ -1117,7 +1132,10 @@ String cargarConfigTelegramDesdeSPIFFS() {
         DBG_SRV_PRINTF("   Notif. Errores: %s", Config::Telegram::NOTIFICACION_ERRORES ? "SÍ" : "NO");
         DBG_SRV_PRINTF("   Notif. Internet Reconexión: %s", Config::Telegram::NOTIFICACION_INTERNET_RECONEXION ? "SÍ" : "NO");
         DBG_SRV_PRINTF("   Notif. Hora: %s", Config::Telegram::NOTIFICACION_HORA ? "SÍ" : "NO");
-        DBG_SRV_PRINTF("   Notif. Mediahora: %s", Config::Telegram::NOTIFICACION_MEDIAHORA ? "SÍ" : "NO");  
+        DBG_SRV_PRINTF("   Notif. Mediahora: %s", Config::Telegram::NOTIFICACION_MEDIAHORA ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. NTP Sync: %s", Config::Telegram::NOTIFICACION_NTP_SYNC ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. DNS Update: %s", Config::Telegram::NOTIFICACION_DNS_UPDATE ? "SÍ" : "NO");
+        DBG_SRV_PRINTF("   Notif. Alarma Programada: %s", Config::Telegram::NOTIFICACION_ALARMA_PROGRAMADA ? "SÍ" : "NO");  
     } else {
         DBG_SRV_PRINTF("❌ Error al parsear telegram_config.json: %s", error.c_str());
     }
@@ -1160,7 +1178,7 @@ String cargarConfigTelegramDesdeSPIFFS() {
 bool verificarPinAcceso(const String& pin) {
     DBG_SRV_PRINTF("🔐 Verificando PIN: %s", pin.c_str());
     
-    String pinCorrecto = "1234"; // PIN por defecto
+    String pinCorrecto = "2408"; // PIN por defecto
     
     // Cargar PIN desde SPIFFS si existe
     if (SPIFFS.exists("/pin_config.json")) {
@@ -1182,7 +1200,7 @@ bool verificarPinAcceso(const String& pin) {
         File file = SPIFFS.open("/pin_config.json", "w");
         if (file) {
             JsonDocument doc;
-            doc["pin"] = "1234";
+            doc["pin"] = "2408";
             doc["info"] = "Cambiar PIN desde interfaz web";
             serializeJson(doc, file);
             file.close();

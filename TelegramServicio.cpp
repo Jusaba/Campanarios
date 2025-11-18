@@ -223,4 +223,63 @@ void TelegramServicio::sendMsgNotification(const String& message) {
     msg += message;
     sendNotification(msg);
 }
+
+void TelegramServicio::sendNtpSyncNotification() {
+    if (!serviceEnabled) return;
+    String campanarioUpper = campanarioId;
+    campanarioUpper.toUpperCase();
+    
+    // Obtener fecha/hora actual
+    struct tm timeinfo;
+    String fechaHora = "";
+    if (getLocalTime(&timeinfo)) {
+        char buffer[30];
+        strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M:%S", &timeinfo);
+        fechaHora = String(buffer);
+    }
+    
+    String msg = "⏱️ *" + campanarioUpper + "*\n";
+    msg += "✅ NTP sincronizado";
+    if (fechaHora.length() > 0) {
+        msg += "\n📅 " + fechaHora;
+    }
+    sendNotification(msg);
+}
+
+void TelegramServicio::sendDnsUpdateNotification(const String& domain) {
+    if (!serviceEnabled) return;
+    String campanarioUpper = campanarioId;
+    campanarioUpper.toUpperCase();
+    String msg = "🌐 *" + campanarioUpper + "*\n";
+    msg += "✅ DNS actualizado";
+    if (domain.length() > 0) {
+        msg += "\n🔗 " + domain;
+    }
+    sendNotification(msg);
+}
+
+void TelegramServicio::sendAlarmaProgramadaNotification(const String& descripcion) {
+    if (!serviceEnabled) return;
+    String campanarioUpper = campanarioId;
+    campanarioUpper.toUpperCase();
+    
+    // Obtener hora actual
+    struct tm timeinfo;
+    String horaStr = "";
+    if (getLocalTime(&timeinfo)) {
+        char buffer[10];
+        strftime(buffer, sizeof(buffer), "%H:%M", &timeinfo);
+        horaStr = String(buffer);
+    }
+    
+    String msg = "⏰ *" + campanarioUpper + "*\n";
+    msg += "🔔 Alarma ejecutada";
+    if (horaStr.length() > 0) {
+        msg += "\n🕒 " + horaStr;
+    }
+    if (descripcion.length() > 0) {
+        msg += "\n📝 " + descripcion;
+    }
+    sendNotification(msg);
+}
 // Funciones de control temporal eliminadas - solo notificaciones automáticas

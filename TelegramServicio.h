@@ -40,6 +40,9 @@ public:
     void sendMediaHoraNotification(const String& horaStr);
     void sendSequenceNotification(const String& sequenceName, int nMetodo);
     void sendMsgNotification(const String& message);  // Habilita, envía y deshabilita automáticamente
+    void sendNtpSyncNotification();
+    void sendDnsUpdateNotification(const String& domain);
+    void sendAlarmaProgramadaNotification(const String& descripcion);
     bool isEnabled() const { return serviceEnabled; }
 };
 

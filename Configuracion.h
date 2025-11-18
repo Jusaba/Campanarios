@@ -67,6 +67,8 @@
             constexpr int METODO_ACTIVACION_MANUAL = 0;                                     
             constexpr int METODO_ACTIVACION_WEB = 1;
             constexpr int METODO_ACTIVACION_ALARMA_PROGRAMADA = 2;
+            constexpr int METODO_ACTIVACION_SISTEMA = 3;
+            constexpr int METODO_ACTIVACION_OFF = 9;
 
             
             // Intervalos de verificación
@@ -95,6 +97,9 @@
             inline bool NOTIFICACION_INTERNET_RECONEXION = false;           // Notificar reconexión a Internet
             inline bool NOTIFICACION_HORA = false;                          // Notificar toques de hora
             inline bool NOTIFICACION_MEDIAHORA = false;                     // Notificar toques de cuartos
+            inline bool NOTIFICACION_NTP_SYNC = false;                      // Notificar sincronización NTP exitosa
+            inline bool NOTIFICACION_DNS_UPDATE = false;                    // Notificar actualización DNS dinámica
+            inline bool NOTIFICACION_ALARMA_PROGRAMADA = false;             // Notificar ejecución de alarmas programadas
         }
 
         // ==================== ESTADOS I2C ====================

@@ -159,5 +159,11 @@
                   ActualizaDNS(dominioCache.c_str());
                   lastIP = currentIP;
                   DBG_DNS("DNS actualizado - IP: " + currentIP);
+                  
+                  // Notificar actualización DNS si está habilitada
+                  extern TelegramServicio telegramBot;
+                  if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_DNS_UPDATE) {
+                      telegramBot.sendDnsUpdateNotification(dominioCache + " (" + currentIP + ")");
+                  }
               }
         }

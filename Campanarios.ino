@@ -151,18 +151,18 @@
     if (secuenciaI2C > 0) {                                                 // Si se ha recibido orden por I2C
       if (secuenciaI2C == Config::States::SET_TEMPORIZADOR) {
           // Secuencias que SÍ necesitan parámetro:
-          EjecutaSecuencia(secuenciaI2C, ParametroI2C);                     // Con parámetro I2C
-          DBG_INO_PRINTF("I2C -> EjecutaSecuencia(%d, %d)", secuenciaI2C, ParametroI2C);
+          EjecutaSecuencia(secuenciaI2C, ParametroI2C, Config::Telegram::METODO_ACTIVACION_MANUAL);                     // Con parámetro I2C
+          DBG_INO_PRINTF("I2C -> EjecutaSecuencia(%d, %d, %d)", secuenciaI2C, ParametroI2C, Config::Telegram::METODO_ACTIVACION_MANUAL  );
       } else {
           // Secuencias que NO necesitan parámetro:
-          EjecutaSecuencia(secuenciaI2C);                                   // Sin parámetro
-          DBG_INO_PRINTF("I2C -> EjecutaSecuencia(%d)", secuenciaI2C);
+          EjecutaSecuencia(secuenciaI2C, Config::Telegram::METODO_ACTIVACION_MANUAL);                                   // Sin parámetro
+          DBG_INO_PRINTF("I2C -> EjecutaSecuencia(%d,  %d)", secuenciaI2C, Config::Telegram::METODO_ACTIVACION_MANUAL);
       }
       secuenciaI2C = 0;                                                     // Resetea para esperar la siguiente orden
       nToque = 0;                                                           // Resetea el numero de la secuencia a tocar
     }
     if (nToque > 0) {                                                       // Si la orden se ha recibido por websocket
-      EjecutaSecuencia(nToque);                                             // Llama a la función para ejecutar la orden recibida de inernet
+      EjecutaSecuencia(nToque, Config::Telegram::METODO_ACTIVACION_MANUAL);                                              // Llama a la función para ejecutar la orden recibida de inernet
       nToque = 0;                                                           // Resetea el numero de la secuencia a tocar
     }
   
