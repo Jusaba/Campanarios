@@ -458,12 +458,17 @@ renderStatsBasico() {
                 claveAccion = accionLimpia;
             }
         }
-        
+        let textoTipoCompleto = accionTraducida;
+        if (alarm.accion === 'CALEFACCION' && alarm.duracion) {
+            textoTipoCompleto = `🔥 ${accionTraducida} (${formatearDuracion(alarm.duracion)})`;
+        } else if (alarm.accion !== 'CALEFACCION') {
+            textoTipoCompleto = `🔔 ${accionTraducida}`;
+        }        
         div.innerHTML = `
             <div class="alarm-info">
                 <h4>${alarm.nombre}</h4>
                 <p><strong><span data-i18n="${alarm.diaNombre}">${diaTraducido}</span></strong> a las <strong>${alarm.horaTexto}</strong></p>
-                <p><span data-i18n="Acción">${textoAccion}</span>: <strong><span data-i18n="${claveAccion}" data-valor-original="${alarm.accion}">${accionTraducida}</span></strong></p>
+                <p><span data-i18n="Acción">${textoAccion}</span>: <strong>${textoTipoCompleto}</strong></p>
                 ${alarm.descripcion ? `<p><em>${alarm.descripcion}</em></p>` : ''}
             </div>
             <div class="alarm-controls">
@@ -530,7 +535,11 @@ renderStatsBasico() {
             segundo: 0,
             accion: document.getElementById('accion').value,
             parametro:  0,
-            habilitada: true
+            habilitada: true,
+            duracion: (() => {
+                const duracionSelect = document.getElementById('duracion');
+                return duracionSelect ? parseInt(duracionSelect.value) || 0 : 0;
+            })()
         };
     }
     
@@ -591,6 +600,12 @@ renderStatsBasico() {
             document.getElementById('hora').value = alarm.hora;
             document.getElementById('minuto').value = alarm.minuto;
             document.getElementById('accion').value = alarm.accion;
+            
+            const duracionSelect = document.getElementById('duracion');
+            if (duracionSelect && alarm.duracion) {
+                duracionSelect.value = alarm.duracion;
+            }
+            mostrarDuracionSiEsCalefaccion(); // Mostrar campo duración si es calefacción
             
             // Cambiar texto del botón
             const submitBtn = document.querySelector('#alarmForm button[type="submit"]');
@@ -860,6 +875,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const alarmManager = new AlarmManager();
         window.alarmManager = alarmManager;
         console.log('✅ AlarmManager inicializado y disponible globalmente');
+        const accionSelect = document.getElementById('accion');
+        if (accionSelect) {
+            accionSelect.addEventListener('change', mostrarDuracionSiEsCalefaccion);
+        }        
     }, 500); // Aumentado de 200ms a 500ms
 });
 
@@ -878,3 +897,55 @@ if (document.readyState !== 'loading') {
         console.log('✅ AlarmManager inicializado (fallback)');
     }, 500); // Aumentado de 200ms a 500ms
 } 
+
+/**
+ * Mostrar/ocultar campo duración según la acción seleccionada
+ */
+function mostrarDuracionSiEsCalefaccion() {
+    const accionSelect = document.getElementById('accion');
+    const duracionSelect = document.getElementById('duracion');
+    const btnCrear = document.querySelector('button[type="submit"]');
+    
+    if (accionSelect && accionSelect.value === 'CALEFACCION') {
+        // Mostrar selector de duración
+        if (duracionSelect) {
+            duracionSelect.style.display = 'inline-block';
+            duracionSelect.required = true;
+        }
+        
+        // Cambiar texto del botón
+        if (btnCrear) {
+            btnCrear.innerHTML = '🔥 <span data-i18n="crear">Crear</span> <span data-i18n="alarma_calefaccion">Alarma de Calefacción</span>';
+        }
+    } else {
+        // Ocultar selector de duración
+        if (duracionSelect) {
+            duracionSelect.style.display = 'none';
+            duracionSelect.required = false;
+        }
+        
+        // Restaurar texto del botón
+        if (btnCrear) {
+            btnCrear.innerHTML = '🔔 <span data-i18n="crear">Crear</span> <span data-i18n="nueva_alarma">Alarma</span>';
+        }
+    }
+}
+
+/**
+ * Formatear duración en texto legible
+ */
+function formatearDuracion(minutos) {
+    if (!minutos) return '0 min';
+    
+    if (minutos < 60) {
+        return `${minutos} min`;
+    } else if (minutos === 60) {
+        return '1h';
+    } else if (minutos % 60 === 0) {
+        return `${minutos / 60}h`;
+    } else {
+        const horas = Math.floor(minutos / 60);
+        const mins = minutos % 60;
+        return `${horas}h ${mins}m`;
+    }
+}

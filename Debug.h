@@ -16,13 +16,13 @@
 //#define DEBUGI2CREQUEST             // Debug de requests I2C (envío/recepción)
 //#define DEBUGI2CSECUENCIA           // Debug de secuencias I2C recibidas
 
-//#define DEBUGINO                    // Debug del módulo INO
+#define DEBUGINO                    // Debug del módulo INO
 
 //#define DEBUGAUXILIAR             // Debug del módulo Auxiliar
 //#define DEBUGPROTECCION             // Debug de protección de campanadas
 //#define DEBUGACCIONES             // Debug de las acciones de alarmas
  #define DEBUGSERVIDOR              // Debug del servidor web
-// #define DEBUGDNS                 // Debug del servicio DNS
+ #define DEBUGDNS                 // Debug del servicio DNS
  #define DEBUGWIFI                // Debug de conexión WiFi
  #define DEBUGALARMAS               // Debug del sistema de alarmas
  #define DEBUGCAMPANARIO          // Debug del campanario
@@ -114,9 +114,11 @@
 // Macros para debug de DNS
 #ifdef DEBUGDNS
     #define DBG_DNS(msg) Serial.println(String("[DNS] ") + msg)
+    #define DBG_DNS_PRINT(msg) Serial.print(String("[DNS] ") + msg)
     #define DBG_DNS_PRINTF(fmt, ...) Serial.printf("[DNS] " fmt "\n", ##__VA_ARGS__)
 #else
     #define DBG_DNS(msg)
+    #define DBG_DNS_PRINT (msg)
     #define DBG_DNS_PRINTF(fmt, ...)
 #endif
 

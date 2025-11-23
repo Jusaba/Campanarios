@@ -6,7 +6,7 @@
 ConfigWiFi configWiFi;
 DNSServer dnsServer;
 const char* ap_ssid = "magaru";
-const char* ap_password = "MGR24081960";
+const char* ap_password = "24081960";
 
 
 /**

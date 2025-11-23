@@ -248,6 +248,17 @@ const IDIOMAS = {
         'notif_dns': '🌐 Actualització DNS',
         'notif_alarma_programada': '⏰ Alarma programada executada',
         'configuracion_guardada': 'Configuració guardada correctament',
+        //Calefacción
+        "tipo_calefaccion": "🔥 Calefacció",
+        "alarma_calefaccion": "Alarma de Calefacció",
+        "duracion_15min": "15 minuts",
+        "duracion_30min": "30 minuts", 
+        "duracion_45min": "45 minuts",
+        "duracion_1h": "1 hora",
+        "duracion_1h30m": "1h 30m",
+        "duracion_2h": "2 hores",
+        "duracion_3h": "3 hores",
+        "duracion_4h": "4 hores"
     },
     
     'es': {
@@ -495,6 +506,18 @@ const IDIOMAS = {
         'notif_dns': '🌐 Actualización DNS',
         'notif_alarma_programada': '⏰ Alarma programada ejecutada',
         'configuracion_guardada': 'Configuración guardada correctamente',
+
+        //Calefacción
+       "tipo_calefaccion": "🔥 Calefacción",
+        "alarma_calefaccion": "Alarma de Calefacción", 
+        "duracion_15min": "15 minutos",
+        "duracion_30min": "30 minutos",
+        "duracion_45min": "45 minutos",
+        "duracion_1h": "1 hora",
+        "duracion_1h30m": "1h 30m",
+        "duracion_2h": "2 horas",
+        "duracion_3h": "3 horas",
+        "duracion_4h": "4 horas"        
     }
 };
 

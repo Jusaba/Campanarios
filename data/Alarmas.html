@@ -267,12 +267,22 @@
                 </div>
                 
                 <div class="form-row">
-                    <select id="accion" required>
+                    <select id="accion" onchange="mostrarDuracionSiEsCalefaccion()" required>
                         <option value="MISA" data-i18n="tipo_misa">Campanadas de Misa</option>
                         <option value="DIFUNTOS" data-i18n="tipo_difuntos">Campanadas de Difuntos</option>
                         <option value="FIESTA" data-i18n="tipo_fiesta">Campanadas de Fiesta</option>
+                        <option value="CALEFACCION" data-i18n="tipo_calefaccion">🔥 Calefacción</option>
                     </select>
-                    
+                    <select id="duracion" style="display: none;">
+                        <option value="15" data-i18n="duracion_15min">15 minutos</option>
+                        <option value="30" data-i18n="duracion_30min" selected>30 minutos</option>
+                        <option value="45" data-i18n="duracion_45min">45 minutos</option>
+                        <option value="60" data-i18n="duracion_1h">1 hora</option>
+                        <option value="90" data-i18n="duracion_1h30m">1h 30m</option>
+                        <option value="120" data-i18n="duracion_2h">2 horas</option>
+                        <option value="180" data-i18n="duracion_3h">3 horas</option>
+                        <option value="240" data-i18n="duracion_4h">4 horas</option>
+                    </select>                    
                 </div>
                 
                 <div class="form-row">
