@@ -207,14 +207,57 @@ function abrirConfigWifi() {
     // TODO: Implementar configuración WiFi
 }
 
-function abrirConfigSistema() {
-    alert("🔧 Configuración Sistema - Próximamente");
-    // TODO: Implementar configuración sistema (PIN, actualización OTA, etc.)
+function abrirConfigReset() {
+    console.log("🔄 Solicitando reinicio del sistema");
+    
+    // Confirmar antes de reiniciar
+    const mensaje = typeof t === 'function' ? 
+        t('reset_confirmacion') + '\n\n' + t('reset_descripcion') :
+        '¿Estás seguro que quieres reiniciar el sistema?\n\nEl sistema se reiniciará y se perderá la conexión temporalmente.';
+    
+    if (confirm(mensaje)) {
+        console.log("✅ Reinicio confirmado");
+        
+        // Enviar comando de reset al servidor
+        if (typeof websocket !== 'undefined' && websocket.readyState === WebSocket.OPEN) {
+            websocket.send('RESET_SYSTEM');
+            console.log("📤 Comando de reinicio enviado al servidor");
+            
+            // Cerrar modales
+            cerrarModalConfiguracion();
+            
+            // Mostrar mensaje al usuario
+            const mensajeEjecutando = typeof t === 'function' ? t('reset_ejecutando') : 'Reiniciando el sistema...';
+            alert(mensajeEjecutando);
+            
+        } else {
+            const mensajeError = typeof t === 'function' ? t('error_conexion') : 'Error de conexión';
+            alert('Error: ' + mensajeError);
+            console.error("❌ WebSocket no disponible");
+        }
+    } else {
+        console.log("❌ Reinicio cancelado por el usuario");
+    }
 }
 
 // ============================================================================
 // CERRAR MODALES CON CLICK FUERA
 // ============================================================================
+
+function abrirModalAcercaDe() {
+    const modal = document.getElementById('modalAcercaDe');
+    modal.style.display = 'block';
+    
+    // Solicitar versión actual del firmware
+    if (typeof websocket !== 'undefined' && websocket.readyState === WebSocket.OPEN) {
+        websocket.send('GET_VERSION_OTA');
+    }
+}
+
+function cerrarModalAcercaDe() {
+    const modal = document.getElementById('modalAcercaDe');
+    modal.style.display = 'none';
+}
 
 window.onclick = function(event) {
     const modalPin = document.getElementById('modalPin');
@@ -272,6 +315,23 @@ function procesarMensajeConfiguracion(mensaje) {
             console.log("✅ Configuración aplicada al formulario");
         } catch (e) {
             console.error("❌ Error al parsear configuración:", e);
+        }
+    } else if (mensaje.startsWith("VERSION_OTA:")) {
+        // VERSION_OTA:1.0.4
+        const version = mensaje.substring(12);
+        
+        // Actualizar en modal OTA si existe
+        const versionOTA = document.getElementById('versionActual');
+        if (versionOTA) {
+            versionOTA.textContent = version;
+        }
+        
+        // Actualizar en modal Acerca de
+        const versionSistema = document.getElementById('versionSistema');
+        if (versionSistema) {
+            const idioma = idiomaActual || 'ca';
+            const textoVersion = idioma === 'ca' ? 'Versió' : 'Versión';
+            versionSistema.textContent = `${textoVersion} ${version}`;
         }
     }
 }

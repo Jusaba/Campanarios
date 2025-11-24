@@ -1,30 +1,5 @@
 #include "OTAServicio.h"
 
-// Certificado raíz de GitHub (válido hasta 2031)
-const char* github_root_ca = \
-"-----BEGIN CERTIFICATE-----\n" \
-"MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh\n" \
-"MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n" \
-"d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD\n" \
-"QTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT\n" \
-"MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\n" \
-"b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG\n" \
-"9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB\n" \
-"CSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97\n" \
-"nh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt\n" \
-"43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P\n" \
-"T19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4\n" \
-"gdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO\n" \
-"BgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR\n" \
-"TLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw\n" \
-"DQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr\n" \
-"hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg\n" \
-"06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF\n" \
-"PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls\n" \
-"YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk\n" \
-"CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=\n" \
-"-----END CERTIFICATE-----\n";
-
 OTAServicio OTA;
 
 OTAServicio::OTAServicio() 
@@ -39,12 +14,8 @@ OTAServicio::OTAServicio()
 }
 
 void OTAServicio::begin() {
-    Serial.println("[OTA] Servicio OTA iniciado");
-    Serial.printf("[OTA] Version actual: %s\n", Config::OTA::FIRMWARE_VERSION.c_str());
-    
-    // Configurar cliente HTTPS con certificado
-    _httpsClient.setCACert(github_root_ca);
-    
+    DBG_OTA("Servicio OTA iniciado");
+    DBG_OTA_PRINTF("Version actual: %s", Config::OTA::FIRMWARE_VERSION.c_str());
     setState(OTA_IDLE);
 }
 
@@ -52,10 +23,10 @@ void OTAServicio::enableAutoUpdate(bool enable) {
     _autoUpdateEnabled = enable;
     Config::OTA::AUTO_UPDATE_ENABLED = enable;  // Sincronizar con config
     if (enable) {
-        Serial.println("[OTA] Auto-update habilitado");
+        DBG_OTA("Auto-update habilitado");
         _lastUpdateCheck = millis();
     } else {
-        Serial.println("[OTA] Auto-update deshabilitado");
+        DBG_OTA("Auto-update deshabilitado");
     }
 }
 
@@ -68,11 +39,11 @@ void OTAServicio::checkAutoUpdate() {
     }
     
     _lastUpdateCheck = now;
-    Serial.println("[OTA] Comprobacion automatica de actualizaciones...");
+    DBG_OTA("Comprobacion automatica de actualizaciones...");
     
     VersionInfo info = checkForUpdates();
     if (info.newVersionAvailable) {
-        Serial.printf("[OTA] Nueva version disponible: %s\n", info.latestVersion.c_str());
+        DBG_OTA_PRINTF("Nueva version disponible: %s", info.latestVersion.c_str());
         // Aquí podrías enviar notificación Telegram
         // Por ahora solo registramos el evento
     }
@@ -94,7 +65,7 @@ VersionInfo OTAServicio::checkForUpdates() {
     http.setTimeout(15000); // 15 segundos timeout
     
     String apiUrl = Config::OTA::getGitHubApiUrl();
-    Serial.printf("[OTA] Consultando: %s\n", apiUrl.c_str());
+    DBG_OTA_PRINTF("Consultando: %s", apiUrl.c_str());
     
     if (!http.begin(client, apiUrl)) {
         setError("Error al iniciar conexion HTTPS");
@@ -110,7 +81,7 @@ VersionInfo OTAServicio::checkForUpdates() {
     
     int httpCode = http.GET();
     
-    Serial.printf("[OTA] Codigo HTTP: %d\n", httpCode);
+    DBG_OTA_PRINTF("Codigo HTTP: %d", httpCode);
     
     if (httpCode != HTTP_CODE_OK) {
         if (httpCode > 0) {
@@ -128,7 +99,7 @@ VersionInfo OTAServicio::checkForUpdates() {
     String payload = http.getString();
     http.end();
     
-    Serial.printf("[OTA] Respuesta recibida: %d bytes\n", payload.length());
+    DBG_OTA_PRINTF("Respuesta recibida: %d bytes", payload.length());
     
     // Parsear JSON
     JsonDocument doc;
@@ -179,7 +150,7 @@ VersionInfo OTAServicio::checkForUpdates() {
     setProgress(100, "Comprobacion completada");
     setState(OTA_IDLE);
     
-    Serial.printf("[OTA] Version actual: %s, Ultima: %s, Nueva disponible: %s\n", 
+    DBG_OTA_PRINTF("Version actual: %s, Ultima: %s, Nueva disponible: %s", 
                   info.currentVersion.c_str(), 
                   info.latestVersion.c_str(),
                   info.newVersionAvailable ? "SI" : "NO");
@@ -210,11 +181,11 @@ bool OTAServicio::performFullUpdate(const VersionInfo& versionInfo) {
         return false;
     }
     
-    Serial.println("[OTA] Iniciando actualizacion completa...");
+    DBG_OTA("Iniciando actualizacion completa...");
     
     // Aumentar timeout del watchdog durante la actualización (60 segundos)
     esp_task_wdt_init(60, true);
-    Serial.println("[OTA] Watchdog timeout aumentado a 60s");
+    DBG_OTA("Watchdog timeout aumentado a 60s");
     
     // 1. Actualizar firmware
     if (!versionInfo.firmwareUrl.isEmpty()) {
@@ -229,7 +200,7 @@ bool OTAServicio::performFullUpdate(const VersionInfo& versionInfo) {
     // 2. Actualizar SPIFFS (opcional)
     if (!versionInfo.spiffsUrl.isEmpty()) {
         if (!updateSPIFFS(versionInfo.spiffsUrl, versionInfo.spiffsSize)) {
-            Serial.println("[OTA] Advertencia: Error actualizando SPIFFS (no critico)");
+            DBG_OTA("Advertencia: Error actualizando SPIFFS (no critico)");
             // No es crítico, continuamos
         }
     }
@@ -239,8 +210,14 @@ bool OTAServicio::performFullUpdate(const VersionInfo& versionInfo) {
         _successCallback(versionInfo.latestVersion.c_str());
     }
     
-    Serial.println("[OTA] Actualizacion completada. Reiniciando en 3 segundos...");
-    delay(3000);
+    DBG_OTA("Actualizacion completada. Reiniciando en 5 segundos...");
+    
+    // Dar tiempo para que se envíen los mensajes WebSocket
+    for (int i = 5; i > 0; i--) {
+        DBG_OTA_PRINTF("Reiniciando en %d...", i);
+        delay(1000);
+    }
+    
     ESP.restart();
     
     return true;
@@ -250,7 +227,7 @@ bool OTAServicio::updateFirmware(const String& url, size_t expectedSize) {
     setState(OTA_DOWNLOADING_FIRMWARE);
     setProgress(0, "Descargando firmware...");
     
-    Serial.printf("[OTA] Descargando firmware desde: %s\n", url.c_str());
+    DBG_OTA_PRINTF("Descargando firmware desde: %s", url.c_str());
     
     WiFiClientSecure client;
     client.setInsecure();
@@ -271,7 +248,7 @@ bool OTAServicio::updateFirmware(const String& url, size_t expectedSize) {
     }
     
     size_t contentLength = http.getSize();
-    Serial.printf("[OTA] Tamano firmware: %d bytes\n", contentLength);
+    DBG_OTA_PRINTF("Tamano firmware: %d bytes", contentLength);
     
     if (contentLength <= 0 || contentLength > Config::OTA::MAX_FIRMWARE_SIZE) {
         setError("Tamano de firmware invalido");
@@ -307,7 +284,7 @@ bool OTAServicio::updateFirmware(const String& url, size_t expectedSize) {
             setProgress(progress, "Instalando firmware...");
             
             if (progress % 10 == 0) {
-                Serial.printf("[OTA] Progreso firmware: %d%%\n", progress);
+                DBG_OTA_PRINTF("Progreso firmware: %d%%", progress);
             }
         }
         esp_task_wdt_reset(); // Reset watchdog
@@ -322,7 +299,7 @@ bool OTAServicio::updateFirmware(const String& url, size_t expectedSize) {
         return false;
     }
     
-    Serial.println("[OTA] Firmware actualizado correctamente");
+    DBG_OTA("Firmware actualizado correctamente");
     setProgress(100, "Firmware instalado");
     return true;
 }
@@ -331,7 +308,7 @@ bool OTAServicio::updateSPIFFS(const String& url, size_t expectedSize) {
     setState(OTA_DOWNLOADING_SPIFFS);
     setProgress(0, "Descargando SPIFFS...");
     
-    Serial.printf("[OTA] Descargando SPIFFS desde: %s\n", url.c_str());
+    DBG_OTA_PRINTF("Descargando SPIFFS desde: %s", url.c_str());
     
     WiFiClientSecure client;
     client.setInsecure();
@@ -352,7 +329,7 @@ bool OTAServicio::updateSPIFFS(const String& url, size_t expectedSize) {
     }
     
     size_t contentLength = http.getSize();
-    Serial.printf("[OTA] Tamano SPIFFS: %d bytes\n", contentLength);
+    DBG_OTA_PRINTF("Tamano SPIFFS: %d bytes", contentLength);
     
     if (contentLength <= 0 || contentLength > Config::OTA::MAX_SPIFFS_SIZE) {
         setError("Tamano de SPIFFS invalido");
@@ -386,7 +363,7 @@ bool OTAServicio::updateSPIFFS(const String& url, size_t expectedSize) {
             setProgress(progress, "Instalando SPIFFS...");
             
             if (progress % 10 == 0) {
-                Serial.printf("[OTA] Progreso SPIFFS: %d%%\n", progress);
+                DBG_OTA_PRINTF("Progreso SPIFFS: %d%%", progress);
             }
         }
         esp_task_wdt_reset(); // Reset watchdog
@@ -401,7 +378,7 @@ bool OTAServicio::updateSPIFFS(const String& url, size_t expectedSize) {
         return false;
     }
     
-    Serial.println("[OTA] SPIFFS actualizado correctamente");
+    DBG_OTA("SPIFFS actualizado correctamente");
     setProgress(100, "SPIFFS instalado");
     return true;
 }
@@ -419,7 +396,7 @@ void OTAServicio::setProgress(int progress, const char* message) {
 
 void OTAServicio::setError(const char* error) {
     _lastError = String(error);
-    Serial.printf("[OTA] ERROR: %s\n", error);
+    DBG_OTA_PRINTF("ERROR: %s", error);
     setState(OTA_ERROR);
     if (_errorCallback) {
         _errorCallback(error);

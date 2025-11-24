@@ -105,7 +105,7 @@
         // ==================== OTA ====================
         namespace OTA {
             // Versión del firmware (debe coincidir con GitHub Release)
-            inline String FIRMWARE_VERSION = "1.0.0";
+            inline String FIRMWARE_VERSION = "1.0.5";
             
             // Configuración GitHub
             inline String GITHUB_OWNER = "Jusaba";

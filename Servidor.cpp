@@ -403,16 +403,22 @@
                 DBG_SRV("❌ No hay actualizaciones para instalar");
             } else {
                 // Configurar callbacks antes de actualizar
-                OTA.setProgressCallback([](int progress, const char* message) -> void {
-                    ws.textAll("OTA_PROGRESS:" + String(progress) + ":" + String(message ? message : ""));
+                OTA.setProgressCallback([](int progress, const char* message) {
+                    String msg = "OTA_PROGRESS:" + String(progress) + ":" + String(message ? message : "");
+                    ws.textAll(msg);
+                    DBG_OTA_PRINTF("📊 Progreso: %d%% - %s", progress, message ? message : "");
                 });
                 
-                OTA.setErrorCallback([](const char* error) -> void {
-                    ws.textAll("OTA_ERROR:" + String(error ? error : "Error desconocido"));
+                OTA.setErrorCallback([](const char* error) {
+                    String msg = "OTA_ERROR:" + String(error ? error : "Error desconocido");
+                    ws.textAll(msg);
+                    DBG_OTA_PRINTF("❌ Error: %s", error ? error : "Error desconocido");
                 });
                 
-                OTA.setSuccessCallback([](const char* version) -> void {
-                    ws.textAll("OTA_SUCCESS:" + String(version ? version : ""));
+                OTA.setSuccessCallback([](const char* version) {
+                    String msg = "OTA_SUCCESS:" + String(version ? version : "");
+                    ws.textAll(msg);
+                    DBG_OTA_PRINTF("✅ Actualización completada: %s", version ? version : "");
                 });
                 
                 // Notificar inicio
@@ -426,6 +432,17 @@
                     DBG_SRV("❌ Error al iniciar actualización OTA");
                 }
             }
+        
+        } else if (mensaje == "RESET_SYSTEM") {
+            // Reiniciar el sistema
+            DBG_SRV("🔄 Reinicio del sistema solicitado por el usuario");
+            ws.textAll("RESET_OK");
+            
+            // Dar tiempo para enviar la respuesta
+            delay(500);
+            
+            // Reiniciar ESP32
+            ESP.restart();
         
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido

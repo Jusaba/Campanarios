@@ -94,10 +94,14 @@ function onMessageDatos(event) {
         event.data.startsWith("OTA_PROGRESS:") ||
         event.data.startsWith("OTA_SUCCESS:") ||
         event.data.startsWith("OTA_ERROR:")) {
+        // VERSION_OTA se usa tanto en modal OTA como en modal Acerca de
         if (typeof procesarMensajeOTA === 'function') {
             procesarMensajeOTA(event.data);
         } else {
             console.warn("⚠️ Función procesarMensajeOTA no disponible");
+        }
+        if (event.data.startsWith("VERSION_OTA:") && typeof procesarMensajeConfiguracion === 'function') {
+            procesarMensajeConfiguracion(event.data);
         }
     }
     

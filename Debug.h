@@ -19,19 +19,20 @@
 #define DEBUGINO                    // Debug del módulo INO
 
 //#define DEBUGAUXILIAR             // Debug del módulo Auxiliar
-//#define DEBUGPROTECCION             // Debug de protección de campanadas
+//#define DEBUGPROTECCION           // Debug de protección de campanadas
 //#define DEBUGACCIONES             // Debug de las acciones de alarmas
- #define DEBUGSERVIDOR              // Debug del servidor web
- #define DEBUGDNS                 // Debug del servicio DNS
- #define DEBUGWIFI                // Debug de conexión WiFi
- #define DEBUGALARMAS               // Debug del sistema de alarmas
- #define DEBUGCAMPANARIO          // Debug del campanario
-// #define DEBUGRTC                 // Debug del RTC
-// #define DEBUGAP                  // Debug del modo AP
-// #define DEBUGCALEFACCION         // Debug del sistema de calefacción
-// #define DEBUGCAMPANA             // Debug del sistema de campanas
- #define DEBUGTELEGRAM            // Debug del servicio Telegram
-#define DBG_ALARMS_ENABLED          // Habilita macros de debug para alarmas personalizadas
+//#define DEBUGSERVIDOR             // Debug del servidor web
+//#define DEBUGDNS                  // Debug del servicio DNS
+//#define DEBUGWIFI                 // Debug de conexión WiFi
+//#define DEBUGALARMAS              // Debug del sistema de alarmas
+//#define DEBUGCAMPANARIO           // Debug del campanario
+//#define DEBUGRTC                  // Debug del RTC
+//#define DEBUGAP                   // Debug del modo AP
+//#define DEBUGCALEFACCION          // Debug del sistema de calefacción
+//#define DEBUGCAMPANA              // Debug del sistema de campanas
+//#define DEBUGTELEGRAM             // Debug del servicio Telegram
+//#define DBG_ALARMS_ENABLED        // Habilita macros de debug para alarmas personalizadas
+//#define DEBUGOTA                  // Debug del servicio OTA
 
 // ============================================================================
 // MACROS DE DEBUG - Simplifica el uso de debug condicional
@@ -224,6 +225,17 @@
 #else
     #define DBG_ALARMS(msg)
     #define DBG_ALARMS_PRINTF(format, ...)
+#endif
+
+// Macros para debug de OTA
+#ifdef DEBUGOTA
+    #define DBG_OTA(msg) Serial.println(String("[OTA] ") + msg)
+    #define DBG_OTA_PRINT(msg) Serial.print(String("[OTA] ") + msg)
+    #define DBG_OTA_PRINTF(fmt, ...) Serial.printf("[OTA] " fmt "\n", ##__VA_ARGS__)
+#else
+    #define DBG_OTA(msg)
+    #define DBG_OTA_PRINT(msg)
+    #define DBG_OTA_PRINTF(fmt, ...)
 #endif
 
 // ============================================================================
