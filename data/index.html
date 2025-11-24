@@ -8,6 +8,7 @@
     <script src="Calefaccion.js"></script>
     <script src="Campanas.js"></script>
     <script src="configuracion.js"></script>
+    <script src="ota.js"></script>
     <!--<link rel="stylesheet" type="text/css" href="style.css">-->
     <link rel="stylesheet" type="text/css" href="campanas.css">
     <link rel="stylesheet" type="text/css" href="Calefaccion.css">
@@ -287,11 +288,11 @@
                         <div class="flecha-config">›</div>
                     </div>
                     
-                    <div class="config-opcion" onclick="abrirConfigWifi()">
-                        <div class="icono-config-grande">📡</div>
+                    <div class="config-opcion" onclick="abrirModalOTA()">
+                        <div class="icono-config-grande">🔄</div>
                         <div class="texto-config-opcion">
-                            <strong data-i18n="config_wifi">WiFi</strong>
-                            <small data-i18n="config_wifi_desc">Xarxa i connexió</small>
+                            <strong data-i18n="actualizacion">Actualització</strong>
+                            <small data-i18n="actualizacion_desc">Actualitzar firmware</small>
                         </div>
                         <div class="flecha-config">›</div>
                     </div>
@@ -423,6 +424,52 @@
             <div class="modal-footer">
                 <button class="btn-cancelar" onclick="cerrarModalConfigTelegram()" data-i18n="cancelar">Cancel·lar</button>
                 <button class="btn-aceptar" onclick="guardarConfigTelegram()" data-i18n="guardar">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ MODAL DE ACTUALIZACIÓN OTA -->
+    <div id="modalOTA" class="modal">
+        <div class="modal-content modal-ota">
+            <div class="modal-header">
+                <h2>🔄 <span data-i18n="actualizacion">Actualització</span></h2>
+                <span class="close" onclick="cerrarModalOTA()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="ota-info">
+                    <div class="version-actual">
+                        <strong data-i18n="version_actual">Versió actual:</strong>
+                        <span id="versionActual">1.0.0</span>
+                    </div>
+                    
+                    <div class="version-disponible" id="versionDisponibleContainer" style="display: none;">
+                        <strong data-i18n="version_disponible">Versió disponible:</strong>
+                        <span id="versionDisponible">-</span>
+                    </div>
+                </div>
+                
+                <div class="ota-estado" id="otaEstado">
+                    <p data-i18n="ota_comprobar_desc">Comprova si hi ha actualitzacions disponibles</p>
+                </div>
+                
+                <div class="ota-progreso" id="otaProgreso" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="otaProgressFill" style="width: 0%"></div>
+                    </div>
+                    <p id="otaMensaje">Comprovant...</p>
+                </div>
+                
+                <div id="otaNotas" class="ota-notas" style="display: none;">
+                    <h4 data-i18n="notas_version">Notes de la versió:</h4>
+                    <div id="otaNotasContenido"></div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancelar" id="btnCancelarOTA" onclick="cerrarModalOTA()" data-i18n="cerrar">Tancar</button>
+                <button class="btn-secundario" id="btnComprobarOTA" onclick="comprobarActualizacion()" data-i18n="comprobar">Comprovar</button>
+                <button class="btn-aceptar" id="btnActualizarOTA" onclick="iniciarActualizacion()" style="display: none;" data-i18n="actualizar">Actualitzar</button>
             </div>
         </div>
     </div>

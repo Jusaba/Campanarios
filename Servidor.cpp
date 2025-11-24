@@ -366,6 +366,67 @@
                 DBG_SRV("❌ PIN incorrecto");
             }
         
+        } else if (mensaje == "GET_VERSION_OTA") {
+            // Enviar versión actual del firmware
+            ws.textAll("VERSION_OTA:" + String(Config::OTA::FIRMWARE_VERSION));
+            DBG_SRV_PRINTF("📤 Versión actual enviada: %s", Config::OTA::FIRMWARE_VERSION);
+        
+        } else if (mensaje == "CHECK_UPDATE_OTA") {
+            // Comprobar si hay actualizaciones disponibles
+            DBG_SRV("🔍 Comprobando actualizaciones OTA...");
+            
+            VersionInfo versionInfo = OTA.checkForUpdates();
+            
+            if (versionInfo.newVersionAvailable) {
+                // Enviar información de actualización disponible
+                String respuesta = "UPDATE_AVAILABLE:" + 
+                                 versionInfo.latestVersion + ":" +
+                                 versionInfo.firmwareUrl + ":" +
+                                 versionInfo.spiffsUrl + ":" +
+                                 versionInfo.releaseNotes;
+                ws.textAll(respuesta);
+                DBG_SRV_PRINTF("✅ Nueva versión disponible: %s", versionInfo.latestVersion.c_str());
+            } else {
+                ws.textAll("NO_UPDATE");
+                DBG_SRV("ℹ️ No hay actualizaciones disponibles");
+            }
+        
+        } else if (mensaje == "START_UPDATE_OTA") {
+            // Iniciar proceso de actualización OTA
+            DBG_SRV("🚀 Iniciando actualización OTA...");
+            
+            // Primero comprobar qué versión hay disponible
+            VersionInfo versionInfo = OTA.checkForUpdates();
+            
+            if (!versionInfo.newVersionAvailable) {
+                ws.textAll("OTA_ERROR:No hay actualizaciones disponibles");
+                DBG_SRV("❌ No hay actualizaciones para instalar");
+            } else {
+                // Configurar callbacks antes de actualizar
+                OTA.setProgressCallback([](int progress, const char* message) -> void {
+                    ws.textAll("OTA_PROGRESS:" + String(progress) + ":" + String(message ? message : ""));
+                });
+                
+                OTA.setErrorCallback([](const char* error) -> void {
+                    ws.textAll("OTA_ERROR:" + String(error ? error : "Error desconocido"));
+                });
+                
+                OTA.setSuccessCallback([](const char* version) -> void {
+                    ws.textAll("OTA_SUCCESS:" + String(version ? version : ""));
+                });
+                
+                // Notificar inicio
+                ws.textAll("OTA_PROGRESS:0:Iniciando actualización...");
+                
+                // Ejecutar actualización
+                if (OTA.performFullUpdate(versionInfo)) {
+                    DBG_SRV("✅ Actualización iniciada correctamente");
+                } else {
+                    ws.textAll("OTA_ERROR:Error al iniciar la actualización");
+                    DBG_SRV("❌ Error al iniciar actualización OTA");
+                }
+            }
+        
         } else {
             nToque = 0; // Resetea la secuencia si el mensaje no es reconocido
             DBG_SRV("Mensaje no reconocido, reseteando secuencia.");
@@ -433,12 +494,19 @@
                if (tipoAccion == "MISA") {
                    callback = accionSecuencia;
                    parametro = Config::States::I2CState::MISA;
+                   DBG_SRV("🔔 Configurando callback MISA");
                } else if (tipoAccion == "DIFUNTOS") {
                    callback = accionSecuencia;
                    parametro = Config::States::I2CState::DIFUNTOS;
+                   DBG_SRV("🔔 Configurando callback DIFUNTOS");
                } else if (tipoAccion == "FIESTA") {
                    callback = accionSecuencia;
                    parametro = Config::States::I2CState::FIESTA;
+                   DBG_SRV("🔔 Configurando callback FIESTA");
+               } else if (tipoAccion == "CALEFACCION") {
+                   callback = accionEnciendeCalefaccion;
+                   parametro = doc["duracion"] | 30;  // Duración en minutos (por defecto 30)
+                   DBG_SRV_PRINTF("🔥 Configurando callback CALEFACCION con %d minutos", parametro);
                }
 
                if (callback) {
@@ -478,6 +546,10 @@
                     callback = accionSecuencia;
                     parametro = Config::States::I2CState::FIESTA;
                     DBG_SRV("🔧 Configurando callback FIESTA para edición");
+                } else if (tipoAccion == "CALEFACCION") {
+                    callback = accionEnciendeCalefaccion;
+                    parametro = doc["duracion"] | 30;  // Duración en minutos (por defecto 30)
+                    DBG_SRV_PRINTF("🔥 Configurando callback CALEFACCION para edición con %d minutos", parametro);
                 }
             
                 // ✅ VERIFICAR callback válido

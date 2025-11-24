@@ -260,6 +260,7 @@ public:
     void clear();
     uint8_t count() const;
     const Alarm* get(uint8_t idx) const;
+    Alarm* getMutable(uint8_t idx);  // Permite modificar alarmas (para restaurar callbacks)
     bool esHorarioNocturno() const;
     void resetCache();
 

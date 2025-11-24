@@ -58,6 +58,7 @@
     void accionSecuencia(uint16_t seqId);                                               // Ejecuta secuencia específica
     void accionTocaHora(void);                                                          // Ejecuta toque de hora
     void accionTocaMedia(void);                                                         // Ejecuta toque de media hora
+    void accionEnciendeCalefaccion(uint16_t minutos);                                   // Enciende calefacción por X minutos
 
 
     void SincronizaNTP( void );                                                        // Sincroniza reloj con servidor NTP    

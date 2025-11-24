@@ -89,5 +89,6 @@ bool EsPeriodoToqueCampanas(void);                                   // Prototip
 void ActualizaEstadoProteccionCampanadas(void);                      // Prototipo de la función para actualizar el estado de protección de campanadas
 
 void IniciaAlarmas (void);                                           // Prototipo de la función para iniciar las alarmas
+void RestaurarCallbacksAlarmas(void);                                // Restaura callbacks después de cargar desde JSON
 
 #endif

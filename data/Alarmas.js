@@ -73,6 +73,12 @@ class AlarmManager {
             delete window.actualizarTextosAlarmas;
         }
         window.actualizarTextosAlarmas = () => this.actualizarTextosIdioma();
+        
+        // ✅ FORZAR actualización de textos de interfaz al iniciar
+        if (typeof actualizarTextosInterfaz === 'function') {
+            console.log('🔄 Forzando actualización de textos de interfaz desde Alarmas.js');
+            actualizarTextosInterfaz();
+        }
     }
     
     setupWebSocket() {

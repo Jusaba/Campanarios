@@ -15,3 +15,8 @@ arduino-cli upload -p COM10  -b esp32:esp32:stamp-s3 -i DialCampanario.ino.bin
 Para Lenovo
 arduino-cli compile -b esp32:esp32:m5stack_stamp_s3  --build-property  " build.extra_flags= -D ESP32 -D ARDUINO_USB_MODE=1 -D ARDUINO_USB_CDC_ON_BOOT=1" --build-path build -e -vls
 arduino-cli upload -p COM7  -b esp32:esp32:m5stack_stamp_s3 -i DialCampanario.ino.bin
+
+arduino-cli compile -b esp32:esp32:esp32:PartitionScheme=default,UploadSpeed=115200 -e -v
+C:\Users\Julian\AppData\Local\Arduino15\packages\esp32\tools\mkspiffs\0.2.3\mkspiffs.exe -c data -b 4096 -p 256 -s 1441792 build\esp32.esp32.esp32\Campanarios.spiffs.bin
+*** 1441792 es el peso del fichero Campanarios.spiffs.bin
+C:\Users\Julian\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.5.1\esptool.exe --chip esp32 --port COM3 --baud 460800 write_flash 0x290000 build\esp32.esp32.esp32\Campanarios.spiffs.bin

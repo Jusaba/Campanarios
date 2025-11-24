@@ -48,6 +48,7 @@
   #include "Campanario.h"
   #include "RTC.h"
   #include "ConexionWifi.h"
+  #include "OTAServicio.h"
   #include <Wire.h>
   #include "Auxiliar.h"
   #include "ModoAp.h"
@@ -99,6 +100,12 @@
             ServidorOn(configWiFi.usuario, configWiFi.clave);                         // Llama a la función para iniciar el servidor
             Campanario.SetInternetConectado();                                        // Notifica al campanario que hay conexión a Internet
             DBG_INO("Conexión Wi-Fi exitosa.");
+            
+            // Inicializar servicio OTA
+            OTA.begin();
+            OTA.enableAutoUpdate(Config::OTA::AUTO_UPDATE_ENABLED);
+            DBG_INO("Servicio OTA inicializado.");
+            
             //Alarmas.begin(false);                                                      // Inicializa el sistema de alarmas sin cargar configuración por defecto
             IniciaAlarmas();                                                            // Llama a la función para iniciar las alarmas
             // Inicializar servicio Telegram (solo notificaciones)
@@ -141,6 +148,9 @@
           ultimoCheckInternet = millis();
           TestInternet();                                                   // Llama a la función para comprobar la conexión a Internet y actualizar el DNS si es necesario
       }
+      
+      // Comprobar actualizaciones OTA automáticas
+      OTA.checkAutoUpdate();
       
       // Verificar mensajes de Telegram    
 //      if (telegramBot.isEnabled()) {

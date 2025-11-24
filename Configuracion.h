@@ -102,6 +102,36 @@
             inline bool NOTIFICACION_ALARMA_PROGRAMADA = false;             // Notificar ejecución de alarmas programadas
         }
 
+        // ==================== OTA ====================
+        namespace OTA {
+            // Versión del firmware (debe coincidir con GitHub Release)
+            inline String FIRMWARE_VERSION = "1.0.0";
+            
+            // Configuración GitHub
+            inline String GITHUB_OWNER = "Jusaba";
+            inline String GITHUB_REPO = "Campanarios";
+            
+            // URLs (se construyen en runtime)
+            inline String getGitHubApiUrl() {
+                return "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO + "/releases/latest";
+            }
+            
+            inline String getGitHubReleaseBaseUrl() {
+                return "https://github.com/" + GITHUB_OWNER + "/" + GITHUB_REPO + "/releases/download/";
+            }
+            
+            // Tamaños máximos (esquema 'default')
+            constexpr size_t MAX_FIRMWARE_SIZE = 1310720;  // 1.25 MB
+            constexpr size_t MAX_SPIFFS_SIZE = 1441792;    // ~1.4 MB (0x160000)
+            
+            // Configuración de actualización automática
+            constexpr unsigned long AUTO_UPDATE_INTERVAL_HOURS = 24;  // Comprobar cada 24 horas
+            constexpr unsigned long UPDATE_CHECK_TIMEOUT_MS = 10000;  // Timeout de 10 segundos
+            
+            // Auto-update habilitado por defecto
+            inline bool AUTO_UPDATE_ENABLED = false;  // Deshabilitado por seguridad, activar vía web
+        }
+
         // ==================== ESTADOS I2C ====================
         namespace States {
             enum I2CState : uint8_t {

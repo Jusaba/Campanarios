@@ -175,6 +175,7 @@
     #include "Configuracion.h"
     #include "Debug.h"
     #include "TelegramServicio.h"
+    #include "OTAServicio.h"
     
     #include "Campanario.h"
     #include "Alarmas.h" 

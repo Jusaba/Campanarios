@@ -258,7 +258,24 @@ const IDIOMAS = {
         "duracion_1h30m": "1h 30m",
         "duracion_2h": "2 hores",
         "duracion_3h": "3 hores",
-        "duracion_4h": "4 hores"
+        "duracion_4h": "4 hores",
+        //ota
+        "actualizacion": "Actualització",
+        "actualizacion_desc": "Actualitzar Firmware",
+        "version_actual": "Versió actual:",
+        "version_disponible": "Versió disponible:",
+        "ota_comprobar_desc": "Comprova si hi ha actualitzacions disponibles",
+        "comprobar": "Comprovar",
+        "notas_version": "Notes de la versió:",
+        "ota_actualizando": "Actualitzant...",
+        "ota_descargando": "Descarregant firmware...",
+        "ota_instalando": "Instal·lant actualització...",
+        "ota_completado": "Actualització completada!",
+        "ota_reiniciando": "Reiniciant dispositiu...",
+        "ota_error": "Error en l'actualització",
+        "ota_no_disponible": "No hi ha actualitzacions disponibles",
+        "ota_nueva_version": "Nova versió disponible!",
+        "ota_firmware_actualizado": "El firmware està actualitzat"
     },
     
     'es': {
@@ -517,7 +534,24 @@ const IDIOMAS = {
         "duracion_1h30m": "1h 30m",
         "duracion_2h": "2 horas",
         "duracion_3h": "3 horas",
-        "duracion_4h": "4 horas"        
+        "duracion_4h": "4 horas",
+        //ota
+        "actualizacion": "Actualización",
+        "actualizacion_desc": "Actualizar Firmware",
+        "version_actual": "Versión actual:",
+        "version_disponible": "Versión disponible:",
+        "ota_comprobar_desc": "Comprueba si hay actualizaciones disponibles",
+        "comprobar": "Comprobar",
+        "notas_version": "Notas de la versión:",
+        "ota_actualizando": "Actualizando...",
+        "ota_descargando": "Descargando firmware...",
+        "ota_instalando": "Instalando actualización...",
+        "ota_completado": "¡Actualización completada!",
+        "ota_reiniciando": "Reiniciando dispositivo...",
+        "ota_error": "Error en la actualización",
+        "ota_no_disponible": "No hay actualizaciones disponibles",
+        "ota_nueva_version": "¡Nueva versión disponible!",
+        "ota_firmware_actualizado": "El firmware está actualizado"
     }
 };
 

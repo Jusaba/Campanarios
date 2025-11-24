@@ -543,6 +543,21 @@ const Alarm* AlarmScheduler::get(uint8_t idx) const {
 }
 
 /**
+ * @brief Obtiene acceso mutable a una alarma específica por índice
+ * 
+ * @details Devuelve puntero no-const para permitir modificar alarmas existentes.
+ *          Útil para restaurar callbacks después de cargar desde JSON.
+ * 
+ * @param idx Índice de la alarma (0 a count()-1)
+ * @return Alarm* Puntero a la alarma o nullptr si índice inválido
+ * 
+ * @warning Usar con precaución - permite modificar alarmas directamente
+ */
+Alarm* AlarmScheduler::getMutable(uint8_t idx) { 
+    return (idx < _num) ? &_alarmas[idx] : nullptr; 
+}
+
+/**
  * @brief Determina si la hora actual está en horario nocturno
  * 
  * @details Evalúa si la hora actual del sistema está dentro del rango
@@ -1261,6 +1276,8 @@ String AlarmScheduler::obtenerPersonalizablesJSON() {
         alarmaObj["hora"] = alarma.hora;
         alarmaObj["minuto"] = alarma.minuto;
         alarmaObj["accion"] = alarma.tipoString;
+        alarmaObj["parametro"] = alarma.parametro;  // Parámetro genérico
+        alarmaObj["duracion"] = alarma.parametro;   // Alias para alarmas de calefacción
         alarmaObj["habilitada"] = alarma.habilitada;
         
         // Formatear hora para mostrar (ej: "11:05")
@@ -1525,6 +1542,13 @@ bool AlarmScheduler::cargarPersonalizablesDesdeJSON() {
         alarma.esPersonalizable = true;
         alarma.idWeb = idWeb;
         
+        // Leer parámetro desde JSON (se usará para callback específico)
+        uint16_t parametroJson = alarmaObj["parametro"] | 0;
+        alarma.parametro = parametroJson;
+        
+        // ⚠️ CALLBACK se asigna DESPUÉS mediante restaurarCallbacksAlarmas()
+        // No se puede asignar aquí porque sería dependiente del proyecto
+        alarma.accionExt = nullptr;
          
         // Actualizar siguiente ID si es necesario
         if (idWeb >= _siguienteIdWeb) {
@@ -1644,6 +1668,8 @@ bool AlarmScheduler::guardarPersonalizablesEnJSON() {
         alarmaObj["minuto"] = alarma.minuto;
         alarmaObj["accion"] = alarma.tipoString;
         alarmaObj["habilitada"] = alarma.habilitada;
+        alarmaObj["parametro"] = alarma.parametro;  // ✅ Guardar parámetro (duración para CALEFACCION)
+        alarmaObj["duracion"] = alarma.parametro;   // ✅ Alias para compatibilidad con frontend
     }
     
     // Escribir archivo

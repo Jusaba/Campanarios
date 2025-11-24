@@ -447,12 +447,65 @@ void ActualizaEstadoProteccionCampanadas(void) {
 void IniciaAlarmas (void)
 {
     Alarmas.begin(true); // Inicializa el sistema de alarmas con configuración por defecto
+    
+    // Restaurar callbacks de alarmas personalizables cargadas desde JSON
+    RestaurarCallbacksAlarmas();
 
     Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 0, 0, accionTocaHora, true);                                      // Toca cada hora en punto con accionTocaHora()
     Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 30, 0, accionTocaMedia, true);                                    // Toca cada media hora con accionTocaMedia()  
     Alarmas.addExternal0(DOW_TODOS, 12, 2, 0, SincronizaNTP, true);                                                    // Sincroniza NTP al mediodía
     Alarmas.addExternal0(DOW_TODOS, ALARMA_WILDCARD, 10, 0, ActualizaDNSSiNecesario, true);                             // Actualiza DNS si es necesario cada hora en el minuto 10
 
+}
+
+/**
+ * @brief Restaura los callbacks de las alarmas personalizables después de cargarlas desde JSON
+ * 
+ * @details Esta función recorre todas las alarmas cargadas y asigna los callbacks correctos
+ *          según el tipo de alarma (MISA, DIFUNTOS, FIESTA, CALEFACCION).
+ *          Debe llamarse después de Alarmas.begin() para que las alarmas estén cargadas.
+ * 
+ * @note Esta función es específica del proyecto y mantiene Alarmas.cpp genérico
+ */
+void RestaurarCallbacksAlarmas(void)
+{
+    DBG_AUX("🔧 Restaurando callbacks de alarmas personalizables...");
+    
+    for (uint8_t i = 0; i < Alarmas.count(); i++) {
+        Alarm* alarma = Alarmas.getMutable(i);
+        
+        if (alarma && alarma->esPersonalizable && alarma->accionExt == nullptr) {
+            // La alarma fue cargada desde JSON y necesita su callback
+            
+            if (strcmp(alarma->tipoString, "MISA") == 0) {
+                alarma->accionExt = accionSecuencia;
+                alarma->parametro = Config::States::I2CState::MISA;
+                DBG_AUX_PRINTF("  ✅ Callback MISA restaurado para '%s'", alarma->nombre);
+                
+            } else if (strcmp(alarma->tipoString, "DIFUNTOS") == 0) {
+                alarma->accionExt = accionSecuencia;
+                alarma->parametro = Config::States::I2CState::DIFUNTOS;
+                DBG_AUX_PRINTF("  ✅ Callback DIFUNTOS restaurado para '%s'", alarma->nombre);
+                
+            } else if (strcmp(alarma->tipoString, "FIESTA") == 0) {
+                alarma->accionExt = accionSecuencia;
+                alarma->parametro = Config::States::I2CState::FIESTA;
+                DBG_AUX_PRINTF("  ✅ Callback FIESTA restaurado para '%s'", alarma->nombre);
+                
+            } else if (strcmp(alarma->tipoString, "CALEFACCION") == 0) {
+                alarma->accionExt = accionEnciendeCalefaccion;
+                // El parámetro ya está cargado desde JSON (duración en minutos)
+                DBG_AUX_PRINTF("  ✅ Callback CALEFACCION restaurado para '%s' (%d min)", 
+                              alarma->nombre, alarma->parametro);
+                              
+            } else {
+                DBG_AUX_PRINTF("  ⚠️ Tipo '%s' desconocido para alarma '%s'", 
+                              alarma->tipoString, alarma->nombre);
+            }
+        }
+    }
+    
+    DBG_AUX("✅ Callbacks restaurados");
 }
 
 // HabilitarTelegramTemporal eliminada - solo notificaciones automáticas

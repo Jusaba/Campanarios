@@ -87,6 +87,20 @@ function onMessageDatos(event) {
         }
     }
     
+    // ✅ DELEGAR MENSAJES DE OTA
+    if (event.data.startsWith("VERSION_OTA:") || 
+        event.data.startsWith("UPDATE_AVAILABLE:") || 
+        event.data === "NO_UPDATE" ||
+        event.data.startsWith("OTA_PROGRESS:") ||
+        event.data.startsWith("OTA_SUCCESS:") ||
+        event.data.startsWith("OTA_ERROR:")) {
+        if (typeof procesarMensajeOTA === 'function') {
+            procesarMensajeOTA(event.data);
+        } else {
+            console.warn("⚠️ Función procesarMensajeOTA no disponible");
+        }
+    }
+    
     if (event.data.startsWith("PROTECCION:ON")) {
         console.log("Actualizando la protección de campanadas horarias: " + event.data);
         habilitarBotonesCampanadas(false);

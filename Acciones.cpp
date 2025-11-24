@@ -243,4 +243,87 @@
         }
     }
 
+    /**
+     * @brief Enciende la calefacción por un número específico de minutos
+     * 
+     * @details Función de callback para alarmas programadas que activa
+     *          la calefacción del campanario por un período determinado.
+     *          Diseñada para ejecutarse automáticamente según calendario
+     *          de alarmas configurado por el usuario.
+     *          
+     *          **FUNCIONAMIENTO:**
+     *          - Activa calefacción del campanario
+     *          - Configura temporizador automático de apagado
+     *          - Notifica a clientes WebSocket conectados
+     *          - Envía notificación Telegram si está habilitada
+     *          
+     *          **NOTIFICACIONES:**
+     *          - WebSocket: "CALEFACCION:ON:X" (X = minutos programados)
+     *          - Telegram: Solo si NOTIFICACION_CALEFACCION_ON está habilitada
+     *          - Método: ALARMA_PROGRAMADA (distingue de activación manual/web)
+     * 
+     * @param minutos Duración en minutos para mantener encendida la calefacción
+     * 
+     * @note Diseñada específicamente para uso con sistema de alarmas
+     * @note Siempre se ejecuta (no verifica estado de campanario)
+     * @note Compatible con sistema de temporizador integrado del Campanario
+     * 
+     * @warning Validar que minutos no exceda Config::Heating::MAX_MINUTES
+     * @warning Requiere objeto Campanario inicializado correctamente
+     * 
+     * @see Campanario.EnciendeCalefaccion() - Función utilizada internamente
+     * @see AlarmScheduler::addPersonalizable() - Registra esta función como callback
+     * @see Config::Telegram::NOTIFICACION_CALEFACCION_ON - Flag de notificación
+     * 
+     * @example
+     * @code
+     * // Alarma para encender calefacción a las 7:00 por 45 minutos
+     * Alarmas.addPersonalizable(
+     *     "Calefacción Mañana",
+     *     "Pre-calentar antes de misa",
+     *     DOW_TODOS,
+     *     7, 0,
+     *     "CALEFACCION",
+     *     45,  // 45 minutos
+     *     accionEnciendeCalefaccion,
+     *     true
+     * );
+     * @endcode
+     * 
+     * @since v2.2 - Sistema de alarmas de calefacción programadas
+     * @author Julian Salas Bartolomé
+     */
+    void accionEnciendeCalefaccion(uint16_t minutos) {
+        DBG_ACCIONES_PRINTF("accionEnciendeCalefaccion -> Encendiendo calefacción por %d minutos (alarma programada)", minutos);
+        
+        // Validar rango de minutos
+        if (minutos > Config::Heating::MAX_MINUTES) {
+            DBG_ACCIONES_PRINTF("⚠️ Minutos exceden el máximo (%d > %d), ajustando a máximo", 
+                               minutos, Config::Heating::MAX_MINUTES);
+            minutos = Config::Heating::MAX_MINUTES;
+        }
+        
+        if (minutos == 0) {
+            DBG_ACCIONES("⚠️ Minutos es 0, estableciendo a 30 por defecto");
+            minutos = 30;
+        }
+        
+        // Encender calefacción con temporizador
+        Campanario.EnciendeCalefaccion(minutos);
+        
+        // Notificar a clientes WebSocket
+        ws.textAll("CALEFACCION:ON:" + String(minutos));
+        
+        DBG_ACCIONES_PRINTF("✅ Calefacción encendida por %d minutos desde alarma programada", minutos);
+        
+        // Notificar vía Telegram si está habilitado
+        if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_CALEFACCION_ON) {
+            telegramBot.sendCalefaccionOnNotification(Config::Telegram::METODO_ACTIVACION_ALARMA_PROGRAMADA);
+        }
+        
+        // Notificación adicional de alarma programada ejecutada si está habilitada
+        if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_ALARMA_PROGRAMADA) {
+            telegramBot.sendAlarmaProgramadaNotification("Calefacción: " + String(minutos) + " min");
+        }
+    }
 
