@@ -79,7 +79,10 @@
 }
 
 .btn-cancelar,
-.btn-aceptar {
+.btn-aceptar,
+.btn-secundario,
+.btn-info,
+.btn-warning {
     padding: 10px 25px;
     border: none;
     border-radius: 5px;
@@ -98,6 +101,39 @@
     background: #e0e0e0;
 }
 
+.btn-secundario {
+    background: #2196F3;
+    color: white;
+}
+
+.btn-secundario:hover {
+    background: #1976D2;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+.btn-warning {
+    background: #ff9800;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
 .btn-aceptar {
     background: #4CAF50;
     color: white;
@@ -108,6 +144,12 @@
     transform: translateY(-2px);
     box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
+
+#botonesActualizacion {
+    display: flex;
+    gap: 10px;
+}
+
 
 /* ✅ MODAL DE PIN */
 .modal-pin {
@@ -290,6 +332,144 @@
     margin: 0 auto;
 }
 
+/* ✅ MODAL DE OTA */
+.modal-ota {
+    max-width: 650px;
+}
+
+.ota-notas {
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.ota-notas h4 {
+    margin-top: 0;
+    color: #1565c0;
+    font-size: 1.1em;
+}
+
+#otaNotasContenido {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #333;
+}
+
+#otaNotasContenido h3 {
+    color: #1565c0;
+    font-size: 1em;
+    margin: 12px 0 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 4px;
+}
+
+#otaNotasContenido ul {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+#otaNotasContenido li {
+    margin: 4px 0;
+}
+
+#otaNotasContenido p {
+    margin: 8px 0;
+}
+
+.ota-progreso {
+    margin: 15px 0;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 25px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #66BB6A);
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+#otaMensaje {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ✅ MODAL DE BACKUP */
+.modal-backup {
+    max-width: 600px;
+}
+
+.backup-opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.backup-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s;
+}
+
+.backup-item:hover {
+    background: #f0f0f0;
+    border-color: #4CAF50;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.backup-info {
+    flex: 1;
+}
+
+.backup-info strong {
+    display: block;
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.backup-info small {
+    display: block;
+    color: #666;
+    font-size: 13px;
+}
+
+.backup-acciones {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
     .modal-content {
@@ -299,7 +479,8 @@
     
     .modal-pin,
     .modal-config,
-    .modal-config-telegram {
+    .modal-config-telegram,
+    .modal-backup {
         max-width: none;
     }
 }

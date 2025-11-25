@@ -82,6 +82,7 @@
       } else {
         cargarConfigWiFi();                                                           // Carga la configuración guardada
         DBG_INO("Iniciando Campanario...");
+        DBG_INO_PRINTF("📤 Versión actual: %s", Config::OTA::FIRMWARE_VERSION);
         initI2C();                                                                    // Inicializa el bus I2C como esclavo
 
         CAMPANA* campana1 = new CAMPANA(Config::Pins::CAMPANA1);                      // Crea una nueva instancia de la clase CAMPANA para la campana 1

@@ -183,12 +183,7 @@ if ($uploadToGitHub) {
     $releaseNotes += "**Fecha:** $currentDate`n`n"
     $releaseNotes += "### Archivos para OTA:`n"
     $releaseNotes += "* Firmware: $firmwareSizeKB KB`n"
-    $releaseNotes += "* SPIFFS: $spiffsSizeKB KB`n`n"
-    $releaseNotes += "### Instalacion:`n"
-    $releaseNotes += "1. Descargar ambos archivos (.bin)`n"
-    $releaseNotes += "2. Acceder a la interfaz OTA del ESP32`n"
-    $releaseNotes += "3. Subir firmware y SPIFFS`n"
-    $releaseNotes += "4. Reiniciar el dispositivo`n"
+    $releaseNotes += "* SPIFFS: $spiffsSizeKB KB"
     
     $releaseNotesFile = Join-Path $RELEASE_DIR "release-notes.md"
     $releaseNotes | Out-File -FilePath $releaseNotesFile -Encoding UTF8

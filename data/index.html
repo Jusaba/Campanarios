@@ -297,6 +297,15 @@
                         <div class="flecha-config">›</div>
                     </div>
                     
+                    <div class="config-opcion" onclick="abrirModalBackup()">
+                        <div class="icono-config-grande">💾</div>
+                        <div class="texto-config-opcion">
+                            <strong data-i18n="backup">Backup</strong>
+                            <small data-i18n="backup_desc">Descarregar configuracions</small>
+                        </div>
+                        <div class="flecha-config">›</div>
+                    </div>
+                    
                     <div class="config-opcion" onclick="abrirConfigReset()">
                         <div class="icono-config-grande">🔁</div>
                         <div class="texto-config-opcion">
@@ -469,7 +478,67 @@
             <div class="modal-footer">
                 <button class="btn-cancelar" id="btnCancelarOTA" onclick="cerrarModalOTA()" data-i18n="cerrar">Tancar</button>
                 <button class="btn-secundario" id="btnComprobarOTA" onclick="comprobarActualizacion()" data-i18n="comprobar">Comprovar</button>
-                <button class="btn-aceptar" id="btnActualizarOTA" onclick="iniciarActualizacion()" style="display: none;" data-i18n="actualizar">Actualitzar</button>
+                <div id="botonesActualizacion" style="display: none; gap: 10px;">
+                    <button class="btn-info" id="btnActualizarFirmware" onclick="iniciarActualizacion('firmware')" data-i18n="actualizar_firmware">Firmware</button>
+                    <button class="btn-warning" id="btnActualizarSPIFFS" onclick="iniciarActualizacion('spiffs')" data-i18n="actualizar_spiffs">SPIFFS</button>
+                    <button class="btn-aceptar" id="btnActualizarTodo" onclick="iniciarActualizacion('completo')" data-i18n="actualizar_completo">Completo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ✅ MODAL DE BACKUP -->
+    <div id="modalBackup" class="modal">
+        <div class="modal-content modal-backup">
+            <div class="modal-header">
+                <h2>💾 <span data-i18n="backup">Backup</span></h2>
+                <span class="close" onclick="cerrarModalBackup()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <p data-i18n="backup_descripcion">Descarrega còpies de seguretat de les configuracions:</p>
+                
+                <div class="backup-opciones">
+                    <div class="backup-item">
+                        <div class="backup-info">
+                            <strong>📅 alarmas_personalizadas.json</strong>
+                            <small data-i18n="backup_alarmas_desc">Configuració d'alarmes programades</small>
+                        </div>
+                        <div class="backup-acciones">
+                            <button class="btn-info btn-small" onclick="descargarArchivo('alarmas_personalizadas.json')" data-i18n="descargar">Descarregar</button>
+                            <button class="btn-warning btn-small" onclick="document.getElementById('uploadAlarmas').click()" data-i18n="restaurar">Restaurar</button>
+                            <input type="file" id="uploadAlarmas" accept=".json" style="display: none;" onchange="subirArchivo(this, 'alarmas_personalizadas.json')">
+                        </div>
+                    </div>
+                    
+                    <div class="backup-item">
+                        <div class="backup-info">
+                            <strong>📱 telegram_config.json</strong>
+                            <small data-i18n="backup_telegram_desc">Configuració de Telegram</small>
+                        </div>
+                        <div class="backup-acciones">
+                            <button class="btn-info btn-small" onclick="descargarArchivo('telegram_config.json')" data-i18n="descargar">Descarregar</button>
+                            <button class="btn-warning btn-small" onclick="document.getElementById('uploadTelegram').click()" data-i18n="restaurar">Restaurar</button>
+                            <input type="file" id="uploadTelegram" accept=".json" style="display: none;" onchange="subirArchivo(this, 'telegram_config.json')">
+                        </div>
+                    </div>
+                    
+                    <div class="backup-item">
+                        <div class="backup-info">
+                            <strong>⚙️ config.json</strong>
+                            <small data-i18n="backup_config_desc">Configuració general del sistema</small>
+                        </div>
+                        <div class="backup-acciones">
+                            <button class="btn-info btn-small" onclick="descargarArchivo('config.json')" data-i18n="descargar">Descarregar</button>
+                            <button class="btn-warning btn-small" onclick="document.getElementById('uploadConfig').click()" data-i18n="restaurar">Restaurar</button>
+                            <input type="file" id="uploadConfig" accept=".json" style="display: none;" onchange="subirArchivo(this, 'config.json')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-cancelar" onclick="cerrarModalBackup()" data-i18n="cerrar">Tancar</button>
             </div>
         </div>
     </div>

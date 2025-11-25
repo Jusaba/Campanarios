@@ -20,3 +20,6 @@ arduino-cli compile -b esp32:esp32:esp32:PartitionScheme=default,UploadSpeed=115
 C:\Users\Julian\AppData\Local\Arduino15\packages\esp32\tools\mkspiffs\0.2.3\mkspiffs.exe -c data -b 4096 -p 256 -s 1441792 build\esp32.esp32.esp32\Campanarios.spiffs.bin
 *** 1441792 es el peso del fichero Campanarios.spiffs.bin
 C:\Users\Julian\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.5.1\esptool.exe --chip esp32 --port COM3 --baud 460800 write_flash 0x290000 build\esp32.esp32.esp32\Campanarios.spiffs.bin
+
+
+.\build-release.ps1 -version "1.0.10" -uploadToGitHub

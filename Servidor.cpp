@@ -85,6 +85,96 @@
               request->send(SPIFFS, "/alarmas.html", "text/html");
             });
 
+            // ✅ ENDPOINT PARA DESCARGAR ARCHIVOS DE SPIFFS
+            server.on("/download", HTTP_GET, [](AsyncWebServerRequest *request){
+              // Nota: Autenticación manejada por el navegador ya autenticado
+              
+              if (!request->hasParam("file")) {
+                DBG_SRV("❌ Parámetro 'file' no encontrado en la petición");
+                request->send(400, "text/plain", "Parametro 'file' requerido");
+                return;
+              }
+              
+              String filename = request->getParam("file")->value();
+              DBG_SRV_PRINTF("📥 Solicitud de descarga: %s", filename.c_str());
+              
+              // Validar que el archivo existe y está en la lista permitida
+              if (filename != "alarmas_personalizadas.json" && 
+                  filename != "telegram_config.json" && 
+                  filename != "config.json") {
+                request->send(403, "text/plain", "Archivo no permitido");
+                DBG_SRV_PRINTF("❌ Intento de descarga de archivo no permitido: %s", filename.c_str());
+                return;
+              }
+              
+              String filepath = "/" + filename;
+              
+              if (!SPIFFS.exists(filepath)) {
+                request->send(404, "text/plain", "Archivo no encontrado en SPIFFS");
+                DBG_SRV_PRINTF("❌ Archivo no encontrado: %s", filepath.c_str());
+                return;
+              }
+              
+              DBG_SRV_PRINTF("✅ Descargando archivo: %s", filename.c_str());
+              
+              // Enviar archivo con headers apropiados
+              AsyncWebServerResponse *response = request->beginResponse(SPIFFS, filepath, "application/json", true);
+              response->addHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+              request->send(response);
+            });
+
+            // ✅ ENDPOINT PARA SUBIR/RESTAURAR ARCHIVOS A SPIFFS
+            server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request){
+              request->send(200);
+            }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+              static File uploadFile;
+              
+              if (index == 0) {
+                // Inicio de upload
+                DBG_SRV_PRINTF("📤 Iniciando upload: %s", filename.c_str());
+                
+                // Validar que el archivo está en la lista permitida
+                if (filename != "alarmas_personalizadas.json" && 
+                    filename != "telegram_config.json" && 
+                    filename != "config.json") {
+                  DBG_SRV_PRINTF("❌ Archivo no permitido para upload: %s", filename.c_str());
+                  return;
+                }
+                
+                String filepath = "/" + filename;
+                uploadFile = SPIFFS.open(filepath, "w");
+                if (!uploadFile) {
+                  DBG_SRV_PRINTF("❌ Error abriendo archivo para escritura: %s", filepath.c_str());
+                  return;
+                }
+              }
+              
+              // Escribir chunk de datos
+              if (uploadFile) {
+                uploadFile.write(data, len);
+              }
+              
+              if (final) {
+                // Fin de upload
+                if (uploadFile) {
+                  uploadFile.close();
+                  DBG_SRV_PRINTF("✅ Upload completado: %s (%d bytes)", filename.c_str(), index + len);
+                  
+                  // Si es telegram_config.json, recargar configuración
+                  if (filename == "telegram_config.json") {
+                    cargarConfigTelegramDesdeSPIFFS();
+                    DBG_SRV("🔄 Configuración de Telegram recargada desde archivo subido");
+                  }
+                  
+                  // Si es alarmas_personalizadas.json, recargar alarmas
+                  if (filename == "alarmas_personalizadas.json") {
+                    // Aquí podrías llamar a una función para recargar alarmas si existe
+                    DBG_SRV("🔄 Alarmas recargadas desde archivo subido");
+                  }
+                }
+              }
+            });
+
             server.serveStatic("/", SPIFFS, "/");
             // Iniciar el servidor
             server.begin();
@@ -391,9 +481,9 @@
                 DBG_SRV("ℹ️ No hay actualizaciones disponibles");
             }
         
-        } else if (mensaje == "START_UPDATE_OTA") {
+        } else if (mensaje == "START_UPDATE_FIRMWARE" || mensaje == "START_UPDATE_SPIFFS" || mensaje == "START_UPDATE_COMPLETE") {
             // Iniciar proceso de actualización OTA
-            DBG_SRV("🚀 Iniciando actualización OTA...");
+            DBG_SRV_PRINTF("🚀 Iniciando actualización OTA: %s", mensaje.c_str());
             
             // Primero comprobar qué versión hay disponible
             VersionInfo versionInfo = OTA.checkForUpdates();
@@ -421,11 +511,25 @@
                     DBG_OTA_PRINTF("✅ Actualización completada: %s", version ? version : "");
                 });
                 
-                // Notificar inicio
-                ws.textAll("OTA_PROGRESS:0:Iniciando actualización...");
+                bool resultado = false;
                 
-                // Ejecutar actualización
-                if (OTA.performFullUpdate(versionInfo)) {
+                if (mensaje == "START_UPDATE_FIRMWARE") {
+                    // Solo actualizar firmware
+                    ws.textAll("OTA_PROGRESS:0:Descargando firmware...");
+                    resultado = OTA.updateFirmware(versionInfo.firmwareUrl, versionInfo.firmwareSize);
+                    
+                } else if (mensaje == "START_UPDATE_SPIFFS") {
+                    // Solo actualizar SPIFFS
+                    ws.textAll("OTA_PROGRESS:0:Descargando SPIFFS...");
+                    resultado = OTA.updateSPIFFS(versionInfo.spiffsUrl, versionInfo.spiffsSize);
+                    
+                } else if (mensaje == "START_UPDATE_COMPLETE") {
+                    // Actualización completa
+                    ws.textAll("OTA_PROGRESS:0:Iniciando actualización completa...");
+                    resultado = OTA.performFullUpdate(versionInfo);
+                }
+                
+                if (resultado) {
                     DBG_SRV("✅ Actualización iniciada correctamente");
                 } else {
                     ws.textAll("OTA_ERROR:Error al iniciar la actualización");

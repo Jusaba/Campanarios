@@ -241,6 +241,184 @@ function abrirConfigReset() {
 }
 
 // ============================================================================
+// MODAL DE BACKUP
+// ============================================================================
+
+function abrirModalBackup() {
+    console.log("💾 Abriendo modal de backup");
+    cerrarModalConfiguracion();
+    
+    const modal = document.getElementById('modalBackup');
+    modal.style.display = 'block';
+}
+
+function cerrarModalBackup() {
+    const modal = document.getElementById('modalBackup');
+    modal.style.display = 'none';
+}
+
+function descargarArchivo(filename) {
+    console.log(`📥 Descargando archivo: ${filename}`);
+    
+    // Usar fetch para descargar el archivo
+    const url = `/download?file=${encodeURIComponent(filename)}`;
+    
+    fetch(url, {
+        method: 'GET',
+        credentials: 'include' // Incluir credenciales de autenticación
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        // Crear URL del blob
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Crear enlace temporal y hacer clic
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        a.style.display = 'none';
+        
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Liberar la URL del blob
+        window.URL.revokeObjectURL(blobUrl);
+        
+        console.log(`✅ Descarga completada: ${filename}`);
+        
+        // Mostrar notificación visual
+        const notificacion = document.createElement('div');
+        notificacion.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-weight: bold;
+        `;
+        notificacion.textContent = `✅ ${filename} descarregat`;
+        document.body.appendChild(notificacion);
+        
+        setTimeout(() => {
+            notificacion.remove();
+        }, 3000);
+    })
+    .catch(error => {
+        console.error(`❌ Error descargando ${filename}:`, error);
+        
+        // Mostrar notificación de error
+        const notificacion = document.createElement('div');
+        notificacion.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #f44336;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-weight: bold;
+        `;
+        notificacion.textContent = `❌ Error: ${error.message}`;
+        document.body.appendChild(notificacion);
+        
+        setTimeout(() => {
+            notificacion.remove();
+        }, 5000);
+    });
+}
+
+function subirArchivo(input, targetFilename) {
+    const file = input.files[0];
+    if (!file) {
+        console.log('❌ No se seleccionó archivo');
+        return;
+    }
+    
+    console.log(`📤 Subiendo archivo: ${file.name} como ${targetFilename}`);
+    
+    // Confirmar antes de sobrescribir
+    if (!confirm(`¿Restaurar ${targetFilename}? Esto sobrescribirá la configuración actual.`)) {
+        input.value = ''; // Limpiar input
+        return;
+    }
+    
+    // Crear FormData y añadir el archivo con el nombre correcto
+    const formData = new FormData();
+    formData.append('file', file, targetFilename);
+    
+    // Mostrar notificación de carga
+    const notificacion = document.createElement('div');
+    notificacion.id = 'uploadNotification';
+    notificacion.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #2196F3;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        z-index: 10000;
+        font-weight: bold;
+    `;
+    notificacion.textContent = `⏳ Pujant ${targetFilename}...`;
+    document.body.appendChild(notificacion);
+    
+    // Subir archivo
+    fetch('/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+        return response.text();
+    })
+    .then(() => {
+        console.log(`✅ Archivo subido: ${targetFilename}`);
+        
+        // Actualizar notificación
+        notificacion.style.background = '#4CAF50';
+        notificacion.textContent = `✅ ${targetFilename} restaurat correctament`;
+        
+        setTimeout(() => {
+            notificacion.remove();
+        }, 3000);
+        
+        // Limpiar input
+        input.value = '';
+    })
+    .catch(error => {
+        console.error(`❌ Error subiendo ${targetFilename}:`, error);
+        
+        // Actualizar notificación de error
+        notificacion.style.background = '#f44336';
+        notificacion.textContent = `❌ Error: ${error.message}`;
+        
+        setTimeout(() => {
+            notificacion.remove();
+        }, 5000);
+        
+        // Limpiar input
+        input.value = '';
+    });
+}
+
+// ============================================================================
 // CERRAR MODALES CON CLICK FUERA
 // ============================================================================
 
@@ -263,6 +441,7 @@ window.onclick = function(event) {
     const modalPin = document.getElementById('modalPin');
     const modalConfig = document.getElementById('modalConfiguracion');
     const modalTelegram = document.getElementById('modalConfigTelegram');
+    const modalBackup = document.getElementById('modalBackup');
     
     if (event.target === modalPin) {
         cerrarModalPin();
@@ -272,6 +451,9 @@ window.onclick = function(event) {
     }
     if (event.target === modalTelegram) {
         cerrarModalConfigTelegram();
+    }
+    if (event.target === modalBackup) {
+        cerrarModalBackup();
     }
 };
 
