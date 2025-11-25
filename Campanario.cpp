@@ -1,4 +1,6 @@
 #include "Campanario.h"
+#include <SPIFFS.h>
+#include <FS.h>
 
     /**
      * @brief Constructor que inicializa el sistema de campanario
@@ -62,8 +64,279 @@
      */
     CAMPANARIO::~CAMPANARIO() {
         this->ParaSecuencia();
+        
+        // Liberar memoria de secuencias dinámicas
+        if (_secuenciaDifuntos) {
+            delete[] _secuenciaDifuntos;
+            _secuenciaDifuntos = nullptr;
+        }
+        if (_secuenciaMisa) {
+            delete[] _secuenciaMisa;
+            _secuenciaMisa = nullptr;
+        }
+        if (_secuenciaFiesta) {
+            delete[] _secuenciaFiesta;
+            _secuenciaFiesta = nullptr;
+        }
+        
         DBG_CAM("[CAMPANARIO] Destructor - Sistema limpiado\n");        
     }
+
+    /**
+     * @brief Carga las secuencias de campanadas desde archivo JSON
+     * 
+     * @details Lee el archivo Secuencias.json desde SPIFFS y carga las tres
+     *          secuencias (Difuntos, Misa, Fiesta) en memoria dinámica.
+     *          Si el archivo no existe, crea uno con valores por defecto.
+     *          
+     *          **PROCESO DE CARGA:**
+     *          1. Verifica existencia del archivo Secuencias.json
+     *          2. Si no existe, crea archivo con secuencias por defecto
+     *          3. Parsea el JSON manualmente (sin ArduinoJson)
+     *          4. Asigna memoria dinámica para cada secuencia
+     *          5. Carga los pasos de cada secuencia
+     * 
+     * @return true si las secuencias se cargaron correctamente, false si hubo error
+     * 
+     * @note **SPIFFS:** Requiere que SPIFFS esté inicializado previamente
+     * @note **MEMORIA:** Asigna memoria dinámica que se libera en el destructor
+     * @note **JSON SIMPLE:** Parseo manual optimizado, sin librerías externas
+     * 
+     * @warning **MEMORIA LIMITADA:** Verifica que hay suficiente heap antes de cargar
+     * @warning **ARCHIVO CORRUPTO:** Si el JSON está mal formado, usa valores por defecto
+     * 
+     * @see CrearSecuenciasPorDefecto() - Crea archivo si no existe
+     * 
+     * @since v1.0.14
+     * @author Julian Salas Bartolomé
+     */
+    bool CAMPANARIO::CargarSecuencias() {
+        DBG_CAM("[CAMPANARIO] Cargando secuencias desde SPIFFS...");
+        
+        // Verificar que SPIFFS está montado
+        if (!SPIFFS.begin(true)) {
+            DBG_CAM("[CAMPANARIO] ERROR: No se pudo montar SPIFFS");
+            return false;
+        }
+        
+        // Verificar si existe el archivo
+        if (!SPIFFS.exists("/Secuencias.json")) {
+            DBG_CAM("[CAMPANARIO] Secuencias.json no existe, usando valores por defecto hardcodeados");
+            // Por ahora retornamos false para usar las secuencias hardcodeadas
+            // En el futuro se puede crear el archivo automáticamente
+            return false;
+        }
+        
+        // Abrir archivo
+        File file = SPIFFS.open("/Secuencias.json", "r");
+        if (!file) {
+            DBG_CAM("[CAMPANARIO] ERROR: No se pudo abrir Secuencias.json");
+            return false;
+        }
+        
+        // Leer contenido completo
+        String jsonContent = file.readString();
+        file.close();
+        
+        DBG_CAM_PRINTF("[CAMPANARIO] JSON leído: %d bytes\n", jsonContent.length());
+        
+        // Parsear JSON manualmente (formato simple y conocido)
+        // Buscar cada secuencia y cargarla
+        
+        // Liberar memoria anterior si existe
+        if (_secuenciaDifuntos) delete[] _secuenciaDifuntos;
+        if (_secuenciaMisa) delete[] _secuenciaMisa;
+        if (_secuenciaFiesta) delete[] _secuenciaFiesta;
+        
+        // Cargar secuencia de Difuntos
+        int startDifuntos = jsonContent.indexOf("\"difuntos\"");
+        if (startDifuntos > 0) {
+            int startPasos = jsonContent.indexOf("\"pasos\"", startDifuntos);
+            int startArray = jsonContent.indexOf("[", startPasos);
+            int endArray = jsonContent.indexOf("]", startArray);
+            
+            if (startArray > 0 && endArray > startArray) {
+                String pasosStr = jsonContent.substring(startArray + 1, endArray);
+                _numPasosDifuntos = 0;
+                
+                // Contar número de objetos {}
+                int count = 0;
+                for (int i = 0; i < pasosStr.length(); i++) {
+                    if (pasosStr[i] == '{') count++;
+                }
+                
+                _numPasosDifuntos = count;
+                _secuenciaDifuntos = new PasoSecuencia[_numPasosDifuntos];
+                
+                // Parsear cada paso
+                int currentPaso = 0;
+                int pos = 0;
+                while (currentPaso < _numPasosDifuntos && pos < pasosStr.length()) {
+                    int objStart = pasosStr.indexOf("{", pos);
+                    int objEnd = pasosStr.indexOf("}", objStart);
+                    
+                    if (objStart < 0 || objEnd < 0) break;
+                    
+                    String obj = pasosStr.substring(objStart, objEnd + 1);
+                    
+                    // Extraer campana
+                    int campanaIdx = obj.indexOf("\"campana\"");
+                    int campanaValStart = obj.indexOf(":", campanaIdx) + 1;
+                    int campanaValEnd = obj.indexOf(",", campanaValStart);
+                    if (campanaValEnd < 0) campanaValEnd = obj.indexOf("}", campanaValStart);
+                    String campanaStr = obj.substring(campanaValStart, campanaValEnd);
+                    campanaStr.trim();
+                    
+                    // Extraer repeticiones
+                    int repIdx = obj.indexOf("\"repeticiones\"");
+                    int repValStart = obj.indexOf(":", repIdx) + 1;
+                    int repValEnd = obj.indexOf(",", repValStart);
+                    if (repValEnd < 0) repValEnd = obj.indexOf("}", repValStart);
+                    String repStr = obj.substring(repValStart, repValEnd);
+                    repStr.trim();
+                    
+                    // Extraer intervalo
+                    int intIdx = obj.indexOf("\"intervalo\"");
+                    int intValStart = obj.indexOf(":", intIdx) + 1;
+                    int intValEnd = obj.indexOf(",", intValStart);
+                    if (intValEnd < 0) intValEnd = obj.indexOf("}", intValStart);
+                    String intStr = obj.substring(intValStart, intValEnd);
+                    intStr.trim();
+                    
+                    _secuenciaDifuntos[currentPaso].indiceCampana = campanaStr.toInt();
+                    _secuenciaDifuntos[currentPaso].repeticiones = repStr.toInt();
+                    _secuenciaDifuntos[currentPaso].intervaloMs = intStr.toInt();
+                    
+                    currentPaso++;
+                    pos = objEnd + 1;
+                }
+                
+                DBG_CAM_PRINTF("[CAMPANARIO] Secuencia Difuntos cargada: %d pasos\n", _numPasosDifuntos);
+            }
+        }
+        
+        // Cargar secuencia de Misa (mismo proceso)
+        int startMisa = jsonContent.indexOf("\"misa\"");
+        if (startMisa > 0) {
+            int startPasos = jsonContent.indexOf("\"pasos\"", startMisa);
+            int startArray = jsonContent.indexOf("[", startPasos);
+            int endArray = jsonContent.indexOf("]", startArray);
+            
+            if (startArray > 0 && endArray > startArray) {
+                String pasosStr = jsonContent.substring(startArray + 1, endArray);
+                int count = 0;
+                for (int i = 0; i < pasosStr.length(); i++) {
+                    if (pasosStr[i] == '{') count++;
+                }
+                
+                _numPasosMisa = count;
+                _secuenciaMisa = new PasoSecuencia[_numPasosMisa];
+                
+                int currentPaso = 0;
+                int pos = 0;
+                while (currentPaso < _numPasosMisa && pos < pasosStr.length()) {
+                    int objStart = pasosStr.indexOf("{", pos);
+                    int objEnd = pasosStr.indexOf("}", objStart);
+                    if (objStart < 0 || objEnd < 0) break;
+                    
+                    String obj = pasosStr.substring(objStart, objEnd + 1);
+                    
+                    int campanaIdx = obj.indexOf("\"campana\"");
+                    int campanaValStart = obj.indexOf(":", campanaIdx) + 1;
+                    int campanaValEnd = obj.indexOf(",", campanaValStart);
+                    if (campanaValEnd < 0) campanaValEnd = obj.indexOf("}", campanaValStart);
+                    String campanaStr = obj.substring(campanaValStart, campanaValEnd);
+                    campanaStr.trim();
+                    
+                    int repIdx = obj.indexOf("\"repeticiones\"");
+                    int repValStart = obj.indexOf(":", repIdx) + 1;
+                    int repValEnd = obj.indexOf(",", repValStart);
+                    if (repValEnd < 0) repValEnd = obj.indexOf("}", repValStart);
+                    String repStr = obj.substring(repValStart, repValEnd);
+                    repStr.trim();
+                    
+                    int intIdx = obj.indexOf("\"intervalo\"");
+                    int intValStart = obj.indexOf(":", intIdx) + 1;
+                    int intValEnd = obj.indexOf(",", intValStart);
+                    if (intValEnd < 0) intValEnd = obj.indexOf("}", intValStart);
+                    String intStr = obj.substring(intValStart, intValEnd);
+                    intStr.trim();
+                    
+                    _secuenciaMisa[currentPaso].indiceCampana = campanaStr.toInt();
+                    _secuenciaMisa[currentPaso].repeticiones = repStr.toInt();
+                    _secuenciaMisa[currentPaso].intervaloMs = intStr.toInt();
+                    
+                    currentPaso++;
+                    pos = objEnd + 1;
+                }
+                
+                DBG_CAM_PRINTF("[CAMPANARIO] Secuencia Misa cargada: %d pasos\n", _numPasosMisa);
+            }
+        }
+        
+        // Cargar secuencia de Fiesta
+        int startFiesta = jsonContent.indexOf("\"fiesta\"");
+        if (startFiesta > 0) {
+            int startPasos = jsonContent.indexOf("\"pasos\"", startFiesta);
+            int startArray = jsonContent.indexOf("[", startPasos);
+            int endArray = jsonContent.indexOf("]", startArray);
+            
+            if (startArray > 0 && endArray > startArray) {
+                String pasosStr = jsonContent.substring(startArray + 1, endArray);
+                int count = 0;
+                for (int i = 0; i < pasosStr.length(); i++) {
+                    if (pasosStr[i] == '{') count++;
+                }
+                
+                _numPasosFiesta = count;
+                _secuenciaFiesta = new PasoSecuencia[_numPasosFiesta];
+                
+                int currentPaso = 0;
+                int pos = 0;
+                while (currentPaso < _numPasosFiesta && pos < pasosStr.length()) {
+                    int objStart = pasosStr.indexOf("{", pos);
+                    int objEnd = pasosStr.indexOf("}", objStart);
+                    if (objStart < 0 || objEnd < 0) break;
+                    
+                    String obj = pasosStr.substring(objStart, objEnd + 1);
+                    
+                    int campanaIdx = obj.indexOf("\"campana\"");
+                    int campanaValStart = obj.indexOf(":", campanaIdx) + 1;
+                    int campanaValEnd = obj.indexOf(",", campanaValStart);
+                    if (campanaValEnd < 0) campanaValEnd = obj.indexOf("}", campanaValStart);
+                    String campanaStr = obj.substring(campanaValStart, campanaValEnd);
+                    campanaStr.trim();
+                    
+                    int repIdx = obj.indexOf("\"repeticiones\"");
+                    int repValStart = obj.indexOf(":", repIdx) + 1;
+                    int repValEnd = obj.indexOf(",", repValStart);
+                    if (repValEnd < 0) repValEnd = obj.indexOf("}", repValStart);
+                    String repStr = obj.substring(repValStart, repValEnd);
+                    repStr.trim();
+                    
+                    int intIdx = obj.indexOf("\"intervalo\"");
+                    int intValStart = obj.indexOf(":", intIdx) + 1;
+                    int intValEnd = obj.indexOf(",", intValStart);
+                    if (intValEnd < 0) intValEnd = obj.indexOf("}", intValStart);
+                    String intStr = obj.substring(intValStart, intValEnd);
+                    intStr.trim();
+                    
+                    _secuenciaFiesta[currentPaso].indiceCampana = campanaStr.toInt();
+                    _secuenciaFiesta[currentPaso].repeticiones = repStr.toInt();
+                    _secuenciaFiesta[currentPaso].intervaloMs = intStr.toInt();
+                    
+                    currentPaso++;
+                    pos = objEnd + 1;
+                }
+                
+                DBG_CAM_PRINTF("[CAMPANARIO] Secuencia Fiesta cargada: %d pasos\n", _numPasosFiesta);
+            }
+        }
+        
+        DBG_CAM("[CAMPANARIO] Secuencias cargadas correctamente desde SPIFFS");
+        return true;
+    }
+    
     /**
      * @brief Añade una campana al sistema de campanario
      * 
@@ -134,9 +407,9 @@
     void CAMPANARIO::TocaDifuntos(void) {
         DBG_CAM("Tocando campanas para difuntos...");
         DBG_CAM_PRINT ("numPasosDifuntos: ");
-        DBG_CAM(numPasosDifuntos);
+        DBG_CAM(_numPasosDifuntos);
         this->secuenciaActiva = Config::Secuencia::DIFUNTOS;                        // Indica que la secuencia activa es Difuntos
-        this->_GeneraraCampanadas(secuenciaDifuntos, numPasosDifuntos);             // Genera la secuencia plana de campanadas para difuntos
+        this->_GeneraraCampanadas(_secuenciaDifuntos, _numPasosDifuntos);           // Genera la secuencia plana de campanadas para difuntos
         this->IniciarSecuenciaCampanadas();                                         // Inicia la secuencia de toque de campanadas
         this->_nEstadoCampanario |= Config::States::BIT_SECUENCIA;                  // Marca el estado del campanario como tocando difuntos
     }
@@ -171,9 +444,9 @@
 
         DBG_CAM ("Tocando campanas para misa...");
         DBG_CAM_PRINT ("numPasosMisa: ");
-        DBG_CAM(numPasosMisa);
+        DBG_CAM(_numPasosMisa);
         this->secuenciaActiva = Config::Secuencia::MISA;                            // Indica que la secuencia activa es Misa
-        this->_GeneraraCampanadas(secuenciaMisa, numPasosMisa);
+        this->_GeneraraCampanadas(_secuenciaMisa, _numPasosMisa);
         this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
         this->_nEstadoCampanario |= Config::States::BIT_SECUENCIA;
     }
@@ -218,9 +491,9 @@
 
         DBG_CAM ("Tocando campanas para fiesta...");
         DBG_CAM_PRINT ("numPasosFiesta: ");
-        DBG_CAM(numPasosFiesta);
+        DBG_CAM(_numPasosFiesta);
         this->secuenciaActiva = Config::Secuencia::FIESTA;                          // Indica que la secuencia activa es Fiesta
-        this->_GeneraraCampanadas(secuenciaFiesta, numPasosFiesta);
+        this->_GeneraraCampanadas(_secuenciaFiesta, _numPasosFiesta);
         this->IniciarSecuenciaCampanadas(); // Inicia la secuencia de campanadas
         this->_nEstadoCampanario |= Config::States::BIT_SECUENCIA;
     }

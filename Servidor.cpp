@@ -101,7 +101,8 @@
               // Validar que el archivo existe y está en la lista permitida
               if (filename != "alarmas_personalizadas.json" && 
                   filename != "telegram_config.json" && 
-                  filename != "config.json") {
+                  filename != "config.json" &&
+                  filename != "Secuencias.json") {
                 request->send(403, "text/plain", "Archivo no permitido");
                 DBG_SRV_PRINTF("❌ Intento de descarga de archivo no permitido: %s", filename.c_str());
                 return;
@@ -136,7 +137,8 @@
                 // Validar que el archivo está en la lista permitida
                 if (filename != "alarmas_personalizadas.json" && 
                     filename != "telegram_config.json" && 
-                    filename != "config.json") {
+                    filename != "config.json" &&
+                    filename != "Secuencias.json") {
                   DBG_SRV_PRINTF("❌ Archivo no permitido para upload: %s", filename.c_str());
                   return;
                 }
@@ -170,6 +172,12 @@
                   if (filename == "alarmas_personalizadas.json") {
                     // Aquí podrías llamar a una función para recargar alarmas si existe
                     DBG_SRV("🔄 Alarmas recargadas desde archivo subido");
+                  }
+                  
+                  // Si es Secuencias.json, recargar secuencias
+                  if (filename == "Secuencias.json") {
+                    Campanario.CargarSecuencias();
+                    DBG_SRV("🔄 Secuencias de campanadas recargadas desde archivo subido");
                   }
                 }
               }

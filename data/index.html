@@ -534,6 +534,18 @@
                             <input type="file" id="uploadConfig" accept=".json" style="display: none;" onchange="subirArchivo(this, 'config.json')">
                         </div>
                     </div>
+                    
+                    <div class="backup-item">
+                        <div class="backup-info">
+                            <strong>🔔 Secuencias.json</strong>
+                            <small data-i18n="backup_secuencias_desc">Seqüències de campanades personalitzades</small>
+                        </div>
+                        <div class="backup-acciones">
+                            <button class="btn-info btn-small" onclick="descargarArchivo('Secuencias.json')" data-i18n="descargar">Descarregar</button>
+                            <button class="btn-warning btn-small" onclick="document.getElementById('uploadSecuencias').click()" data-i18n="restaurar">Restaurar</button>
+                            <input type="file" id="uploadSecuencias" accept=".json" style="display: none;" onchange="subirArchivo(this, 'Secuencias.json')">
+                        </div>
+                    </div>
                 </div>
             </div>
             

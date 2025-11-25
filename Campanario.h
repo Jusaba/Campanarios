@@ -76,142 +76,6 @@
         int intervaloMs;                                        //!< Intervalo en milisegundos entre toques
     };
 
-   const PasoSecuencia secuenciaDifuntos[] PROGMEM = {
-        {1, 3, 2500},
-        {1, 1, 2500},
-        {0, 1, 2300},
-        {1, 2, 2200},
-        {1, 1, 1800},
-        {0, 1, 2700},
-        {1, 2, 2700},
-        {0, 1, 2900},
-        {1, 2, 2500},
-        {1, 1, 2000},
-        {0, 1, 2000},
-        {1, 3, 2500},
-        {1, 1, 2500},
-        {0, 1, 2300},
-        {1, 2, 2200},
-        {1, 1, 1800},
-        {0, 1, 2700},
-        {1, 2, 2700},
-        {0, 1, 2900},
-        {1, 2, 2500},
-        {1, 1, 2000},
-        {0, 1, 2000}
-    };
-    const int numPasosDifuntos = sizeof(secuenciaDifuntos) / sizeof(PasoSecuencia);
-    const PasoSecuencia secuenciaFiesta[] PROGMEM = {
-        {0, 1, 1000},
-        {1, 1, 1000},
-        {0, 1, 600},
-        {1, 1, 600},
-        {0, 1, 600},
-        {1, 1, 600},
-        {0, 1, 600},
-        {1, 1, 600},
-        {0, 1, 600},
-        {1, 1, 600},
-        {0, 1, 600},
-        {1, 1, 600},
-        {0, 1, 600},
-        {1, 1, 600},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 480},
-        {1, 1, 480},
-        {0, 1, 480},
-        {1, 1, 480},
-        {0, 1, 480},
-        {1, 1, 480},
-        {0, 1, 480},
-        {1, 1, 1600}, 
-        {0, 1, 200},
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 200},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500},
-        {0, 1, 500},
-        {1, 1, 500}, 
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 200},
-        {1, 1, 2000},
-        {0, 1, 1000},
-        {1, 1, 1000},
-        {0, 1, 1000},
-        {1, 1, 1000},
-        {0, 1, 1000},
-        {1, 1, 1000},
-        {0, 1, 1000},
-        {1, 1, 1000},
-        {0, 1, 1000},
-        {1, 1, 1000},
-        {0, 1, 1000},
-        {1, 1, 1000},
-        {1, 1, 2000}
-    };    
-    const int numPasosFiesta = sizeof(secuenciaFiesta) / sizeof(PasoSecuencia);
-
-    const PasoSecuencia secuenciaMisa[] = {
-          {0, 1, 1100},  
-        {1, 1, 1000},
-        {0, 1, 1100},
-        {1, 1, 1000},
-        {0, 1, 1100},
-        {1, 1, 1000},
-        {0, 1, 1100},
-        {1, 1, 1000},
-        {0, 1, 1100},   
-        {1, 1, 1000},
-        {0, 1, 1100},
-        {1, 1, 1000},
-        {0, 1, 1100},
-        {1, 1, 1000},
-        {0, 1, 1100},
-        {1, 1, 1000},
-        {0, 1, 1100},
-        {1, 1, 1100},
-        {0, 1, 1100},
-        {1, 1, 2000},
-        {0, 1, 1000},
-        {0, 1, 700},
-        {1, 1, 1000},
-        {0, 1, 700},
-        {1, 1, 1000},   
-        {0, 1, 700},   
-        {1, 1, 700}
-    };
-    static constexpr int numPasosMisa = sizeof(secuenciaMisa) / sizeof(PasoSecuencia);
-
 
     class CAMPANARIO 
     {
@@ -219,6 +83,7 @@
 
             CAMPANARIO();                                               //!< Constructor con pin 
             ~CAMPANARIO();
+            bool CargarSecuencias();                                    //!< Carga las secuencias desde el archivo Secuencias.json en SPIFFS
             void AddCampana (CAMPANA* pCampana);                        //!< Añade una campana al campanario
             void TocaDifuntos (void);                                   //!< Toca la secuencia de campanadas para difuntos   
             void TocaMisa (void);                                       //!< Toca la secuencia de campanadas para misa   
@@ -254,6 +119,14 @@
             void _GeneraraCampanadas(const PasoSecuencia* secuencia, int numPasos); // Genera una secuencia de campanadas planas a partir de una secuencia de pasos definida
             void _LimpiaraCampanadas(void) ;                            //!< Limpia el array de campanadas y reinicia el contador.    
     
+            // Arrays dinámicos para secuencias cargadas desde JSON
+            PasoSecuencia* _secuenciaDifuntos = nullptr;                //!< Array dinámico para secuencia de difuntos
+            int _numPasosDifuntos = 0;                                  //!< Número de pasos en secuencia de difuntos
+            PasoSecuencia* _secuenciaMisa = nullptr;                    //!< Array dinámico para secuencia de misa
+            int _numPasosMisa = 0;                                      //!< Número de pasos en secuencia de misa
+            PasoSecuencia* _secuenciaFiesta = nullptr;                  //!< Array dinámico para secuencia de fiesta
+            int _numPasosFiesta = 0;                                    //!< Número de pasos en secuencia de fiesta
+
             int _indiceCampanadaActual = 0;                             //!< Índice de la campanada actual en la secuencia
             unsigned long _ultimoToqueMs = 0;                           //!< Marca de tiempo del último toque de campana en milisegundos
             bool _tocandoSecuencia = false;                             //!< Indica si se está tocando una secuencia de campanadas

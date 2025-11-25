@@ -26,6 +26,7 @@
     CALEFACCION::CALEFACCION(int nPin) {
         this->_nPin = nPin;                 // Asigna el número de pin a la calefacción
         pinMode(this->_nPin, OUTPUT);       // Configura el pin de la calefacción como salida
+        digitalWrite(this->_nPin, LOW);     // Inicializa el pin en LOW (calefacción apagada)
         _lCalefaccion = false;              // Inicializa el estado de la calefacción como apagada
         DBG_CALEFACCION_PRINTF("CALEFACCION->Inicializada en pin %d, estado OFF\n", this->_nPin);
     }

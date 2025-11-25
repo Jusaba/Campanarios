@@ -462,6 +462,7 @@
 .backup-acciones {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .btn-small {
@@ -482,5 +483,38 @@
     .modal-config-telegram,
     .modal-backup {
         max-width: none;
+    }
+    
+    /* Backup responsive */
+    .backup-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    .backup-info {
+        width: 100%;
+    }
+    
+    .backup-info strong {
+        font-size: 14px;
+        word-break: break-word;
+    }
+    
+    .backup-info small {
+        font-size: 12px;
+    }
+    
+    .backup-acciones {
+        width: 100%;
+        justify-content: stretch;
+    }
+    
+    .btn-small {
+        flex: 1;
+        padding: 10px 12px;
+        font-size: 12px;
+        text-align: center;
     }
 }

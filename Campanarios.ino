@@ -94,6 +94,12 @@
         Campanario.AddCampana(campana2);                                              // Añade la campana 2 al campanario
         Campanario.AddCalefaccion(calefaccion);                                       // Añade la calefacción al campanario  
 
+        // Cargar secuencias de campanadas desde SPIFFS
+        if (!Campanario.CargarSecuencias()) {
+            DBG_INO("[WARN] No se pudieron cargar secuencias desde JSON, usando valores por defecto");
+        } else {
+            DBG_INO("[OK] Secuencias cargadas desde Secuencias.json");
+        }
 
         lConexionInternet = ConectarWifi(configWiFi);                                 // Llama a la función para conectar a la red Wi-Fi con la configuración cargada
         if (lConexionInternet)                                                        // Llama a la función para conectar a la red Wi-Fi

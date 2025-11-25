@@ -23,3 +23,6 @@ C:\Users\Julian\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.5.1\es
 
 
 .\build-release.ps1 -version "1.0.10" -uploadToGitHub
+
+Para crear y subir la release v1.1.1 creada en local
+gh release create v1.1.1 --title "Campanarios v1.1.1" --notes-file "releases\v1.1.1\release-notes.md" "releases\v1.1.1\Campanarios-firmware-v1.1.1.bin" "releases\v1.1.1\Campanarios-spiffs-v1.1.1.bin" "releases\v1.1.1\Campanarios-partitions-v1.1.1.bin"
