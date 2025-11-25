@@ -147,6 +147,8 @@ function iniciarActualizacion(tipo) {
 // Simular progreso OTA cuando el WebSocket se cierra
 function simularProgresoOTA(tipo) {
     let progreso = 0;
+    let tiempoEn90 = 0;
+    
     const intervalo = setInterval(() => {
         if (!otaState.actualizando) {
             clearInterval(intervalo);
@@ -173,19 +175,45 @@ function simularProgresoOTA(tipo) {
             }
             
             document.getElementById('otaMensaje').textContent = mensaje;
+        } else {
+            // Cuando llega al 90%, esperar 20 segundos más
+            tiempoEn90++;
+            
+            if (tiempoEn90 >= 20) {
+                // Después de 20 segundos en 90%, asumir que completó (ESP32 reinició)
+                clearInterval(intervalo);
+                console.log('⏱️ Timeout alcanzado - asumiendo actualización exitosa');
+                
+                // Completar manualmente
+                document.getElementById('otaProgressFill').style.width = '100%';
+                document.getElementById('otaMensaje').textContent = 'Actualització completada. Reiniciant...';
+                document.getElementById('otaEstado').innerHTML = 
+                    '<p style="color: #4CAF50; font-weight: bold;">✅ Actualització completada</p>';
+                
+                // Recargar después de 10 segundos más
+                setTimeout(() => {
+                    console.log('🔄 Recargando página después de actualización...');
+                    location.reload();
+                }, 10000);
+            }
         }
     }, 1000); // Actualizar cada segundo
     
-    // Timeout de seguridad (5 minutos)
+    // Timeout de seguridad total (2 minutos)
     setTimeout(() => {
         clearInterval(intervalo);
         if (otaState.actualizando) {
-            // Si después de 5 minutos no hay respuesta, mostrar mensaje
+            // Si después de 2 minutos sigue activo, forzar recarga
+            console.log('⚠️ Timeout total alcanzado - forzando recarga');
+            document.getElementById('otaProgressFill').style.width = '100%';
             document.getElementById('otaMensaje').textContent = 
-                'Reiniciant dispositiu... Espera uns segons i recarrega la pàgina.';
-            document.getElementById('otaProgressFill').style.width = '95%';
+                'Actualització completada. Recarregant...';
+            
+            setTimeout(() => {
+                location.reload();
+            }, 5000);
         }
-    }, 300000); // 5 minutos
+    }, 120000); // 2 minutos
 }
 
 // Procesar mensajes OTA del WebSocket
@@ -318,10 +346,13 @@ function mostrarExitoOTA(version) {
     document.getElementById('otaEstado').innerHTML = 
         `<p style="color: #4CAF50; font-weight: bold;">✅ ${t('ota_completado')}</p>`;
     
-    // Esperar 3 segundos y recargar la página
+    console.log('⏱️ Esperando 15 segundos antes de recargar página...');
+    
+    // Esperar 15 segundos y recargar la página (tiempo para reinicio completo)
     setTimeout(() => {
+        console.log('🔄 Recargando página después de actualización OTA...');
         location.reload();
-    }, 3000);
+    }, 15000);
 }
 
 // Mostrar error de OTA

@@ -230,6 +230,13 @@ function abrirConfigReset() {
             const mensajeEjecutando = typeof t === 'function' ? t('reset_ejecutando') : 'Reiniciando el sistema...';
             alert(mensajeEjecutando);
             
+            // Recargar página después de 30 segundos (tiempo suficiente para reinicio)
+            console.log("⏱️ Recarga automática programada en 30 segundos");
+            setTimeout(() => {
+                console.log("🔄 Recargando página después del reinicio...");
+                location.reload();
+            }, 30000);
+            
         } else {
             const mensajeError = typeof t === 'function' ? t('error_conexion') : 'Error de conexión';
             alert('Error: ' + mensajeError);
