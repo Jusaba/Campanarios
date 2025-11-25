@@ -1,5 +1,22 @@
 #include "OTAServicio.h"
 
+// Compatibilidad con diferentes versiones del framework ESP32
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+    // ESP-IDF 4.x y superior: esp_task_wdt_init requiere esp_task_wdt_config_t
+    #define INIT_WATCHDOG(timeout_s, panic) \
+        do { \
+            esp_task_wdt_config_t wdt_config = { \
+                .timeout_ms = (timeout_s) * 1000, \
+                .idle_core_mask = 0, \
+                .trigger_panic = (panic) \
+            }; \
+            esp_task_wdt_init(&wdt_config); \
+        } while(0)
+#else
+    // ESP-IDF 3.x: esp_task_wdt_init toma timeout y panic directamente
+    #define INIT_WATCHDOG(timeout_s, panic) esp_task_wdt_init(timeout_s, panic)
+#endif
+
 OTAServicio OTA;
 
 OTAServicio::OTAServicio() 
@@ -184,7 +201,7 @@ bool OTAServicio::performFullUpdate(const VersionInfo& versionInfo) {
     DBG_OTA("Iniciando actualizacion completa...");
     
     // Aumentar timeout del watchdog durante la actualización (60 segundos)
-    esp_task_wdt_init(60, true);
+    INIT_WATCHDOG(60, true);
     DBG_OTA("Watchdog timeout aumentado a 60s");
     
     // 1. Actualizar firmware
@@ -192,7 +209,7 @@ bool OTAServicio::performFullUpdate(const VersionInfo& versionInfo) {
         if (!updateFirmware(versionInfo.firmwareUrl, versionInfo.firmwareSize)) {
             setError("Error actualizando firmware");
             // Restaurar watchdog normal antes de salir
-            esp_task_wdt_init(30, true);
+            INIT_WATCHDOG(30, true);
             return false;
         }
     }
