@@ -21,9 +21,9 @@
 //#define DEBUGAUXILIAR             // Debug del módulo Auxiliar
 //#define DEBUGPROTECCION           // Debug de protección de campanadas
 //#define DEBUGACCIONES             // Debug de las acciones de alarmas
-//#define DEBUGSERVIDOR             // Debug del servidor web
+#define DEBUGSERVIDOR             // Debug del servidor web
 //#define DEBUGDNS                  // Debug del servicio DNS
-//#define DEBUGWIFI                 // Debug de conexión WiFi
+#define DEBUGWIFI                 // Debug de conexión WiFi
 //#define DEBUGALARMAS              // Debug del sistema de alarmas
 //#define DEBUGCAMPANARIO           // Debug del campanario
 //#define DEBUGRTC                  // Debug del RTC

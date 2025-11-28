@@ -125,12 +125,25 @@
             });
 
             // ✅ ENDPOINT PARA SUBIR/RESTAURAR ARCHIVOS A SPIFFS
-            server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request){
+            server.on("/upload", HTTP_POST, [usuario, clave](AsyncWebServerRequest *request){
+              if(!request->authenticate(usuario, clave)) {
+                return request->requestAuthentication();
+              }
               request->send(200);
-            }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+            }, [usuario, clave](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+              // Verificar autenticación en cada chunk
+              if(!request->authenticate(usuario, clave)) {
+                return;
+              }
+              
               static File uploadFile;
               
               if (index == 0) {
+                // Cerrar archivo anterior si quedó abierto
+                if (uploadFile) {
+                  uploadFile.close();
+                }
+                
                 // Inicio de upload
                 DBG_SRV_PRINTF("📤 Iniciando upload: %s", filename.c_str());
                 
@@ -153,12 +166,16 @@
               
               // Escribir chunk de datos
               if (uploadFile) {
-                uploadFile.write(data, len);
+                size_t written = uploadFile.write(data, len);
+                if (written != len) {
+                  DBG_SRV_PRINTF("⚠️  Escritura parcial: %d de %d bytes", written, len);
+                }
               }
               
               if (final) {
                 // Fin de upload
                 if (uploadFile) {
+                  uploadFile.flush();  // Forzar escritura a SPIFFS
                   uploadFile.close();
                   DBG_SRV_PRINTF("✅ Upload completado: %s (%d bytes)", filename.c_str(), index + len);
                   
@@ -181,6 +198,28 @@
                   }
                 }
               }
+            });
+
+            // 🔍 ENDPOINT DEBUG: Listar archivos en SPIFFS
+            server.on("/list-spiffs", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
+              if(!request->authenticate(usuario, clave)) {
+                return request->requestAuthentication();
+              }
+              
+              String output = "Archivos en SPIFFS:\n\n";
+              File root = SPIFFS.open("/");
+              File file = root.openNextFile();
+              
+              while(file) {
+                output += "- ";
+                output += file.name();
+                output += " (";
+                output += String(file.size());
+                output += " bytes)\n";
+                file = root.openNextFile();
+              }
+              
+              request->send(200, "text/plain", output);
             });
 
             server.serveStatic("/", SPIFFS, "/");
@@ -526,15 +565,40 @@
                     ws.textAll("OTA_PROGRESS:0:Descargando firmware...");
                     resultado = OTA.updateFirmware(versionInfo.firmwareUrl, versionInfo.firmwareSize);
                     
+                    if (resultado) {
+                        // Enviar éxito ANTES de reiniciar
+                        ws.textAll("OTA_SUCCESS:" + versionInfo.latestVersion);
+                        DBG_SRV_PRINTF("✅ Firmware actualizado a v%s. Reiniciando...", versionInfo.latestVersion.c_str());
+                        
+                        // Dar tiempo para que el mensaje llegue al cliente
+                        delay(2000);
+                        
+                        // Reiniciar ESP32
+                        ESP.restart();
+                    }
+                    
                 } else if (mensaje == "START_UPDATE_SPIFFS") {
                     // Solo actualizar SPIFFS
                     ws.textAll("OTA_PROGRESS:0:Descargando SPIFFS...");
                     resultado = OTA.updateSPIFFS(versionInfo.spiffsUrl, versionInfo.spiffsSize);
                     
+                    if (resultado) {
+                        // Enviar éxito ANTES de reiniciar
+                        ws.textAll("OTA_SUCCESS:" + versionInfo.latestVersion);
+                        DBG_SRV("✅ SPIFFS actualizado. Reiniciando...");
+                        
+                        // Dar tiempo para que el mensaje llegue al cliente
+                        delay(2000);
+                        
+                        // Reiniciar ESP32
+                        ESP.restart();
+                    }
+                    
                 } else if (mensaje == "START_UPDATE_COMPLETE") {
-                    // Actualización completa
+                    // Actualización completa asíncrona (no bloquea WebSocket)
                     ws.textAll("OTA_PROGRESS:0:Iniciando actualización completa...");
-                    resultado = OTA.performFullUpdate(versionInfo);
+                    OTA.performFullUpdateAsync(versionInfo);
+                    resultado = true;  // La tarea se ejecuta en segundo plano
                 }
                 
                 if (resultado) {

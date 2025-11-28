@@ -670,6 +670,7 @@ renderStatsBasico() {
         // ✅ SOLO LIMPIAR CUANDO NO ESTAMOS EDITANDO
         if (this.editingId === null) {
             form.reset();
+            mostrarDuracionSiEsCalefaccion(); // Ocultar campo duración al resetear
             console.log("✅ Formulario reseteado");
         }
         
@@ -689,6 +690,7 @@ renderStatsBasico() {
             // Ahora sí limpiar formulario
             setTimeout(() => {
                 form.reset();
+                mostrarDuracionSiEsCalefaccion(); // Ocultar campo duración al limpiar tras edición
                 
                 const submitBtn = form.querySelector('button[type="submit"]');
                 if (submitBtn) {

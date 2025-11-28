@@ -147,7 +147,6 @@ function iniciarActualizacion(tipo) {
 // Simular progreso OTA cuando el WebSocket se cierra
 function simularProgresoOTA(tipo) {
     let progreso = 0;
-    let tiempoEn90 = 0;
     
     const intervalo = setInterval(() => {
         if (!otaState.actualizando) {
@@ -156,9 +155,9 @@ function simularProgresoOTA(tipo) {
         }
         
         // Incremento lento y realista
-        if (progreso < 90) {
-            progreso += Math.random() * 5; // Incremento variable
-            if (progreso > 90) progreso = 90; // Máximo 90% hasta confirmación
+        if (progreso < 95) {
+            progreso += Math.random() * 3; // Incremento variable más lento
+            if (progreso > 95) progreso = 95; // Máximo 95% hasta confirmación OTA_SUCCESS
             
             document.getElementById('otaProgressFill').style.width = Math.floor(progreso) + '%';
             
@@ -168,52 +167,30 @@ function simularProgresoOTA(tipo) {
                 mensaje = tipo === 'firmware' ? 'Descargant firmware...' : 
                          tipo === 'spiffs' ? 'Descargant SPIFFS...' : 
                          'Descargant actualització...';
-            } else if (progreso < 60) {
+            } else if (progreso < 70) {
                 mensaje = 'Instal·lant...';
             } else {
-                mensaje = 'Finalitzant actualització...';
+                mensaje = 'Finalitzant instal·lació...';
             }
             
             document.getElementById('otaMensaje').textContent = mensaje;
-        } else {
-            // Cuando llega al 90%, esperar 20 segundos más
-            tiempoEn90++;
-            
-            if (tiempoEn90 >= 20) {
-                // Después de 20 segundos en 90%, asumir que completó (ESP32 reinició)
-                clearInterval(intervalo);
-                console.log('⏱️ Timeout alcanzado - asumiendo actualización exitosa');
-                
-                // Completar manualmente
-                document.getElementById('otaProgressFill').style.width = '100%';
-                document.getElementById('otaMensaje').textContent = 'Actualització completada. Reiniciant...';
-                document.getElementById('otaEstado').innerHTML = 
-                    '<p style="color: #4CAF50; font-weight: bold;">✅ Actualització completada</p>';
-                
-                // Recargar después de 10 segundos más
-                setTimeout(() => {
-                    console.log('🔄 Recargando página después de actualización...');
-                    location.reload();
-                }, 10000);
-            }
         }
-    }, 1000); // Actualizar cada segundo
+    }, 1500); // Actualizar cada 1.5 segundos (más lento)
     
-    // Timeout de seguridad total (2 minutos)
+    // Timeout de seguridad (3 minutos) - por si nunca llega OTA_SUCCESS
     setTimeout(() => {
         clearInterval(intervalo);
         if (otaState.actualizando) {
-            // Si después de 2 minutos sigue activo, forzar recarga
-            console.log('⚠️ Timeout total alcanzado - forzando recarga');
+            console.log('⚠️ Timeout de seguridad - asumiendo éxito y recargando');
+            // Si después de 3 minutos no hay respuesta, asumir éxito y recargar
             document.getElementById('otaProgressFill').style.width = '100%';
-            document.getElementById('otaMensaje').textContent = 
-                'Actualització completada. Recarregant...';
+            document.getElementById('otaMensaje').textContent = 'Actualització completada. Recarregant...';
             
             setTimeout(() => {
                 location.reload();
             }, 5000);
         }
-    }, 120000); // 2 minutos
+    }, 180000); // 3 minutos
 }
 
 // Procesar mensajes OTA del WebSocket

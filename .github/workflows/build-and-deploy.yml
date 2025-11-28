@@ -1,0 +1,228 @@
+name: Build and Deploy Campanarios
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build and deploy (e.g., 1.1.5)'
+        required: true
+        type: string
+      deploy:
+        description: 'Deploy to devices after build'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  ARDUINO_CLI_VERSION: '0.35.0'
+  ESP32_CORE_VERSION: '2.0.14'
+
+jobs:
+  build:
+    name: Build Firmware
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+      
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v1
+        with:
+          version: ${{ env.ARDUINO_CLI_VERSION }}
+      
+      - name: Install ESP32 core
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@${{ env.ESP32_CORE_VERSION }}
+      
+      - name: Install libraries
+        run: |
+          arduino-cli lib install "ESPAsyncWebServer"
+          arduino-cli lib install "AsyncTCP"
+          arduino-cli lib install "UniversalTelegramBot"
+          arduino-cli lib install "RTClib"
+          arduino-cli lib install "PCF8574 library"
+      
+      - name: Update version in Configuracion.h
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          sed -i "s/#define VERSION \".*\"/#define VERSION \"$VERSION\"/" Configuracion.h
+          echo "Updated version to: $VERSION"
+      
+      - name: Create releases directory
+        run: mkdir -p releases/v${{ steps.get_version.outputs.version }}
+      
+      - name: Compile Firmware
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Compilar sketch
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32 \
+            --build-property "build.partitions=default" \
+            --build-property "upload.maximum_size=1310720" \
+            --export-binaries \
+            Campanarios.ino
+          
+          # Copiar binarios
+          cp build/esp32.esp32.esp32/Campanarios.ino.bin "releases/v$VERSION/Campanarios-firmware-v$VERSION.bin"
+          
+          echo "Firmware compiled successfully"
+      
+      - name: Build SPIFFS image
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Instalar mkspiffs
+          wget https://github.com/igrr/mkspiffs/releases/download/0.2.3/mkspiffs-0.2.3-arduino-esp32-linux64.tar.gz
+          tar -xzf mkspiffs-0.2.3-arduino-esp32-linux64.tar.gz
+          chmod +x mkspiffs
+          
+          # Crear imagen SPIFFS
+          ./mkspiffs -c data -b 4096 -p 256 -s 1507328 "releases/v$VERSION/Campanarios-spiffs-v$VERSION.bin"
+          
+          echo "SPIFFS image created successfully"
+      
+      - name: Merge binaries for complete update
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Instalar esptool
+          pip install esptool
+          
+          # Combinar firmware + SPIFFS
+          python -m esptool \
+            --chip esp32 \
+            merge_bin \
+            -o "releases/v$VERSION/Campanarios-complete-v$VERSION.bin" \
+            --flash_mode dio \
+            --flash_freq 40m \
+            --flash_size 4MB \
+            0x10000 "releases/v$VERSION/Campanarios-firmware-v$VERSION.bin" \
+            0x290000 "releases/v$VERSION/Campanarios-spiffs-v$VERSION.bin"
+          
+          echo "Complete binary created successfully"
+      
+      - name: Create checksums
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          cd "releases/v$VERSION"
+          
+          sha256sum *.bin > checksums.txt
+          cat checksums.txt
+      
+      - name: Create release notes
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          cat > releases/v$VERSION/RELEASE_NOTES.md << EOF
+          # Campanarios v$VERSION
+          
+          ## Binarios disponibles
+          
+          - **Campanarios-firmware-v$VERSION.bin**: Solo firmware (preserva SPIFFS)
+          - **Campanarios-spiffs-v$VERSION.bin**: Solo sistema de archivos (preserva firmware)
+          - **Campanarios-complete-v$VERSION.bin**: Actualización completa (borra todo)
+          
+          ## Instalación
+          
+          ### OTA (Over-The-Air)
+          1. Accede a la interfaz web del dispositivo
+          2. Ve a "Actualización"
+          3. Selecciona el tipo de actualización deseada
+          4. Sube el archivo .bin correspondiente
+          
+          ### Esptool (USB)
+          \`\`\`bash
+          # Firmware + SPIFFS (recomendado para primera instalación)
+          esptool.py --port COM3 write_flash 0x10000 Campanarios-firmware-v$VERSION.bin
+          esptool.py --port COM3 write_flash 0x290000 Campanarios-spiffs-v$VERSION.bin
+          
+          # O actualización completa
+          esptool.py --port COM3 write_flash 0x0 Campanarios-complete-v$VERSION.bin
+          \`\`\`
+          
+          ## Checksums
+          
+          \`\`\`
+          $(cat releases/v$VERSION/checksums.txt)
+          \`\`\`
+          
+          ## Cambios
+          
+          - Consulta el [CHANGELOG](../../CHANGELOG.md) para ver todos los cambios
+          
+          ---
+          
+          **Fecha de compilación**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Commit**: ${{ github.sha }}
+          EOF
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: campanarios-v${{ steps.get_version.outputs.version }}
+          path: releases/v${{ steps.get_version.outputs.version }}/
+          retention-days: 90
+      
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            releases/v${{ steps.get_version.outputs.version }}/*.bin
+            releases/v${{ steps.get_version.outputs.version }}/checksums.txt
+          body_path: releases/v${{ steps.get_version.outputs.version }}/RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  deploy:
+    name: Deploy to Devices
+    needs: build
+    runs-on: self-hosted  # Requiere runner self-hosted con acceso a la red local
+    if: github.event.inputs.deploy == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: campanarios-v${{ needs.build.outputs.version }}
+          path: releases/v${{ needs.build.outputs.version }}
+      
+      - name: Deploy to devices
+        shell: pwsh
+        run: |
+          .\deploy-devices.ps1 -version "${{ needs.build.outputs.version }}"
+      
+      - name: Upload deployment logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-logs-${{ needs.build.outputs.version }}
+          path: device-backups/
+          retention-days: 30

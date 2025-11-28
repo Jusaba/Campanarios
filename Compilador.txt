@@ -22,7 +22,7 @@ C:\Users\Julian\AppData\Local\Arduino15\packages\esp32\tools\mkspiffs\0.2.3\mksp
 C:\Users\Julian\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.5.1\esptool.exe --chip esp32 --port COM3 --baud 460800 write_flash 0x290000 build\esp32.esp32.esp32\Campanarios.spiffs.bin
 
 
-.\build-release.ps1 -version "1.1.3" -uploadToGitHub
+.\build-release.ps1 -version "1.0.10" -uploadToGitHub
 
 Para crear y subir la release v1.1.1 creada en local
 gh release create v1.1.1 --title "Campanarios v1.1.1" --notes-file "releases\v1.1.1\release-notes.md" "releases\v1.1.1\Campanarios-firmware-v1.1.1.bin" "releases\v1.1.1\Campanarios-spiffs-v1.1.1.bin" "releases\v1.1.1\Campanarios-partitions-v1.1.1.bin"

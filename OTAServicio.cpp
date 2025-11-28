@@ -175,6 +175,45 @@ int OTAServicio::compareVersions(const String& v1, const String& v2) {
     return v1_patch - v2_patch;
 }
 
+// Tarea FreeRTOS para ejecutar OTA sin bloquear WebSocket
+static void otaTaskFunction(void* parameter) {
+    OTATaskParams* params = (OTATaskParams*)parameter;
+    
+    // Desactivar watchdog para esta tarea
+    esp_task_wdt_delete(NULL);
+    
+    DBG_OTA("Tarea OTA iniciada");
+    
+    // Ejecutar actualización completa
+    params->otaService->performFullUpdate(params->versionInfo);
+    
+    // Liberar memoria de parámetros
+    delete params;
+    
+    // Terminar tarea
+    vTaskDelete(NULL);
+}
+
+void OTAServicio::performFullUpdateAsync(const VersionInfo& versionInfo) {
+    // Crear parámetros para la tarea (se liberarán dentro de la tarea)
+    OTATaskParams* params = new OTATaskParams();
+    params->otaService = this;
+    params->versionInfo = versionInfo;
+    
+    // Crear tarea con stack grande (16KB) para HTTPS
+    xTaskCreatePinnedToCore(
+        otaTaskFunction,   // Función de la tarea
+        "OTA_Task",        // Nombre
+        16384,             // Stack size (16KB)
+        params,            // Parámetros
+        1,                 // Prioridad
+        NULL,              // Handle (no lo necesitamos)
+        1                  // Core 1
+    );
+    
+    DBG_OTA("Tarea OTA creada en segundo plano");
+}
+
 bool OTAServicio::performFullUpdate(const VersionInfo& versionInfo) {
     if (!versionInfo.newVersionAvailable) {
         setError("No hay actualizacion disponible");

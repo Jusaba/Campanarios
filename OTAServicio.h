@@ -50,6 +50,9 @@ public:
     bool updateSPIFFS(const String& url, size_t expectedSize);
     bool performFullUpdate(const VersionInfo& versionInfo);
     
+    // Actualización asíncrona (no bloquea el WebSocket)
+    void performFullUpdateAsync(const VersionInfo& versionInfo);
+    
     // Auto-update
     void enableAutoUpdate(bool enable);
     void checkAutoUpdate();
@@ -75,6 +78,7 @@ private:
     String _lastError;
     bool _autoUpdateEnabled;
     unsigned long _lastUpdateCheck;
+    TaskHandle_t _otaTaskHandle;
     
     // Callbacks
     ProgressCallback _progressCallback;
@@ -95,5 +99,11 @@ private:
 };
 
 extern OTAServicio OTA;
+
+// Parámetros para tarea OTA asíncrona
+struct OTATaskParams {
+    OTAServicio* otaService;
+    VersionInfo versionInfo;
+};
 
 #endif // OTASERVICIO_H

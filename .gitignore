@@ -10,3 +10,7 @@
 build/
 Campanarios.wiki/
 releases/
+
+# Deploy automation
+device-backups/
+Dispositivos.txt
