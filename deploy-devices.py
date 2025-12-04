@@ -108,14 +108,14 @@ def load_devices(file_path: str) -> List[Dict[str, str]]:
     """
     Carga lista de dispositivos desde archivo de texto.
     
-    Formato esperado: nombre_dispositivo,dominio:puerto
-    Ejemplo: Campanario-Principal,campanario-principal.jusaba.es:8080
+    Formato esperado: nombre_dispositivo,dominio:puerto,usuario,password
+    Ejemplo: Campanario-Principal,campanario-principal.jusaba.es:8080,admin,secret123
     
     Args:
         file_path: Ruta al archivo de dispositivos
         
     Returns:
-        Lista de diccionarios con 'name' y 'host'
+        Lista de diccionarios con 'name', 'host', 'username' y 'password'
         
     Raises:
         FileNotFoundError: Si el archivo no existe
@@ -125,10 +125,10 @@ def load_devices(file_path: str) -> List[Dict[str, str]]:
         raise FileNotFoundError(
             f"No se encuentra el archivo {file_path}\n"
             f"Crea un archivo {file_path} con el formato:\n"
-            f"nombre_dispositivo,dominio:puerto\n"
+            f"nombre_dispositivo,dominio:puerto,usuario,password\n"
             f"Ejemplo:\n"
-            f"  Campanario-Principal,campanario-principal.jusaba.es:8080\n"
-            f"  Campanario-Auxiliar,campanario-auxiliar.jusaba.es:8080"
+            f"  Campanario-Principal,campanario-principal.jusaba.es:8080,admin,secret123\n"
+            f"  Campanario-Auxiliar,campanario-auxiliar.jusaba.es:8080,manolo,garcia"
         )
     
     devices = []
@@ -142,18 +142,24 @@ def load_devices(file_path: str) -> List[Dict[str, str]]:
             
             # Parsear línea
             parts = [p.strip() for p in line.split(',')]
-            if len(parts) != 2:
+            if len(parts) not in [2, 4]:
                 raise ValueError(
                     f"Formato incorrecto en línea {line_num}: {line}\n"
-                    f"Formato esperado: nombre,host:puerto"
+                    f"Formato esperado: nombre,host:puerto[,usuario,password]"
                 )
             
-            name, host = parts
+            name = parts[0]
+            host = parts[1]
+            username = parts[2] if len(parts) == 4 else DEFAULT_USER
+            password = parts[3] if len(parts) == 4 else DEFAULT_PASS
+            
             devices.append({
                 'name': name,
-                'host': host
+                'host': host,
+                'username': username,
+                'password': password
             })
-            print_info(f"  - {name} @ {host}")
+            print_info(f"  - {name} @ {host} (user: {username})")
     
     if not devices:
         raise ValueError(f"No se encontraron dispositivos en {file_path}")
@@ -597,12 +603,12 @@ Ejemplos de uso:
     parser.add_argument(
         '--username',
         default=DEFAULT_USER,
-        help=f'Usuario para HTTP Basic Auth (default: {DEFAULT_USER})'
+        help=f'Usuario por defecto para HTTP Basic Auth si no se especifica en Dispositivos.txt (default: {DEFAULT_USER})'
     )
     parser.add_argument(
         '--password',
         default=DEFAULT_PASS,
-        help='Contraseña para HTTP Basic Auth'
+        help='Contraseña por defecto para HTTP Basic Auth si no se especifica en Dispositivos.txt'
     )
     
     args = parser.parse_args()
@@ -654,8 +660,8 @@ Ejemplos de uso:
             if not backup_device_config(
                 device['name'],
                 device['host'],
-                args.username,
-                args.password
+                device.get('username', args.username),
+                device.get('password', args.password)
             ):
                 print_error(f"Falló el backup de {device['name']}")
                 device_success = False
@@ -667,8 +673,8 @@ Ejemplos de uso:
                 device['host'],
                 args.version,
                 "complete",  # Actualización completa (firmware + SPIFFS)
-                args.username,
-                args.password
+                device.get('username', args.username),
+                device.get('password', args.password)
             ):
                 print_error(f"Falló la actualización de {device['name']}")
                 device_success = False
@@ -678,8 +684,8 @@ Ejemplos de uso:
             if not restore_device_config(
                 device['name'],
                 device['host'],
-                args.username,
-                args.password
+                device.get('username', args.username),
+                device.get('password', args.password)
             ):
                 print_error(f"Falló la restauración de {device['name']}")
                 device_success = False

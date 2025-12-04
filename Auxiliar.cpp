@@ -269,6 +269,10 @@ double nSegundosTemporizacion = 0;                                      // Tempo
                   Campanario.SetInternetConectado(); // Notifica al campanario que hay internet
                   IniciaAlarmas(); // Inicializa el sistema de alarmas sin cargar configuración por defecto
                   // Notificar reconexion via Telegram si está habilitado
+                   if (!telegramBot.isEnabled()) {
+                        telegramBot.begin(Config::Telegram::BOT_TOKEN, Config::Telegram::CHAT_ID, Config::Telegram::CAMPANARIO_NOMBRE);
+                   }    
+
                    if (telegramBot.isEnabled() && Config::Telegram::NOTIFICACION_INTERNET_RECONEXION) {
                         telegramBot.SendReconexionNotification();
                     }
