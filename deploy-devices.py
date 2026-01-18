@@ -55,6 +55,13 @@ CONFIG_FILES = [
     "Secuencias.json"
 ]
 
+# Archivos que se crean dinámicamente (verificación opcional)
+OPTIONAL_FILES = [
+    "alarmas_personalizadas.json",
+    "telegram_config.json",
+    "Secuencias.json"
+]
+
 # ============================================================================
 # COLORES PARA TERMINAL
 # ============================================================================
@@ -558,8 +565,12 @@ def restore_device_config(
                         print_error(f"    [X] {config_file} tamaño incorrecto: {downloaded_size} vs {original_size}")
                         all_success = False
                 else:
-                    print_error(f"    [X] {config_file} no encontrado en SPIFFS")
-                    all_success = False
+                    # Verificar si el archivo es opcional (se crea dinámicamente)
+                    if config_file in OPTIONAL_FILES:
+                        print_info(f"    [-] {config_file} no encontrado (se creará automáticamente)")
+                    else:
+                        print_error(f"    [X] {config_file} no encontrado en SPIFFS")
+                        all_success = False
                     
             except requests.exceptions.RequestException as e:
                 print_error(f"    [X] Error verificando {config_file}: {e}")

@@ -6,8 +6,8 @@
     // Variable estática para cachear el dominio
     static String dominioCache = "";
 
-    const char* serverUrl1 = "http://serverpic.cloud:8001"; 
-    const char* serverUrl2 = "http://serverpic.com:8001";
+    const char* serverUrl1 = "http://serverpic1.jusaba.es:8001"; 
+    const char* serverUrl2 = "http://serverpic2.jusaba.es:8001";
     const char* userPassword = "JUSABA2408";      
 
     HTTPClient http1;

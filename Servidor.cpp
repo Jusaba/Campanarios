@@ -86,8 +86,11 @@
             });
 
             // ✅ ENDPOINT PARA DESCARGAR ARCHIVOS DE SPIFFS
-            server.on("/download", HTTP_GET, [](AsyncWebServerRequest *request){
-              // Nota: Autenticación manejada por el navegador ya autenticado
+            server.on("/download", HTTP_GET, [usuario, clave](AsyncWebServerRequest *request){
+              // Verificar autenticación
+              if(!request->authenticate(usuario, clave)) {
+                return request->requestAuthentication();
+              }
               
               if (!request->hasParam("file")) {
                 DBG_SRV("❌ Parámetro 'file' no encontrado en la petición");

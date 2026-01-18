@@ -66,7 +66,7 @@ function onMessageDatos(event) {
     if (event.data.startsWith("CAMPANA:")) {
         console.log("Activando campana con ID: " + event.data);
         let idx = parseInt(event.data.split(":")[1]);
-        window.activarCampana(idx);
+        activarCampana(idx);
     }
     
     // ✅ DELEGAR MENSAJES DE CALEFACCIÓN AL MÓDULO CORRESPONDIENTE

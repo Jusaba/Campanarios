@@ -32,7 +32,7 @@
 //#define DEBUGCAMPANA              // Debug del sistema de campanas
 //#define DEBUGTELEGRAM             // Debug del servicio Telegram
 //#define DBG_ALARMS_ENABLED        // Habilita macros de debug para alarmas personalizadas
-//#define DEBUGOTA                  // Debug del servicio OTA
+#define DEBUGOTA                  // Debug del servicio OTA
 
 // ============================================================================
 // MACROS DE DEBUG - Simplifica el uso de debug condicional
