@@ -579,55 +579,120 @@ def restore_device_config(
     return all_success
 
 # ============================================================================
-# FUNCIÓN PRINCIPAL
+# MENÚ INTERACTIVO
 # ============================================================================
 
-def main():
-    """Función principal del script"""
-    parser = argparse.ArgumentParser(
-        description="Script para desplegar actualizaciones OTA a dispositivos ESP32 Campanarios",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Ejemplos de uso:
-  python deploy-devices.py --version 1.1.4
-  python deploy-devices.py --version 1.1.4 --only-backup
-  python deploy-devices.py --version 1.1.4 --only-restore
-  python deploy-devices.py --version 1.1.4 --username admin --password 1234
-        """
-    )
+def mostrar_menu_principal():
+    """Muestra el menú principal y retorna la opción seleccionada"""
+    print()
+    print(f"{Colors.CYAN}{'=' * 50}{Colors.RESET}")
+    print(f"{Colors.CYAN}    CAMPANARIOS - MENÚ DE ACTUALIZACIÓN OTA{Colors.RESET}")
+    print(f"{Colors.CYAN}{'=' * 50}{Colors.RESET}")
+    print()
+    print(f"{Colors.WHITE}Selecciona una opción:{Colors.RESET}")
+    print(f"{Colors.GREEN}  1.{Colors.RESET} Actualizar TODO (Firmware + SPIFFS)")
+    print(f"{Colors.GREEN}  2.{Colors.RESET} Actualizar SOLO Firmware (sin tocar SPIFFS)")
+    print(f"{Colors.YELLOW}  3.{Colors.RESET} Solo hacer BACKUP de configuraciones")
+    print(f"{Colors.YELLOW}  4.{Colors.RESET} Solo RESTAURAR configuraciones desde backup")
+    print(f"{Colors.RED}  5.{Colors.RESET} Salir")
+    print()
     
-    parser.add_argument(
-        '--version',
-        help='Versión a desplegar (debe existir en releases/)',
-        required=False
-    )
-    parser.add_argument(
-        '--only-backup',
-        action='store_true',
-        help='Solo hacer backup de configuraciones sin actualizar'
-    )
-    parser.add_argument(
-        '--only-restore',
-        action='store_true',
-        help='Solo restaurar configuraciones desde backups existentes'
-    )
-    parser.add_argument(
-        '--username',
-        default=DEFAULT_USER,
-        help=f'Usuario por defecto para HTTP Basic Auth si no se especifica en Dispositivos.txt (default: {DEFAULT_USER})'
-    )
-    parser.add_argument(
-        '--password',
-        default=DEFAULT_PASS,
-        help='Contraseña por defecto para HTTP Basic Auth si no se especifica en Dispositivos.txt'
-    )
+    while True:
+        try:
+            opcion = input(f"{Colors.CYAN}Opción [1-5]: {Colors.RESET}").strip()
+            if opcion in ['1', '2', '3', '4', '5']:
+                return int(opcion)
+            else:
+                print(f"{Colors.RED}❌ Opción inválida. Usa 1-5{Colors.RESET}")
+        except (KeyboardInterrupt, EOFError):
+            print()
+            return 5
+
+def listar_versiones_disponibles():
+    """Lista las versiones disponibles en el directorio releases"""
+    releases_dir = Path("releases")
+    if not releases_dir.exists():
+        return []
     
-    args = parser.parse_args()
+    versiones = []
+    for item in sorted(releases_dir.iterdir(), reverse=True):
+        if item.is_dir() and item.name.startswith('v'):
+            version = item.name[1:]  # Quitar la 'v'
+            versiones.append(version)
     
-    # Validaciones
-    if not args.only_backup and not args.only_restore and not args.version:
-        parser.error("Debe especificar --version para actualizar")
+    return versiones
+
+def seleccionar_version():
+    """Muestra las versiones disponibles y permite seleccionar una"""
+    versiones = listar_versiones_disponibles()
     
+    if not versiones:
+        print_error("No se encontraron versiones en el directorio releases/")
+        return None
+    
+    print()
+    print(f"{Colors.MAGENTA}Versiones disponibles:{Colors.RESET}")
+    for i, version in enumerate(versiones, 1):
+        print(f"  {Colors.GREEN}{i}.{Colors.RESET} v{version}")
+    print(f"  {Colors.RED}0.{Colors.RESET} Cancelar")
+    print()
+    
+    while True:
+        try:
+            opcion = input(f"{Colors.CYAN}Selecciona versión [0-{len(versiones)}]: {Colors.RESET}").strip()
+            if opcion == '0':
+                return None
+            idx = int(opcion) - 1
+            if 0 <= idx < len(versiones):
+                return versiones[idx]
+            else:
+                print(f"{Colors.RED}❌ Opción inválida{Colors.RESET}")
+        except (ValueError, KeyboardInterrupt, EOFError):
+            print(f"{Colors.RED}❌ Entrada inválida{Colors.RESET}")
+            return None
+
+def modo_interactivo():
+    """Modo interactivo con menú"""
+    while True:
+        opcion = mostrar_menu_principal()
+        
+        if opcion == 5:
+            print_info("👋 Saliendo...")
+            return 0
+        
+        # Para opciones que requieren versión (1 y 2)
+        version = None
+        if opcion in [1, 2]:
+            version = seleccionar_version()
+            if not version:
+                print_info("Operación cancelada")
+                continue
+        
+        # Crear objeto args simulado
+        class Args:
+            pass
+        
+        args = Args()
+        args.version = version
+        args.only_backup = (opcion == 3)
+        args.only_restore = (opcion == 4)
+        args.firmware_only = (opcion == 2)
+        args.username = DEFAULT_USER
+        args.password = DEFAULT_PASS
+        
+        # Ejecutar la operación
+        resultado = ejecutar_operacion(args)
+        
+        # Preguntar si desea continuar
+        print()
+        continuar = input(f"{Colors.CYAN}¿Realizar otra operación? [S/n]: {Colors.RESET}").strip().lower()
+        if continuar in ['n', 'no']:
+            print_info("👋 ¡Hasta luego!")
+            return resultado
+        print()
+
+def ejecutar_operacion(args):
+    """Ejecuta la operación seleccionada con los argumentos dados"""
     # Banner
     print_banner(args.version)
     
@@ -679,11 +744,13 @@ Ejemplos de uso:
         
         # PASO 2: Actualizar
         if not args.only_backup and not args.only_restore and device_success:
+            # Determinar tipo de actualización según parámetros
+            update_type = "firmware" if args.firmware_only else "complete"
             if not update_device_firmware(
                 device['name'],
                 device['host'],
                 args.version,
-                "complete",  # Actualización completa (firmware + SPIFFS)
+                update_type,
                 device.get('username', args.username),
                 device.get('password', args.password)
             ):
@@ -726,6 +793,70 @@ Ejemplos de uso:
     else:
         print_error("Algunos dispositivos fallaron. Revisa los logs arriba.")
         return 1
+
+# ============================================================================
+# FUNCIÓN PRINCIPAL
+# ============================================================================
+
+def main():
+    """Función principal del script"""
+    parser = argparse.ArgumentParser(
+        description="Script para desplegar actualizaciones OTA a dispositivos ESP32 Campanarios",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Ejemplos de uso:
+  python deploy-devices.py                                    # Modo interactivo (RECOMENDADO)
+  python deploy-devices.py --version 1.1.4                    # Actualiza firmware + SPIFFS
+  python deploy-devices.py --version 1.1.4 --firmware-only   # Solo actualiza firmware
+  python deploy-devices.py --version 1.1.4 --only-backup
+  python deploy-devices.py --version 1.1.4 --only-restore
+  python deploy-devices.py --version 1.1.4 --username admin --password 1234
+        """
+    )
+    
+    parser.add_argument(
+        '--version',
+        help='Versión a desplegar (debe existir en releases/)',
+        required=False
+    )
+    parser.add_argument(
+        '--only-backup',
+        action='store_true',
+        help='Solo hacer backup de configuraciones sin actualizar'
+    )
+    parser.add_argument(
+        '--only-restore',
+        action='store_true',
+        help='Solo restaurar configuraciones desde backups existentes'
+    )
+    parser.add_argument(
+        '--firmware-only',
+        action='store_true',
+        help='Actualizar solo firmware, sin tocar SPIFFS (por defecto actualiza firmware + SPIFFS)'
+    )
+    parser.add_argument(
+        '--username',
+        default=DEFAULT_USER,
+        help=f'Usuario por defecto para HTTP Basic Auth si no se especifica en Dispositivos.txt (default: {DEFAULT_USER})'
+    )
+    parser.add_argument(
+        '--password',
+        default=DEFAULT_PASS,
+        help='Contraseña por defecto para HTTP Basic Auth si no se especifica en Dispositivos.txt'
+    )
+    
+    args = parser.parse_args()
+    
+    # Si no se proporcionan argumentos, usar modo interactivo
+    if len(sys.argv) == 1:
+        return modo_interactivo()
+    
+    # Validaciones para modo línea de comandos
+    if not args.only_backup and not args.only_restore and not args.version:
+        parser.error("Debe especificar --version para actualizar")
+    
+    # Ejecutar operación con argumentos de línea de comandos
+    return ejecutar_operacion(args)
 
 if __name__ == "__main__":
     sys.exit(main())
