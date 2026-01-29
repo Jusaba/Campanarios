@@ -105,7 +105,7 @@
         // ==================== OTA ====================
         namespace OTA {
             // Versión del firmware (debe coincidir con GitHub Release)
-            inline String FIRMWARE_VERSION = "1.5.3";
+            inline String FIRMWARE_VERSION = "1.5.4";
             
             // Configuración GitHub
             inline String GITHUB_OWNER = "Jusaba";
@@ -177,7 +177,7 @@
         // ==================== CALEFACCIÓN ====================
         namespace Heating {
             constexpr int DEFAULT_TIMER_MINUTES = 45;  // Era nTemporizacionCalefaccion por defecto
-            constexpr int MAX_MINUTES           = 120; // Máximo minutos de calefacción (2 horas)
+            constexpr int MAX_MINUTES           = 300; // Máximo minutos de calefacción (5 horas)
         }
 
         // ==================== DEBUG ====================

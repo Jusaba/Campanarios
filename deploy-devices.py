@@ -592,18 +592,19 @@ def mostrar_menu_principal():
     print(f"{Colors.WHITE}Selecciona una opción:{Colors.RESET}")
     print(f"{Colors.GREEN}  1.{Colors.RESET} Actualizar TODO (Firmware + SPIFFS)")
     print(f"{Colors.GREEN}  2.{Colors.RESET} Actualizar SOLO Firmware (sin tocar SPIFFS)")
-    print(f"{Colors.YELLOW}  3.{Colors.RESET} Solo hacer BACKUP de configuraciones")
-    print(f"{Colors.YELLOW}  4.{Colors.RESET} Solo RESTAURAR configuraciones desde backup")
-    print(f"{Colors.RED}  5.{Colors.RESET} Salir")
+    print(f"{Colors.GREEN}  3.{Colors.RESET} Actualizar SOLO SPIFFS (archivos web del directorio data/)")
+    print(f"{Colors.YELLOW}  4.{Colors.RESET} Solo hacer BACKUP de configuraciones")
+    print(f"{Colors.YELLOW}  5.{Colors.RESET} Solo RESTAURAR configuraciones desde backup")
+    print(f"{Colors.RED}  6.{Colors.RESET} Salir")
     print()
     
     while True:
         try:
-            opcion = input(f"{Colors.CYAN}Opción [1-5]: {Colors.RESET}").strip()
-            if opcion in ['1', '2', '3', '4', '5']:
+            opcion = input(f"{Colors.CYAN}Opción [1-6]: {Colors.RESET}").strip()
+            if opcion in ['1', '2', '3', '4', '5', '6']:
                 return int(opcion)
             else:
-                print(f"{Colors.RED}❌ Opción inválida. Usa 1-5{Colors.RESET}")
+                print(f"{Colors.RED}❌ Opción inválida. Usa 1-6{Colors.RESET}")
         except (KeyboardInterrupt, EOFError):
             print()
             return 5
@@ -656,13 +657,13 @@ def modo_interactivo():
     while True:
         opcion = mostrar_menu_principal()
         
-        if opcion == 5:
+        if opcion == 6:
             print_info("👋 Saliendo...")
             return 0
         
-        # Para opciones que requieren versión (1 y 2)
+        # Para opciones que requieren versión (1, 2 y 3)
         version = None
-        if opcion in [1, 2]:
+        if opcion in [1, 2, 3]:
             version = seleccionar_version()
             if not version:
                 print_info("Operación cancelada")
@@ -674,9 +675,10 @@ def modo_interactivo():
         
         args = Args()
         args.version = version
-        args.only_backup = (opcion == 3)
-        args.only_restore = (opcion == 4)
+        args.only_backup = (opcion == 4)
+        args.only_restore = (opcion == 5)
         args.firmware_only = (opcion == 2)
+        args.spiffs_only = (opcion == 3)
         args.username = DEFAULT_USER
         args.password = DEFAULT_PASS
         
@@ -745,7 +747,12 @@ def ejecutar_operacion(args):
         # PASO 2: Actualizar
         if not args.only_backup and not args.only_restore and device_success:
             # Determinar tipo de actualización según parámetros
-            update_type = "firmware" if args.firmware_only else "complete"
+            if args.firmware_only:
+                update_type = "firmware"
+            elif args.spiffs_only:
+                update_type = "spiffs"
+            else:
+                update_type = "complete"
             if not update_device_firmware(
                 device['name'],
                 device['host'],
@@ -808,6 +815,7 @@ Ejemplos de uso:
   python deploy-devices.py                                    # Modo interactivo (RECOMENDADO)
   python deploy-devices.py --version 1.1.4                    # Actualiza firmware + SPIFFS
   python deploy-devices.py --version 1.1.4 --firmware-only   # Solo actualiza firmware
+  python deploy-devices.py --version 1.1.4 --spiffs-only     # Solo actualiza SPIFFS (archivos web)
   python deploy-devices.py --version 1.1.4 --only-backup
   python deploy-devices.py --version 1.1.4 --only-restore
   python deploy-devices.py --version 1.1.4 --username admin --password 1234
@@ -833,6 +841,11 @@ Ejemplos de uso:
         '--firmware-only',
         action='store_true',
         help='Actualizar solo firmware, sin tocar SPIFFS (por defecto actualiza firmware + SPIFFS)'
+    )
+    parser.add_argument(
+        '--spiffs-only',
+        action='store_true',
+        help='Actualizar solo SPIFFS (archivos web del directorio data/), sin tocar firmware'
     )
     parser.add_argument(
         '--username',
