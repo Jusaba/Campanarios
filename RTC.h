@@ -75,8 +75,12 @@
     #define NTP_SERVER1 "pool.ntp.org"
     #define NTP_SERVER2 "es.pool.ntp.org"
     #define NTP_SERVER3 "time.google.com"
-    #define GMT_OFFSET_SEC 3600                                 // Offset horario en segundos (por ejemplo, -5*3600 para GMT-5)
-    #define DAYLIGHT_OFFSET_SEC 3600                            // Horario de verano, si aplica
+    #define GMT_OFFSET_SEC 3600                                 // CET: GMT+1 (horario de invierno España)
+    #define DAYLIGHT_OFFSET_SEC 0                               // No usar offset fijo, se gestiona con POSIX TZ
+    // Zona horaria POSIX para España: CET-1CEST,M3.5.0,M10.5.0/3
+    // Cambia automáticamente entre CET (GMT+1) y CEST (GMT+2)
+    // Último domingo de marzo a las 2:00 → último domingo de octubre a las 3:00
+    #define POSIX_TZ "CET-1CEST,M3.5.0,M10.5.0/3"
 
 
     /**

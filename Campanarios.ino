@@ -51,7 +51,7 @@
   #include "OTAServicio.h"
   #include <Wire.h>
   #include "Auxiliar.h"
-  #include "ModoAp.h"
+  #include "ModoAP.h"
   #include "Configuracion.h"
   //#include "TimeManager.h"
   #include "Alarmas.h"

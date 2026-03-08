@@ -43,7 +43,7 @@
     void RTC::begin(const char* ntpServer, long gmtOffsetSec, 
                 int daylightOffsetSec, unsigned long timeout_ms) 
     {
-        configTime(gmtOffsetSec, daylightOffsetSec, ntpServer);
+        configTzTime(POSIX_TZ, ntpServer);
         DBG_RTC("Sincronizando hora con NTP en " + String(ntpServer) + ".");
 
         struct tm timeinfo;
@@ -123,11 +123,10 @@
             NTP_SERVER3
         };
     
-        // Configurar múltiples servidores NTP
-        configTime(GMT_OFFSET_SEC, 
-               DAYLIGHT_OFFSET_SEC, 
-               ntpServers[0], 
-               ntpServers[1], 
+        // Configurar zona horaria POSIX (gestiona DST automáticamente)
+        configTzTime(POSIX_TZ,
+               ntpServers[0],
+               ntpServers[1],
                ntpServers[2]);
     
         DBG_RTC("Servidores NTP configurados:");
