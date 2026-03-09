@@ -518,13 +518,22 @@
             VersionInfo versionInfo = OTA.checkForUpdates();
             
             if (versionInfo.newVersionAvailable) {
-                // Enviar información de actualización disponible
-                String respuesta = "UPDATE_AVAILABLE:" + 
-                                 versionInfo.latestVersion + ":" +
-                                 versionInfo.firmwareUrl + ":" +
-                                 versionInfo.spiffsUrl + ":" +
-                                 versionInfo.releaseNotes;
-                ws.textAll(respuesta);
+                // Enviar información de actualización disponible en JSON (evita parseo frágil por ":")
+                JsonDocument otaDoc;
+                otaDoc["version"] = versionInfo.latestVersion;
+                otaDoc["firmwareUrl"] = versionInfo.firmwareUrl;
+                otaDoc["spiffsUrl"] = versionInfo.spiffsUrl;
+
+                String notes = versionInfo.releaseNotes;
+                if (notes.length() > Config::OTA::MAX_RELEASE_NOTES_WS) {
+                    notes = notes.substring(0, Config::OTA::MAX_RELEASE_NOTES_WS);
+                    notes += "\n...";
+                }
+                otaDoc["releaseNotes"] = notes;
+
+                String payload;
+                serializeJson(otaDoc, payload);
+                ws.textAll("UPDATE_AVAILABLE_JSON:" + payload);
                 DBG_SRV_PRINTF("✅ Nueva versión disponible: %s", versionInfo.latestVersion.c_str());
             } else {
                 ws.textAll("NO_UPDATE");
