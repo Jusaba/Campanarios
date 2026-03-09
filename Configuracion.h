@@ -130,6 +130,14 @@
             
             // Auto-update habilitado por defecto
             inline bool AUTO_UPDATE_ENABLED = false;  // Deshabilitado por seguridad, activar vía web
+
+            // Seguridad TLS para OTA (GitHub API/Assets)
+            // Si se activa ALLOW_INSECURE_TLS, se omite validación de certificado (solo desarrollo)
+            constexpr bool ALLOW_INSECURE_TLS = true;
+            inline const char* GITHUB_ROOT_CA = "";
+
+            // Límite de notas de release enviadas por WebSocket
+            constexpr size_t MAX_RELEASE_NOTES_WS = 600;
         }
 
         // ==================== ESTADOS I2C ====================

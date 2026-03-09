@@ -177,18 +177,13 @@ function simularProgresoOTA(tipo) {
         }
     }, 1500); // Actualizar cada 1.5 segundos (más lento)
     
-    // Timeout de seguridad (3 minutos) - por si nunca llega OTA_SUCCESS
+    // Timeout de seguridad (3 minutos) - NO asumir éxito sin OTA_SUCCESS
     setTimeout(() => {
         clearInterval(intervalo);
         if (otaState.actualizando) {
-            console.log('⚠️ Timeout de seguridad - asumiendo éxito y recargando');
-            // Si después de 3 minutos no hay respuesta, asumir éxito y recargar
-            document.getElementById('otaProgressFill').style.width = '100%';
-            document.getElementById('otaMensaje').textContent = 'Actualització completada. Recarregant...';
-            
-            setTimeout(() => {
-                location.reload();
-            }, 5000);
+            console.log('⚠️ Timeout OTA sin confirmación');
+            otaState.actualizando = false;
+            mostrarErrorOTA("Temps d'espera esgotat sense confirmació. Comprova la versió i torna-ho a intentar.");
         }
     }, 180000); // 3 minutos
 }
@@ -208,6 +203,22 @@ function procesarMensajeOTA(mensaje) {
             console.log('✅ Versión OTA actualizada:', partes[1]);
             break;
             
+        case 'UPDATE_AVAILABLE_JSON':
+            // UPDATE_AVAILABLE_JSON:{"version":"1.0.1",...}
+            try {
+                const payload = JSON.parse(partes.slice(1).join(':'));
+                otaState.versionDisponible = payload.version || null;
+                otaState.firmwareUrl = payload.firmwareUrl || null;
+                otaState.spiffsUrl = payload.spiffsUrl || null;
+
+                console.log('✅ Actualización disponible (JSON):', otaState.versionDisponible);
+                mostrarActualizacionDisponible(otaState.versionDisponible, payload.releaseNotes || '');
+            } catch (e) {
+                console.error('❌ Error parseando UPDATE_AVAILABLE_JSON:', e);
+                mostrarErrorOTA('Resposta OTA invàlida del servidor');
+            }
+            break;
+
         case 'UPDATE_AVAILABLE':
             // UPDATE_AVAILABLE:1.0.1:https://...firmware.bin:https://...spiffs.bin:Release notes...
             otaState.versionDisponible = partes[1];

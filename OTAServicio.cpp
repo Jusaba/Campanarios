@@ -57,9 +57,8 @@ VersionInfo OTAServicio::checkForUpdates() {
     setState(OTA_CHECKING);
     setProgress(10, "Conectando a GitHub...");
     
-    // Usar WiFiClientSecure sin validación de certificado para evitar problemas
     WiFiClientSecure client;
-    client.setInsecure(); // No validar certificado SSL
+    configureSecureClient(client);
     
     HTTPClient http;
     http.setTimeout(15000); // 15 segundos timeout
@@ -263,7 +262,7 @@ bool OTAServicio::updateFirmware(const String& url, size_t expectedSize) {
     DBG_OTA_PRINTF("Descargando firmware desde: %s", url.c_str());
     
     WiFiClientSecure client;
-    client.setInsecure();
+    configureSecureClient(client);
     
     HTTPClient http;
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
@@ -285,6 +284,12 @@ bool OTAServicio::updateFirmware(const String& url, size_t expectedSize) {
     
     if (contentLength <= 0 || contentLength > Config::OTA::MAX_FIRMWARE_SIZE) {
         setError("Tamano de firmware invalido");
+        http.end();
+        return false;
+    }
+
+    if (expectedSize > 0 && contentLength != expectedSize) {
+        setError("Tamano de firmware no coincide con release");
         http.end();
         return false;
     }
@@ -344,7 +349,7 @@ bool OTAServicio::updateSPIFFS(const String& url, size_t expectedSize) {
     DBG_OTA_PRINTF("Descargando SPIFFS desde: %s", url.c_str());
     
     WiFiClientSecure client;
-    client.setInsecure();
+    configureSecureClient(client);
     
     HTTPClient http;
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
@@ -366,6 +371,12 @@ bool OTAServicio::updateSPIFFS(const String& url, size_t expectedSize) {
     
     if (contentLength <= 0 || contentLength > Config::OTA::MAX_SPIFFS_SIZE) {
         setError("Tamano de SPIFFS invalido");
+        http.end();
+        return false;
+    }
+
+    if (expectedSize > 0 && contentLength != expectedSize) {
+        setError("Tamano de SPIFFS no coincide con release");
         http.end();
         return false;
     }
@@ -414,6 +425,17 @@ bool OTAServicio::updateSPIFFS(const String& url, size_t expectedSize) {
     DBG_OTA("SPIFFS actualizado correctamente");
     setProgress(100, "SPIFFS instalado");
     return true;
+}
+
+
+void OTAServicio::configureSecureClient(WiFiClientSecure& client) {
+    if (!Config::OTA::ALLOW_INSECURE_TLS && strlen(Config::OTA::GITHUB_ROOT_CA) > 0) {
+        client.setCACert(Config::OTA::GITHUB_ROOT_CA);
+        return;
+    }
+
+    client.setInsecure();
+    DBG_OTA("[WARN] OTA TLS inseguro habilitado");
 }
 
 void OTAServicio::setState(OTAState state) {

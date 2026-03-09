@@ -97,6 +97,7 @@ private:
     void setError(const char* error);
     String parseGitHubResponse(const String& json, VersionInfo& info);
     int compareVersions(const String& v1, const String& v2);
+    void configureSecureClient(WiFiClientSecure& client);
 };
 
 extern OTAServicio OTA;
